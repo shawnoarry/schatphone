@@ -32,6 +32,16 @@ const template = {
       label: 'Scene tags',
       type: PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS,
     },
+    {
+      id: 'debut_date',
+      label: 'Debut date',
+      type: PROFILE_TEMPLATE_FIELD_TYPES.DATE,
+    },
+    {
+      id: 'public_figure',
+      label: 'Public figure',
+      type: PROFILE_TEMPLATE_FIELD_TYPES.BOOLEAN,
+    },
   ],
 }
 
@@ -67,6 +77,8 @@ describe('profile template value assistant', () => {
         values: [
           { fieldId: 'public_persona', value: 'Idol', confidence: 'high', reason: 'Public role.' },
           { fieldId: 'scene_tags', value: ['idol', 'public-facing', 'idol'] },
+          { fieldId: 'debut_date', value: '2024-02-29' },
+          { fieldId: 'public_figure', value: true },
           { fieldId: 'unknown_field', value: 'Drop me' },
         ],
       },
@@ -84,8 +96,25 @@ describe('profile template value assistant', () => {
         fieldId: 'scene_tags',
         value: ['idol', 'public-facing'],
       }),
+      expect.objectContaining({ fieldId: 'debut_date', value: '2024-02-29' }),
+      expect.objectContaining({ fieldId: 'public_figure', value: 'true' }),
     ])
     expect(result.droppedCount).toBe(1)
+  })
+
+  test('drops invalid date and yes/no draft values instead of guessing', () => {
+    const result = normalizeProfileTemplateValueSuggestionPayload(
+      {
+        values: [
+          { fieldId: 'debut_date', value: '2024-02-30' },
+          { fieldId: 'public_figure', value: 'perhaps' },
+        ],
+      },
+      { fields: template.fields },
+    )
+
+    expect(result.suggestions).toEqual([])
+    expect(result.droppedCount).toBe(2)
   })
 
   test('calls AI through the injected seam and returns draft suggestions', async () => {

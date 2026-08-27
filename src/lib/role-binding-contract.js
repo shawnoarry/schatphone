@@ -9,7 +9,12 @@ const MAX_FOLDER_IDS_PER_SLOT = 8
 const MAX_SLOT_PRIORITY = 999
 const MAX_KNOWLEDGE_POINT_ID_LENGTH = 64
 const MAX_KNOWLEDGE_POINT_IDS_PER_PROFILE = 80
-const VALID_PROFILE_ENTITY_TYPES = new Set(['self_profile', 'main_role', 'npc'])
+const VALID_PROFILE_ENTITY_TYPES = new Set([
+  'self_profile',
+  'main_role',
+  'supporting_role',
+  'npc',
+])
 const VALID_PROFILE_VISIBILITY_LEVELS = new Set([
   'public',
   'familiar',
@@ -270,6 +275,11 @@ export const createRoleBindingContract = (input = {}) => {
     preferredImageAssetId,
     profileAssetPack,
   )
+  const entityType = VALID_PROFILE_ENTITY_TYPES.has(profileInput.entityType)
+    ? profileInput.entityType
+    : profileInput.isMain
+      ? 'main_role'
+      : 'npc'
 
   const avatarSources = input.avatarSources && typeof input.avatarSources === 'object'
     ? input.avatarSources
@@ -295,12 +305,8 @@ export const createRoleBindingContract = (input = {}) => {
       id: profileId,
       name: trimTo(profileInput.name, 120),
       role: trimTo(profileInput.role, 120),
-      isMain: Boolean(profileInput.isMain),
-      entityType: VALID_PROFILE_ENTITY_TYPES.has(profileInput.entityType)
-        ? profileInput.entityType
-        : profileInput.isMain
-          ? 'main_role'
-          : 'npc',
+      isMain: entityType === 'main_role',
+      entityType,
       templateLink: normalizeProfileTemplateLinkForContract(profileInput.templateLink),
       profileValues: normalizeProfileValuesForContract(profileInput.profileValues),
       capabilities: normalizeProfileCapabilitiesForContract(profileInput.capabilities),

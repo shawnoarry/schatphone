@@ -3687,6 +3687,19 @@ export const useSystemStore = defineStore('system', () => {
     })
   }
 
+  const createWorldProfileTemplate = (templateInput = {}) => {
+    const now = Date.now()
+    return upsertProfileTemplate({
+      ...templateInput,
+      id: `world_template_${now}_${Math.random().toString(36).slice(2, 8)}`,
+      scope: PROFILE_TEMPLATE_SCOPES.WORLD,
+      worldId: templateInput.worldId || 'default_world',
+      version: 1,
+      createdAt: now,
+      updatedAt: now,
+    })
+  }
+
   const updateWorldProfileTemplate = (templateId, updates = {}) => {
     const existing = getProfileTemplateById(templateId)
     if (!existing || existing.scope !== PROFILE_TEMPLATE_SCOPES.WORLD) return null
@@ -5318,6 +5331,7 @@ export const useSystemStore = defineStore('system', () => {
     listWorldProfileTemplates,
     getProfileTemplateById,
     upsertProfileTemplate,
+    createWorldProfileTemplate,
     createWorldProfileTemplateFromPreset,
     updateWorldProfileTemplate,
     setWorldProfileTemplateEnabled,

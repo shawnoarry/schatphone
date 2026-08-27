@@ -1,6 +1,6 @@
 # SchatPhone Role Binding Contract / SchatPhone 角色绑定契约
 
-Updated: 2026-07-22
+Updated: 2026-08-27
 
 ## 1. Purpose
 
@@ -50,7 +50,9 @@ Compatibility API kept for existing chat asset flow:
 Profile extension fields:
 
 - `entityType`
-  - one of `self_profile`, `main_role`, `npc`
+  - one of `self_profile`, `main_role`, `supporting_role`, `npc`
+- `isMain`
+  - legacy binary compatibility only; it is `true` only when canonical `entityType` is `main_role`
 - `templateLink`
   - one primary world/template context and supplemental knowledge point ids
 - `profileValues`
@@ -90,12 +92,12 @@ Chat Directory is a chat target list, not a Main Role filter.
 Rules:
 
 - Self Profile must not be bound as a Chat target.
-- NPC may be bound as a Chat target before being upgraded to Main Role.
+- Supporting Role and NPC may be bound as Chat targets when their Contacts-owned capabilities allow it.
 - Contacts may invoke `bindRoleProfile()` only from an explicit eligible-role `Start Chat` action; Contacts must not duplicate binding rules or Chat-local metadata.
 - Chat Directory remains the review, unbind, and Chat-local metadata management surface, but it is not a mandatory navigation hop for that explicit Contacts action.
 - An already-bound non-Self role reuses its existing contact and conversation; a disabled unbound role must not create a new target.
 - Chat binding does not prove that an entity is a Main Role.
-- NPC -> Main Role upgrade must preserve existing Chat binding and history.
+- World NPC -> Supporting Role -> Main Role, including the compatibility direct NPC -> Main Role path, must preserve existing Chat binding and history.
 - Capacity management may page or reversibly cold-archive Chat history, but cannot silently or irreversibly delete authoritative role-thread history; lifecycle ownership remains in Contacts rather than this binding contract.
 
 ## 5. Hierarchy Rules

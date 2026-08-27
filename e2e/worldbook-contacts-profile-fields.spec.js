@@ -65,8 +65,12 @@ const expectNoHorizontalOverflow = async (page) => {
   expect(hasOverflow).toBe(false)
 }
 
-test.beforeEach(async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
+test.beforeEach(async ({ page }, testInfo) => {
+  await page.setViewportSize(
+    testInfo.project.name === 'mobile-chrome'
+      ? { width: 390, height: 844 }
+      : { width: 1280, height: 900 },
+  )
   await seedEmptyWorldAndContacts(page)
 })
 
@@ -105,21 +109,160 @@ test('WorldBook profile template can be filled as concrete Contacts values', asy
   await expect(page.getByTestId('contacts-role-detail')).toContainText('Template E2E Role')
   await page.getByTestId('contacts-open-world-fields-sheet').click()
 
+  await expect(page.getByTestId('contacts-world-profile-fields-editor')).toHaveCount(0)
+  await expect(page.getByTestId('contacts-world-profile-fields-section')).toContainText(
+    'No profile card has been selected or filled yet.',
+  )
+  await page.getByTestId('contacts-edit-world-profile-fields').click()
   await expect(page.getByTestId('contacts-world-profile-fields-editor')).toBeVisible()
   await expect(page.getByTestId('contacts-profile-template-select')).toContainText('ABO Profile')
   await expect(page.getByTestId('contacts-template-change-review')).toContainText('Save review')
   await page.getByTestId('contacts-profile-template-value-secondary_gender').selectOption('Omega')
   await page.getByTestId('contacts-profile-template-value-pheromone').fill('Cedar rain')
-  await page.getByTestId('contacts-profile-template-value-bond_mark').fill('Temporary bond mark')
   await page.getByTestId('contacts-profile-template-visibility-pheromone').selectOption('intimate')
   await expectNoHorizontalOverflow(page)
 
   await page.getByTestId('contacts-save-world-profile-fields').click()
   await expect(page.getByTestId('contacts-world-profile-fields-editor')).toHaveCount(0)
+  await expect(page.getByTestId('contacts-world-field-category-general')).toContainText('General')
   await expect(page.getByTestId('contacts-world-field-secondary_gender')).toContainText('Omega')
   await expect(page.getByTestId('contacts-world-field-pheromone')).toContainText('Cedar rain')
   await expect(page.getByTestId('contacts-world-field-pheromone')).toContainText('Intimate')
-  await expect(page.getByTestId('contacts-world-field-bond_mark')).toContainText('Temporary bond mark')
+  await expect(page.getByTestId('contacts-world-field-category-prompt-general')).toContainText(
+    'Consider adding Bond mark.',
+  )
+  await expect(page.getByTestId('contacts-world-profile-fields-section')).not.toContainText(/\d+\/\d+/)
+  await expectNoHorizontalOverflow(page)
+
+  await page.getByTestId('contacts-edit-world-profile-fields').click()
+  await expect(page.getByTestId('contacts-profile-template-value-pheromone')).toHaveValue('Cedar rain')
+  await page.getByTestId('contacts-profile-template-value-pheromone').fill('Unsaved value')
+  await page.getByTestId('contacts-cancel-world-profile-fields').click()
+  await expect(page.getByTestId('contacts-world-profile-fields-editor')).toHaveCount(0)
+  await expect(page.getByTestId('contacts-world-field-pheromone')).toContainText('Cedar rain')
+  await expect(page.getByTestId('contacts-world-profile-fields-section')).not.toContainText('Unsaved value')
+
+  await page.getByTestId('contacts-edit-world-profile-fields').click()
+  await page.getByTestId('contacts-add-person-profile-field').click()
+  await page
+    .getByTestId('contacts-profile-extension-category')
+    .selectOption('__new_profile_category__')
+  await page.getByTestId('contacts-profile-extension-new-category-label').fill('Private habits')
+  await page.getByTestId('contacts-profile-extension-label').fill('Nickname rule')
+  await page
+    .getByTestId('contacts-profile-extension-value')
+    .fill('Do not use the full name in private.')
+  await expectNoHorizontalOverflow(page)
+  await page.getByTestId('contacts-save-profile-extension').click()
+  await expect(page.getByTestId('contacts-world-profile-fields-editor')).toContainText('Nickname rule')
+  await page.getByTestId('contacts-save-world-profile-fields').click()
+  await expect(page.getByTestId('contacts-world-profile-fields-editor')).toHaveCount(0)
+  await expect(page.getByTestId('contacts-world-profile-fields-section')).toContainText('Private habits')
+  await expect(page.getByTestId('contacts-world-profile-fields-section')).toContainText('Person only')
+  await expect(page.getByTestId('contacts-world-profile-fields-section')).toContainText(
+    'Do not use the full name in private.',
+  )
+
+  await page.getByTestId('contacts-edit-world-profile-fields').click()
+  await page.getByTestId('contacts-add-person-profile-field').click()
+  await page.getByTestId('contacts-profile-extension-label').fill('Stage call sign')
+  await page.getByTestId('contacts-profile-extension-value').fill('Blue Hour')
+  await page.getByTestId('contacts-profile-extension-scope-world').check()
+  await page.getByTestId('contacts-save-profile-extension').click()
+  await page.getByTestId('contacts-save-world-profile-fields').click()
+  await expect(page.getByTestId('contacts-world-profile-fields-section')).toContainText('Stage call sign')
+  await expect(page.getByTestId('contacts-world-profile-fields-section')).toContainText('Blue Hour')
+  await expectNoHorizontalOverflow(page)
+
+  expect(pageErrors).toEqual([])
+})
+
+test('WorldBook can manually build and revise a profile card without AI', async ({ page }) => {
+  const pageErrors = []
+  page.on('pageerror', (error) => {
+    pageErrors.push(error.message)
+  })
+
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/worldbook')
+  await page.getByTestId('worldbook-panel-tab-templates').click()
+  await page.getByTestId('worldbook-profile-template-create').click()
+
+  const editor = page.getByTestId('worldbook-profile-template-editor')
+  await expect(editor).toBeVisible()
+  await page.getByTestId('worldbook-profile-template-title').fill('Manual entertainment profile')
+  await page.locator('[data-testid^="worldbook-profile-add-field-"]').first().click()
+
+  const fieldCard = page.locator('[data-testid^="worldbook-profile-field-card-"]').first()
+  const fieldTestId = await fieldCard.getAttribute('data-testid')
+  const fieldId = fieldTestId.replace('worldbook-profile-field-card-', '')
+  await page.getByTestId(`worldbook-profile-field-label-${fieldId}`).fill('Agency')
+  await page.getByTestId(`worldbook-profile-field-type-${fieldId}`).selectOption(
+    'organization_reference',
+  )
+  await expectNoHorizontalOverflow(page)
+
+  await page.getByTestId('worldbook-profile-template-save').click()
+  await expect(editor).toHaveCount(0)
+  const templateRow = page.locator('.worldbook-template-row').filter({
+    hasText: 'Manual entertainment profile',
+  })
+  await expect(templateRow).toContainText('v1')
+  await expect(templateRow).toContainText('1 field')
+
+  const editButton = templateRow.getByRole('button', { name: 'Edit profile card' })
+  await editButton.click()
+  await page.getByTestId('worldbook-profile-template-title').fill('Unsaved profile name')
+  await page.getByTestId('worldbook-profile-template-cancel').click()
+  await expect(templateRow).toContainText('Manual entertainment profile')
+  await expect(templateRow).not.toContainText('Unsaved profile name')
+
+  await editButton.click()
+  await page.getByTestId('worldbook-profile-template-title').fill('Manual entertainment profile v2')
+  await page.getByTestId('worldbook-profile-template-save').click()
+  await expect(page.locator('.worldbook-template-row').filter({
+    hasText: 'Manual entertainment profile v2',
+  })).toContainText('v2')
+  await expectNoHorizontalOverflow(page)
+
+  expect(pageErrors).toEqual([])
+})
+
+test('WorldBook world suggestions stay draft-only until explicitly saved', async ({ page }) => {
+  const pageErrors = []
+  page.on('pageerror', (error) => {
+    pageErrors.push(error.message)
+  })
+
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/worldbook')
+  await page.getByTestId('worldbook-panel-tab-pack').click()
+  await page.getByTestId('worldbook-current-pack-select').selectOption('fandom_parallel')
+  await page.getByTestId('worldbook-current-pack-activate').click()
+  await expect(page.getByTestId('worldbook-current-pack-state')).toContainText('Active')
+
+  await page.getByTestId('worldbook-panel-tab-templates').click()
+  await page.getByTestId('worldbook-profile-template-propose').click()
+  await expect(page.getByTestId('worldbook-profile-template-proposal-review')).toContainText(
+    'Rule-based review draft',
+  )
+  await expect(page.getByTestId('worldbook-profile-template-editor')).toContainText('Stage name')
+  await expect(page.getByTestId('worldbook-profile-template-editor')).toContainText('Group role')
+  await expectNoHorizontalOverflow(page)
+
+  await page.getByTestId('worldbook-profile-template-cancel').click()
+  await expect(page.getByTestId('worldbook-profile-template-editor')).toHaveCount(0)
+  await expect(
+    page.locator('.worldbook-template-row').filter({ hasText: 'Fandom profile suggestion' }),
+  ).toHaveCount(0)
+
+  await page.getByTestId('worldbook-profile-template-propose').click()
+  await page.getByTestId('worldbook-profile-template-title').fill('Generated fandom profile')
+  await page.getByTestId('worldbook-profile-template-save').click()
+  const generatedTemplate = page.locator('.worldbook-template-row').filter({
+    hasText: 'Generated fandom profile',
+  })
+  await expect(generatedTemplate).toContainText('v1')
   await expectNoHorizontalOverflow(page)
 
   expect(pageErrors).toEqual([])

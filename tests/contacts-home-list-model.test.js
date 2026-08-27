@@ -43,6 +43,14 @@ const profiles = [
     role: 'Producer',
     bio: 'Studio contact',
   },
+  {
+    id: 5,
+    roleId: 'S05',
+    name: 'Sora',
+    role: 'Recurring coordinator',
+    bio: 'Supporting contact',
+    entityType: CONTACTS_ENTITY_TYPES.SUPPORTING_ROLE,
+  },
 ]
 
 const createModel = ({
@@ -62,16 +70,20 @@ const createModel = ({
     }),
     getEventAttachedCount: (profile) => Number(eventCounts[profile.id] || 0),
     formatEntityTypeLabel: (entityType) =>
-      entityType === CONTACTS_ENTITY_TYPES.NPC ? 'NPC / World Role' : 'Main Role',
+      entityType === CONTACTS_ENTITY_TYPES.NPC
+        ? 'NPC / World Role'
+        : entityType === CONTACTS_ENTITY_TYPES.SUPPORTING_ROLE
+          ? 'Supporting Role'
+          : 'Main Role',
   })
 
 describe('Contacts home list model interface', () => {
-  test('groups self, main-role, fallback-main, and NPC profiles', () => {
+  test('keeps supporting roles in the existing secondary list until visual regrouping', () => {
     const model = createModel()
 
     expect(model.selfProfiles.value.map((profile) => profile.id)).toEqual([1])
     expect(model.mainRoleProfiles.value.map((profile) => profile.id)).toEqual([2, 4])
-    expect(model.npcRoleProfiles.value.map((profile) => profile.id)).toEqual([3])
+    expect(model.npcRoleProfiles.value.map((profile) => profile.id)).toEqual([3, 5])
   })
 
   test('normalizes search and matches profile basics, role id, bio, and world field values', () => {
@@ -112,5 +124,6 @@ describe('Contacts home list model interface', () => {
     expect(model.contactRecentSourceLabel(profiles[2])).toBe('Chat')
     expect(model.contactRecentSourceLabel(profiles[1])).toBe('Memory')
     expect(model.contactRecentSourceLabel({ ...profiles[2], id: 99 })).toBe('NPC / World Role')
+    expect(model.contactRecentSourceLabel(profiles[4])).toBe('Supporting Role')
   })
 })

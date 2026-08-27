@@ -24,6 +24,30 @@ const normalizeListValue = (value) => {
     })
 }
 
+const normalizeBooleanValue = (value) => {
+  if (value === true || value === 1) return 'true'
+  if (value === false || value === 0) return 'false'
+  const normalized = normalizeText(value, '', 20).toLowerCase()
+  if (['true', 'yes', 'y', '1', '\u662f'].includes(normalized)) return 'true'
+  if (['false', 'no', 'n', '0', '\u5426'].includes(normalized)) return 'false'
+  return ''
+}
+
+const normalizeDateValue = (value) => {
+  const normalized = normalizeText(value, '', 20)
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(normalized)
+  if (!match) return ''
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const date = new Date(Date.UTC(year, month - 1, day))
+  return date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+    ? normalized
+    : ''
+}
+
 const formatProfileValueForPrompt = (value = {}) => {
   const rawValue = Array.isArray(value.value) ? value.value.join(', ') : normalizeText(value.value)
   return `${value.fieldId || 'unknown'} = ${rawValue || '(empty)'} (${value.visibilityLevel || 'familiar'})`
@@ -64,6 +88,7 @@ export const buildProfileTemplateValueAssistantPrompt = ({
     'If an existing value is already filled, either omit that field or suggest only if the existing value is clearly empty.',
     'Use only fieldId values listed in the current template. Do not invent fields.',
     'For multi_select_tags fields, return value as an array of short tags.',
+    'For boolean fields, return true or false. For date fields, return YYYY-MM-DD.',
     `Template: ${normalizeText(template.title || template.name || template.id, 'Untitled template', 160)} v${Number(template.version) || 1}`,
     'Template fields:',
     fields.length > 0 ? fields.map(formatFieldForPrompt).join('\n') : '(none)',
@@ -92,6 +117,12 @@ const readProviderValues = (payload = {}) => {
 const normalizeSuggestionValue = (rawValue, field = {}) => {
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS) {
     return normalizeListValue(rawValue)
+  }
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.BOOLEAN) {
+    return normalizeBooleanValue(rawValue)
+  }
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.DATE) {
+    return normalizeDateValue(rawValue)
   }
   return normalizeText(rawValue, '', field.type === PROFILE_TEMPLATE_FIELD_TYPES.SHORT_TEXT ? MAX_SHORT_TEXT : MAX_TEXT)
 }

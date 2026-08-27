@@ -1,8 +1,8 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-08-26
+Updated: 2026-08-27
 
-Integrated baseline: `f06a575`
+Integrated baseline: `c47faa4`
 
 Working tree: excluded from integrated capability claims; current user-owned visual work remains preserved in place.
 
@@ -16,11 +16,12 @@ The project is not yet a production-hardened final release. Named physical-devic
 
 ## 2. Current Execution Order
 
-1. `CMG-08`: correct Mini Scene occurrence/request reuse, optional full-scene retention, retained-scene management, and the historical 120-artifact silent truncation.
-2. `CMG-09`: bound reading and prompt cost without deleting owner history.
-3. `CMG-10`: close migration, restore, failure, reopen, and high-row-count proof after the preceding CMG items.
-4. Complete the remaining hosted product proof: installed PWA, relaunch, backup round trip, external protections, and named true-device evidence.
-5. Run World Pack true-device validation only where it overlaps the release device matrix.
+1. `CONTACTS-V3-2A / PERSONA-1`: classify one pasted persona description into existing-field candidates, suggested new fields, conflicts, and retained unclassified text; keep everything review-only and save nothing in this slice.
+2. `CMG-08`: correct Mini Scene occurrence/request reuse, optional full-scene retention, retained-scene management, and the historical 120-artifact silent truncation.
+3. `CMG-09`: bound reading and prompt cost without deleting owner history.
+4. `CMG-10`: close migration, restore, failure, reopen, and high-row-count proof after the preceding CMG items.
+5. Complete the remaining hosted product proof: installed PWA, relaunch, backup round trip, external protections, and named true-device evidence.
+6. Run World Pack true-device validation only where it overlaps the release device matrix.
 
 Hotspot decomposition, incremental typing, personal R2/Worker, production push, broader Gallery/non-Book migration, World Setting W2, and secondary-module expansion remain on hold until the first usable product preview unless the user explicitly changes priority.
 
@@ -30,9 +31,9 @@ This table summarizes package status. It does not replace any package's named mi
 
 | Package | Scoped current status | Important integrated progress | Main open boundary | Detail owner |
 | --- | --- | --- | --- | --- |
-| Contacts / Relationship | `Contacts V2 DONE; CMG hardening partial` | role archive, relationship truth, memory review, shared-experience lineage, 500/300 retention removal | later CMG reading/recovery closure; broader automatic extraction remains gated | `docs/pm/contacts-relationship-system-v2/STATUS_AND_HANDOFF.md` |
-| Chat / Chat Directory | `PARTIAL_DONE` | role/service/group threads, direct-provider Chat proof, rich/source cards, explicit remember action, current Relationship Runtime prompt truth | installed-PWA/true-device proof; deeper group orchestration and automatic memory extraction are not promoted | `docs/pm/chat-and-chat-directory/STATUS_AND_HANDOFF.md` |
-| Event Runtime / World Hub | `PARTIAL_DONE` | EVE-4C owner-native commerce chain, Event Notebook, Player Context V1, CJA-5 midpoint family, Event Instance 240-cap removal, bilingual reason feedback | `CMG-08`; production Mini Scene trigger and EVE-5 remain separately gated | `docs/pm/event-runtime-and-world-hub/STATUS_AND_HANDOFF.md` |
+| Contacts / Relationship | `Contacts V2 DONE / CONTACTS-V3-0 DONE / CONTACTS-V3-1 DONE / CONTACTS-V3-2A ACTIVE / CARD-1 DONE / ROLE-1 DONE / CARD-2 DONE / CARD-3 DONE / CARD-4 DONE / CARD-5 DONE / CARD-6 DONE / PERSONA-1 NEXT; CMG hardening partial` | role archive, relationship truth, memory review, shared-experience lineage, 500/300 retention removal; per-world Self Profile decision, Contacts-owned profile behavior, four person types, category-compatible templates, field purposes/input types, manual WorldBook form editing, read-first dynamic person-page card, isolated person-specific extensions, and deterministic/optional-AI world-profile-card proposals | reviewable free-text classification, then per-item confirmation/save; broader automatic extraction and downstream consumer adoption remain gated | `docs/pm/contacts-relationship-system-v2/STATUS_AND_HANDOFF.md` |
+| Chat / Chat Directory | `PARTIAL_DONE` | role/service/group threads, direct-provider Chat proof, rich/source cards, explicit remember action, current Relationship Runtime prompt truth | Contacts V3 precedes formal Contacts-owned role-context adoption; installed-PWA/true-device proof and automatic memory extraction remain open | `docs/pm/chat-and-chat-directory/STATUS_AND_HANDOFF.md` |
+| Event Runtime / World Hub | `PARTIAL_DONE` | EVE-4C owner-native commerce chain, Event Notebook, Player Context V1, CJA-5 midpoint family, Event Instance 240-cap removal, bilingual reason feedback | Contacts V3 precedes new identity-conditioned event families and Work Hub role/affiliation promotion; `CMG-08`, production Mini Scene trigger, and EVE-5 remain separately gated | `docs/pm/event-runtime-and-world-hub/STATUS_AND_HANDOFF.md` |
 | Map / Calendar / Reminders | `INTEGRATED_LOCAL / scoped milestones` | Calendar V3 plus storage V4 handoffs, Agenda Journey/Activity Session, Mail and Work Hub schedule proposals, Map journeys/Footprints, 81 Seoul places with reviewed media and 70 exact card heroes | source-conflict actions, remaining place-media decisions, PWA/true-device proof, later MJE stages | `docs/pm/map-calendar-reminders/STATUS_AND_HANDOFF.md` |
 | Commerce / Finance / Assets | `PARTIAL_DONE` | eleven Shopping storefronts, paid checkout and support flows, fifteen Food Delivery entries with scoped carts/orders, Wallet cards/activity/statements/payees/receipt sharing, ordinary consequence proof | refund/cancellation settlement, tracking shares, Assets/Stock depth, named physical-device proof | `docs/pm/commerce-finance-and-assets/STATUS_AND_HANDOFF.md` |
 | Visual / IA | `PARTIAL_DONE` | Home/App Store systems, thirteen S1 App previews plus Notification Center, day/night and authored theme/icon foundations, visual workflow and Playwright quality gate | current unintegrated visual work, cross-module consistency, real-device polish, later approved focused slices | `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md` |
@@ -54,6 +55,7 @@ This table summarizes package status. It does not replace any package's named mi
 - no production-grade authenticated push backend or closed-page autonomous simulation;
 - no automatic personal R2 backup implementation despite the accepted architecture direction;
 - no general multi-world W2/W3 persistence and switching;
+- no Persona Confirmation flow or downstream formal Chat/Event Runtime/Work Hub projection yet; the Contacts V3 owner, extensible template baseline, manual form editor, dynamic person-page card, and isolated person-specific extensions exist in the current working tree but are not part of the named integrated baseline above;
 - no production Mini Scene trigger/HTML/media expansion, and retained-scene governance remains open under `CMG-08`;
 - no claim that every S1 shell has an S2 owner Store or S3 Event Runtime chain;
 - no broad hotspot rewrite, full TypeScript migration, or universal coverage threshold;

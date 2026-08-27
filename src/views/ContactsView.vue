@@ -37,6 +37,10 @@ import {
   PROFILE_TEMPLATE_SCOPES,
   PROFILE_VALUE_SOURCE_KINDS,
   PROFILE_VISIBILITY_LEVELS,
+  cloneProfileTemplate,
+  createProfileExtensionCategoryId,
+  createProfileExtensionFieldId,
+  normalizeProfileExtensions,
 } from '../lib/profile-template-schema'
 import {
   buildRoleDeleteImpact,
@@ -126,6 +130,23 @@ const profileTemplateDraft = reactive({
   values: {},
   visibility: {},
 })
+const PROFILE_EXTENSION_NEW_CATEGORY_ID = '__new_profile_category__'
+const PROFILE_EXTENSION_SAVE_SCOPES = Object.freeze({
+  PERSON: 'person',
+  WORLD_TEMPLATE: 'world_template',
+})
+const createEmptyProfileExtensionFieldDraft = () => ({
+  categoryId: '',
+  newCategoryLabel: '',
+  label: '',
+  type: PROFILE_TEMPLATE_FIELD_TYPES.SHORT_TEXT,
+  value: '',
+  visibilityLevel: PROFILE_VISIBILITY_LEVELS.FAMILIAR,
+  saveScope: PROFILE_EXTENSION_SAVE_SCOPES.PERSON,
+})
+const isProfileExtensionFieldComposerOpen = ref(false)
+const profileExtensionFieldDraft = reactive(createEmptyProfileExtensionFieldDraft())
+const profileTemplatePendingExtensions = reactive([])
 const profileTemplateAiDraftBusy = ref(false)
 const profileTemplateAiDraftStatus = ref('')
 const profileTemplateAdaptationBusy = ref(false)
@@ -468,7 +489,7 @@ const isContactsDetailSheetOpen = computed(
 const activeDetailSheetTitle = computed(() => {
   const titles = {
     [CONTACTS_DETAIL_SHEETS.RELATIONSHIP]: t('关系', 'Relationship'),
-    [CONTACTS_DETAIL_SHEETS.WORLD_FIELDS]: t('世界字段', 'World fields'),
+    [CONTACTS_DETAIL_SHEETS.WORLD_FIELDS]: t('人物资料', 'Profile card'),
     [CONTACTS_DETAIL_SHEETS.MEMORIES]: t('记忆', 'Memories'),
     [CONTACTS_DETAIL_SHEETS.DETAILS]: t('人物细节', 'Character details'),
     [CONTACTS_DETAIL_SHEETS.ACTIVITY]: t('关联活动', 'Linked activity'),
@@ -666,6 +687,26 @@ const relationshipMemoryReviewSummaryText = (memory = {}) => {
 const selectedProfileValues = computed(() =>
   Array.isArray(selectedProfile.value?.profileValues) ? selectedProfile.value.profileValues : [],
 )
+const selectedProfileExtensions = computed(() =>
+  normalizeProfileExtensions(selectedProfile.value?.profileExtensions),
+)
+const profileTemplateEditorExtensions = computed(() => {
+  const saved = selectedProfileExtensions.value
+  return normalizeProfileExtensions({
+    categories: [
+      ...saved.categories,
+      ...profileTemplatePendingExtensions
+        .map((entry) => entry?.category)
+        .filter(Boolean),
+    ],
+    fields: [
+      ...saved.fields,
+      ...profileTemplatePendingExtensions
+        .map((entry) => entry?.field)
+        .filter(Boolean),
+    ],
+  })
+})
 const selectedProfileEntityType = computed(
   () => selectedProfile.value?.entityType || CONTACTS_ENTITY_TYPES.MAIN_ROLE,
 )
@@ -700,12 +741,14 @@ const {
   selectedProfileTemplateAdaptationDisplay,
   selectedProfileTemplateAdaptationReview,
   selectedProfileValueMap,
+  selectedProfileWorldFieldGroups,
   selectedProfileWorldFieldRows,
   selectedWorldFieldIntroText,
 } = useContactsWorldFieldModel({
   selectedProfile,
   selectedProfileEntityType,
   selectedProfileValues,
+  selectedProfileExtensions,
   currentWorldProfileTemplates,
   universalProfileTemplates,
   currentContactsWorldId,
@@ -716,7 +759,8 @@ const {
 const {
   profileTemplateDraftTemplate,
   profileTemplateDraftFields,
-  profileTemplateDraftFieldRows,
+  profileTemplateDraftFieldGroups,
+  profileTemplateDraftCategories,
   profileTemplateDraftPreservedValues,
   profileTemplateDraftPreservedRows,
   profileTemplateChangeReview,
@@ -726,6 +770,7 @@ const {
 } = useContactsProfileTemplateEditorModel({
   profileTemplateDraft,
   selectedProfileValues,
+  selectedProfileExtensions: profileTemplateEditorExtensions,
   fieldMatchesSelectedProfileEntity,
   getProfileTemplateById: (templateId) => systemStore.getProfileTemplateById(templateId),
   formatProfileValue,
@@ -733,6 +778,21 @@ const {
   profileVisibilityLevelLabel,
   t,
 })
+
+const profileExtensionFieldTypeOptions = computed(() => [
+  { value: PROFILE_TEMPLATE_FIELD_TYPES.SHORT_TEXT, label: t('短文本', 'Short text') },
+  { value: PROFILE_TEMPLATE_FIELD_TYPES.LONG_TEXT, label: t('长文本', 'Long text') },
+  { value: PROFILE_TEMPLATE_FIELD_TYPES.SINGLE_SELECT, label: t('单选 / 自定义值', 'Choice / custom value') },
+  { value: PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS, label: t('多选标签', 'Multiple tags') },
+  { value: PROFILE_TEMPLATE_FIELD_TYPES.DATE, label: t('日期', 'Date') },
+  { value: PROFILE_TEMPLATE_FIELD_TYPES.BOOLEAN, label: t('是 / 否', 'Yes / No') },
+  { value: PROFILE_TEMPLATE_FIELD_TYPES.PERSON_REFERENCE, label: t('人物引用', 'Person reference') },
+  { value: PROFILE_TEMPLATE_FIELD_TYPES.ORGANIZATION_REFERENCE, label: t('组织引用', 'Organization reference') },
+])
+
+const canSaveProfileExtensionToWorldTemplate = computed(
+  () => profileTemplateDraftTemplate.value?.scope === PROFILE_TEMPLATE_SCOPES.WORLD,
+)
 
 const selectedRelationshipSnapshot = computed(() =>
   selectedProfile.value
@@ -1000,6 +1060,9 @@ const openDetailSheet = (sheet = CONTACTS_DETAIL_SHEETS.OVERVIEW) => {
 }
 
 const closeDetailSheet = () => {
+  if (activeDetailSheet.value === CONTACTS_DETAIL_SHEETS.WORLD_FIELDS) {
+    cancelProfileTemplateEditor()
+  }
   activeDetailSheet.value = CONTACTS_DETAIL_SHEETS.OVERVIEW
   void nextTick(() => {
     if (profileScrollElement.value) profileScrollElement.value.scrollTop = 0
@@ -1007,8 +1070,8 @@ const closeDetailSheet = () => {
 }
 
 const openWorldFieldsSheet = () => {
+  cancelProfileTemplateEditor()
   openDetailSheet(CONTACTS_DETAIL_SHEETS.WORLD_FIELDS)
-  openProfileTemplateEditor()
 }
 
 const selectMemoryGroup = (memory) => {
@@ -1085,13 +1148,19 @@ const clearProfileTemplateDraftRecord = (record) => {
   })
 }
 
-const resetProfileTemplateDraftValues = (templateId = profileTemplateDraft.templateId) => {
+const resetProfileExtensionFieldDraft = () => {
+  Object.assign(profileExtensionFieldDraft, createEmptyProfileExtensionFieldDraft())
+  isProfileExtensionFieldComposerOpen.value = false
+}
+
+const clearProfileTemplatePendingExtensions = () => {
+  profileTemplatePendingExtensions.splice(0, profileTemplatePendingExtensions.length)
+}
+
+const resetProfileTemplateDraftValues = () => {
   clearProfileTemplateDraftRecord(profileTemplateDraft.values)
   clearProfileTemplateDraftRecord(profileTemplateDraft.visibility)
-  const template = templateId ? systemStore.getProfileTemplateById(templateId) : null
-  const fields = Array.isArray(template?.fields)
-    ? template.fields.filter(fieldMatchesSelectedProfileEntity)
-    : []
+  const fields = profileTemplateDraftFields.value
   fields.forEach((field) => {
     const existing = selectedProfileValueMap.value.get(field.id)
     profileTemplateDraft.values[field.id] = formatProfileValue(existing)
@@ -1102,7 +1171,9 @@ const resetProfileTemplateDraftValues = (templateId = profileTemplateDraft.templ
 
 const setProfileTemplateDraftTemplate = (templateId = '') => {
   profileTemplateDraft.templateId = templateId
+  clearProfileTemplatePendingExtensions()
   resetProfileTemplateDraftValues(templateId)
+  resetProfileExtensionFieldDraft()
   profileTemplateAiDraftStatus.value = ''
   profileTemplateAdaptationStatus.value = ''
 }
@@ -1115,17 +1186,26 @@ const openProfileTemplateEditor = () => {
   isProfileTemplateEditorOpen.value = true
 }
 
+const openProfileExtensionFieldComposer = () => {
+  if (!selectedProfile.value?.id) return
+  Object.assign(profileExtensionFieldDraft, createEmptyProfileExtensionFieldDraft(), {
+    categoryId: profileTemplateDraftCategories.value[0]?.id || PROFILE_EXTENSION_NEW_CATEGORY_ID,
+  })
+  isProfileExtensionFieldComposerOpen.value = true
+}
+
 const cancelProfileTemplateEditor = () => {
   isProfileTemplateEditorOpen.value = false
   profileTemplateDraft.templateId = ''
   clearProfileTemplateDraftRecord(profileTemplateDraft.values)
   clearProfileTemplateDraftRecord(profileTemplateDraft.visibility)
+  clearProfileTemplatePendingExtensions()
+  resetProfileExtensionFieldDraft()
   profileTemplateAiDraftStatus.value = ''
   profileTemplateAdaptationStatus.value = ''
 }
 
-const serializeProfileTemplateDraftValue = (field = {}) => {
-  const raw = profileTemplateDraft.values[field.id]
+const serializeProfileFieldValue = (field = {}, raw = '') => {
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS) {
     return String(raw || '')
       .split(',')
@@ -1135,6 +1215,9 @@ const serializeProfileTemplateDraftValue = (field = {}) => {
   return String(raw || '').trim()
 }
 
+const serializeProfileTemplateDraftValue = (field = {}) =>
+  serializeProfileFieldValue(field, profileTemplateDraft.values[field.id])
+
 const isEmptyProfileTemplateValue = (value) =>
   Array.isArray(value) ? value.length === 0 : !String(value || '').trim()
 
@@ -1143,6 +1226,97 @@ const formatProfileTemplateSuggestionForDraft = (field = {}, value = '') => {
     return Array.isArray(value) ? value.join(', ') : String(value || '')
   }
   return Array.isArray(value) ? value.join(', ') : String(value || '')
+}
+
+const saveProfileExtensionField = () => {
+  const profile = selectedProfile.value
+  if (!profile?.id) return
+
+  const label = String(profileExtensionFieldDraft.label || '').trim()
+  if (!label) {
+    setUiNotice('warning', t('请填写资料名称。', 'Enter a profile field name.'))
+    return
+  }
+
+  const draftExtensions = profileTemplateEditorExtensions.value
+  const template = profileTemplateDraftTemplate.value
+  const templateCategories = Array.isArray(template?.categories) ? template.categories : []
+  const templateFields = Array.isArray(template?.fields) ? template.fields : []
+  const saveScope = profileExtensionFieldDraft.saveScope
+  if (
+    saveScope === PROFILE_EXTENSION_SAVE_SCOPES.WORLD_TEMPLATE &&
+    (!template?.id || template.scope !== PROFILE_TEMPLATE_SCOPES.WORLD)
+  ) {
+    setUiNotice(
+      'warning',
+      t(
+        '请先选择当前世界的模板；通用模板不能在联系人里直接改写。',
+        'Choose a current-world template first; universal templates cannot be changed from Contacts.',
+      ),
+    )
+    return
+  }
+  const createsCategory =
+    !profileExtensionFieldDraft.categoryId ||
+    profileExtensionFieldDraft.categoryId === PROFILE_EXTENSION_NEW_CATEGORY_ID
+  const newCategoryLabel = String(profileExtensionFieldDraft.newCategoryLabel || '').trim()
+  if (createsCategory && !newCategoryLabel) {
+    setUiNotice('warning', t('请填写新类目名称。', 'Enter a new category name.'))
+    return
+  }
+
+  const category = createsCategory
+    ? {
+        id: createProfileExtensionCategoryId({
+          templateCategories,
+          profileExtensions: draftExtensions,
+        }),
+        label: newCategoryLabel,
+        description: '',
+        order: templateCategories.length + draftExtensions.categories.length,
+      }
+    : null
+  const categoryId = category?.id || profileExtensionFieldDraft.categoryId
+  const knownCategoryIds = new Set([
+    ...templateCategories.map((item) => item?.id),
+    ...draftExtensions.categories.map((item) => item?.id),
+  ])
+  if (!category && !knownCategoryIds.has(categoryId)) {
+    setUiNotice('warning', t('请选择有效的资料类目。', 'Choose a valid profile category.'))
+    return
+  }
+
+  const field = {
+    id: createProfileExtensionFieldId({
+      templateFields,
+      profileExtensions: draftExtensions,
+    }),
+    categoryId,
+    label,
+    description: '',
+    type: profileExtensionFieldDraft.type,
+    defaultVisibilityLevel: profileExtensionFieldDraft.visibilityLevel,
+    entityTypes: [selectedProfileEntityType.value],
+    options: [],
+    purposes: [],
+    required: false,
+    recommended: true,
+    order: templateFields.length + draftExtensions.fields.length,
+  }
+  profileTemplatePendingExtensions.push({
+    category,
+    field,
+    saveScope,
+  })
+  profileTemplateDraft.values[field.id] = String(profileExtensionFieldDraft.value || '')
+  profileTemplateDraft.visibility[field.id] = profileExtensionFieldDraft.visibilityLevel
+  resetProfileExtensionFieldDraft()
+  setUiNotice(
+    'success',
+    saveScope === PROFILE_EXTENSION_SAVE_SCOPES.WORLD_TEMPLATE
+      ? t('已加入本次编辑草稿；保存资料卡后才会生成世界模板新版本。', 'Added to this edit draft; the world template version changes only after you save the profile card.')
+      : t('已加入本次编辑草稿；保存资料卡后才会写入这个人物。', 'Added to this edit draft; it is written to this person only after you save the profile card.'),
+  )
 }
 
 const draftProfileTemplateValuesWithAI = async () => {
@@ -1312,11 +1486,15 @@ const draftProfileTemplateAdaptationWithAI = async () => {
 const saveProfileTemplateValues = () => {
   const profile = selectedProfile.value
   const template = profileTemplateDraftTemplate.value
-  if (!profile?.id || !template?.id) {
-    setUiNotice('warning', t('请先选择一个世界档案模板。', 'Choose a world profile template first.'))
+  if (!profile?.id) return
+  const fields = profileTemplateDraftFields.value
+  if (fields.length === 0) {
+    setUiNotice(
+      'warning',
+      t('当前资料卡还没有可保存的字段。', 'This profile card has no fields to save yet.'),
+    )
     return
   }
-  const fields = profileTemplateDraftFields.value
   const preservedValues = profileTemplateDraftPreservedValues.value
   const nextValues = fields
     .map((field) => {
@@ -1333,26 +1511,127 @@ const saveProfileTemplateValues = () => {
       }
     })
     .filter(Boolean)
-  const ok = chatStore.updateRoleProfile(profile.id, {
-    templateLink: {
+
+  const personEntries = profileTemplatePendingExtensions.filter(
+    (entry) => entry?.saveScope === PROFILE_EXTENSION_SAVE_SCOPES.PERSON,
+  )
+  const worldEntries = profileTemplatePendingExtensions.filter(
+    (entry) => entry?.saveScope === PROFILE_EXTENSION_SAVE_SCOPES.WORLD_TEMPLATE,
+  )
+  let savedTemplate = template
+  let previousTemplate = null
+
+  if (worldEntries.length > 0) {
+    if (!template?.id || template.scope !== PROFILE_TEMPLATE_SCOPES.WORLD) {
+      setUiNotice(
+        'warning',
+        t(
+          '本次草稿包含世界模板字段，请先选择当前世界模板。',
+          'This draft contains world-template fields. Choose a current-world template first.',
+        ),
+      )
+      return
+    }
+
+    previousTemplate = cloneProfileTemplate(template)
+    const nextCategories = Array.isArray(template.categories)
+      ? template.categories.map((category) => ({ ...category }))
+      : []
+    const nextCategoryIds = new Set(nextCategories.map((category) => category.id))
+    worldEntries.forEach((entry) => {
+      const categoryId = entry?.field?.categoryId
+      if (!categoryId || nextCategoryIds.has(categoryId)) return
+      const draftCategory = profileTemplateDraftCategories.value.find(
+        (category) => category.id === categoryId,
+      )
+      if (!draftCategory) return
+      nextCategories.push({
+        id: draftCategory.id,
+        label: draftCategory.label,
+        description: draftCategory.description || '',
+        order: nextCategories.length,
+      })
+      nextCategoryIds.add(categoryId)
+    })
+    savedTemplate = systemStore.updateWorldProfileTemplate(template.id, {
+      categories: nextCategories,
+      fields: [
+        ...(Array.isArray(template.fields) ? template.fields : []),
+        ...worldEntries.map((entry) => entry.field),
+      ],
+    })
+    if (!savedTemplate) {
+      setUiNotice('error', t('当前世界模板更新失败。', 'The current-world template failed to update.'))
+      return
+    }
+  }
+
+  const currentExtensions = selectedProfileExtensions.value
+  const savedTemplateCategoryIds = new Set(
+    Array.isArray(savedTemplate?.categories)
+      ? savedTemplate.categories.map((category) => category?.id).filter(Boolean)
+      : [],
+  )
+  const nextExtensionCategories = currentExtensions.categories
+    .filter((category) => !savedTemplateCategoryIds.has(category.id))
+    .map((category) => ({ ...category }))
+  const nextExtensionCategoryIds = new Set(
+    nextExtensionCategories.map((category) => category.id),
+  )
+  personEntries.forEach((entry) => {
+    const category = entry?.category
+    if (
+      !category?.id ||
+      savedTemplateCategoryIds.has(category.id) ||
+      nextExtensionCategoryIds.has(category.id)
+    ) {
+      return
+    }
+    nextExtensionCategories.push({ ...category })
+    nextExtensionCategoryIds.add(category.id)
+  })
+
+  const updates = {
+    profileValues: [...preservedValues, ...nextValues],
+    profileExtensions: {
+      categories: nextExtensionCategories,
+      fields: [
+        ...currentExtensions.fields,
+        ...personEntries.map((entry) => entry.field),
+      ],
+    },
+  }
+  if (savedTemplate?.id) {
+    updates.templateLink = {
       primaryWorldId:
-        template.scope === PROFILE_TEMPLATE_SCOPES.WORLD
+        savedTemplate.scope === PROFILE_TEMPLATE_SCOPES.WORLD
           ? currentContactsWorldId.value
           : '',
-      profileTemplateId: template.id,
-      profileTemplateVersion: template.version || 1,
+      profileTemplateId: savedTemplate.id,
+      profileTemplateVersion: savedTemplate.version || 1,
       supplementalKnowledgePointIds: profile.templateLink?.supplementalKnowledgePointIds || [],
-    },
-    profileValues: [...preservedValues, ...nextValues],
-  })
+    }
+  }
+  const ok = chatStore.updateRoleProfile(profile.id, updates)
   if (!ok) {
-    setUiNotice('error', t('世界字段保存失败。', 'World fields failed to save.'))
+    if (previousTemplate) systemStore.upsertProfileTemplate(previousTemplate)
+    setUiNotice('error', t('人物资料保存失败。', 'Profile card failed to save.'))
     return
   }
   isProfileTemplateEditorOpen.value = false
+  clearProfileTemplatePendingExtensions()
+  resetProfileExtensionFieldDraft()
   profileTemplateAiDraftStatus.value = ''
   profileTemplateAdaptationStatus.value = ''
-  setUiNotice('success', t('世界字段已保存到角色档案。', 'World fields saved to the role profile.'))
+  setUiNotice(
+    'success',
+    worldEntries.length > 0
+      ? t(
+          `人物资料已保存，当前世界模板已更新为 v${savedTemplate.version}。`,
+          `Profile card saved and the current-world template is now v${savedTemplate.version}.`,
+        )
+      : t('人物资料已保存。', 'Profile card saved.'),
+  )
 }
 
 const openWorldBookProfileTemplates = () => {
@@ -2031,8 +2310,8 @@ const selectedProfileStatusChips = computed(() => {
     {
       key: 'world',
       label: t(
-        `世界字段 ${selectedRoleHubStats.value.worldFieldCount}`,
-        `${selectedRoleHubStats.value.worldFieldCount} world fields`,
+        `人物资料 ${selectedRoleHubStats.value.worldFieldCount} 项`,
+        `${selectedRoleHubStats.value.worldFieldCount} profile details`,
       ),
     },
   ].filter((chip) => chip.label)
@@ -2073,7 +2352,7 @@ const contactListStatusHint = (profile = {}) => {
   if (profile.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE) {
     const worldFieldCount = contactWorldFieldCount(profile)
     return worldFieldCount > 0
-      ? t(`世界字段 ${worldFieldCount} 项`, `${worldFieldCount} world field(s)`)
+      ? t(`人物资料 ${worldFieldCount} 项`, `${worldFieldCount} profile detail(s)`)
       : t('世界中的用户档案', 'Your profile in this world')
   }
   const walletSummary = walletStore.summarizeCounterpartyLedger(profile?.name || '')
@@ -2081,7 +2360,7 @@ const contactListStatusHint = (profile = {}) => {
   const snapshot = profileRelationshipSnapshot(profile)
   if (snapshot?.totalMemoryCount > 0) return profileRelationshipLatestSummary(profile)
   const worldFieldCount = contactWorldFieldCount(profile)
-  if (worldFieldCount > 0) return t(`世界字段 ${worldFieldCount} 项`, `${worldFieldCount} world field(s)`)
+  if (worldFieldCount > 0) return t(`人物资料 ${worldFieldCount} 项`, `${worldFieldCount} profile detail(s)`)
   if (contactIsChatBound(profile)) return t('已进入 Chat', 'Chat target')
   const knowledgeSummary = profileKnowledgeSummary(profile)
   return knowledgeSummary || t('仅在通讯录', 'Contacts only')
@@ -3060,7 +3339,7 @@ onBeforeUnmount(() => {
             data-testid="contacts-open-world-fields-sheet"
             @click="openWorldFieldsSheet"
           >
-            <p class="contacts-role-hub-label">{{ t('世界字段', 'World fields') }}</p>
+            <p class="contacts-role-hub-label">{{ t('人物资料', 'Profile card') }}</p>
             <p class="contacts-role-hub-value">{{ selectedRoleHubStats.worldFieldCount }}</p>
             <p class="contacts-role-hub-detail">{{ selectedWorldFieldPreviewText }}</p>
           </button>
@@ -3516,20 +3795,21 @@ onBeforeUnmount(() => {
             <div class="flex items-start justify-between gap-3">
               <div>
                 <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  {{ t('世界字段', 'World profile fields') }}
+                  {{ t('人物资料', 'Profile card') }}
                 </p>
-                <h3 class="font-semibold">{{ t('扩展设定', 'Extended settings') }}</h3>
+                <h3 class="font-semibold">{{ t('世界资料卡', 'World profile') }}</h3>
                 <p class="mt-1 text-[11px] leading-4 text-gray-500">
                   {{ selectedWorldFieldIntroText }}
                 </p>
               </div>
               <button
+                v-if="!isProfileTemplateEditorOpen"
                 type="button"
                 class="contacts-small-action"
                 data-testid="contacts-edit-world-profile-fields"
                 @click="openProfileTemplateEditor"
               >
-                {{ t('编辑世界字段', 'Edit fields') }}
+                {{ t('编辑资料卡', 'Edit profile card') }}
               </button>
             </div>
 
@@ -3578,28 +3858,68 @@ onBeforeUnmount(() => {
               </p>
             </div>
 
-            <div v-if="selectedProfileWorldFieldRows.length > 0" class="contacts-world-field-list">
-              <div
-                v-for="row in selectedProfileWorldFieldRows"
-                :key="row.key"
-                class="contacts-detail-item"
-                :data-testid="`contacts-world-field-${row.key}`"
+            <div
+              v-if="!isProfileTemplateEditorOpen && selectedProfileWorldFieldGroups.length > 0"
+              class="contacts-world-field-categories"
+              data-testid="contacts-world-profile-category-list"
+            >
+              <section
+                v-for="group in selectedProfileWorldFieldGroups"
+                :key="group.key"
+                class="contacts-world-field-category"
+                :class="group.isCustom ? 'contacts-world-field-category--custom' : ''"
+                :data-testid="`contacts-world-field-category-${group.key}`"
               >
-                <div>
-                  <p class="font-medium">{{ row.title }}</p>
-                  <p v-if="row.displayValue" class="text-sm text-gray-600">{{ row.displayValue }}</p>
-                  <p v-else class="text-sm text-gray-400">{{ t('未填写', 'Not filled') }}</p>
-                  <p v-if="row.description" class="mt-1 text-[11px] leading-4 text-gray-500">
-                    {{ row.description }}
-                  </p>
+                <header class="contacts-world-field-category__head">
+                  <div>
+                    <h4>{{ group.label }}</h4>
+                    <p v-if="group.description">{{ group.description }}</p>
+                  </div>
+                  <span v-if="group.isCustom" class="contacts-source-chip contacts-source-chip-custom">
+                    {{ t('保留资料', 'Preserved') }}
+                  </span>
+                  <span
+                    v-else-if="group.isPersonExtension"
+                    class="contacts-source-chip contacts-source-chip-custom"
+                  >
+                    {{ t('人物专属', 'Person only') }}
+                  </span>
+                </header>
+                <div v-if="group.filledRows.length > 0" class="contacts-world-field-list">
+                  <div
+                    v-for="row in group.filledRows"
+                    :key="row.key"
+                    class="contacts-detail-item"
+                    :data-testid="`contacts-world-field-${row.key}`"
+                  >
+                    <div>
+                      <p class="font-medium">{{ row.title }}</p>
+                      <p class="text-sm text-gray-600">{{ row.displayValue }}</p>
+                      <p v-if="row.description" class="mt-1 text-[11px] leading-4 text-gray-500">
+                        {{ row.description }}
+                      </p>
+                    </div>
+                    <span
+                      class="contacts-source-chip"
+                      :class="row.isTemplateField ? '' : 'contacts-source-chip-custom'"
+                    >
+                      {{ row.badgeLabel }}
+                    </span>
+                  </div>
                 </div>
-                <span class="contacts-source-chip" :class="row.isTemplateField ? '' : 'contacts-source-chip-custom'">
-                  {{ row.badgeLabel }}
-                </span>
-              </div>
+                <p v-else class="contacts-world-field-category__empty">{{ group.emptyText }}</p>
+                <p
+                  v-if="group.promptText"
+                  class="contacts-world-field-category__prompt"
+                  :data-testid="`contacts-world-field-category-prompt-${group.key}`"
+                >
+                  <i class="fas fa-lightbulb" aria-hidden="true"></i>
+                  <span>{{ group.promptText }}</span>
+                </p>
+              </section>
             </div>
-            <p v-else class="contacts-empty-detail">
-              {{ t('还没有填写世界字段。', 'No world profile fields filled yet.') }}
+            <p v-else-if="!isProfileTemplateEditorOpen" class="contacts-empty-detail">
+              {{ t('还没有选择或填写人物资料卡。点击“编辑资料卡”开始。', 'No profile card has been selected or filled yet. Choose Edit profile card to begin.') }}
             </p>
 
             <div
@@ -3619,7 +3939,12 @@ onBeforeUnmount(() => {
                     }}
                   </span>
                 </div>
-                <button type="button" class="contacts-small-action" @click="cancelProfileTemplateEditor">
+                <button
+                  type="button"
+                  class="contacts-small-action"
+                  data-testid="contacts-cancel-world-profile-fields"
+                  @click="cancelProfileTemplateEditor"
+                >
                   {{ t('取消', 'Cancel') }}
                 </button>
               </div>
@@ -3685,81 +4010,309 @@ onBeforeUnmount(() => {
                 </button>
               </div>
 
-              <div v-else-if="profileTemplateDraftFieldRows.length > 0" class="contacts-world-field-form">
-                <label
-                  v-for="field in profileTemplateDraftFieldRows"
-                  :key="field.id"
-                  class="contacts-world-field-control"
-                  :class="`contacts-world-field-control--${field.type}`"
-                  :data-testid="`contacts-profile-template-field-${field.id}`"
+              <div v-else-if="profileTemplateDraftFieldGroups.length > 0" class="contacts-world-field-form">
+                <section
+                  v-for="group in profileTemplateDraftFieldGroups"
+                  :key="group.key"
+                  class="contacts-world-field-category contacts-world-field-category--editor"
+                  :data-testid="`contacts-profile-template-category-${group.key}`"
                 >
-                  <span class="contacts-world-field-control__head">
-                    <span class="contacts-world-field-control__label">
-                      <i :class="field.iconClass" aria-hidden="true"></i>
-                      <span>{{ field.label }}</span>
-                      <small v-if="field.required">{{ t('必填', 'Required') }}</small>
+                  <header class="contacts-world-field-category__head">
+                    <div>
+                      <h4>{{ group.label }}</h4>
+                      <p v-if="group.description">{{ group.description }}</p>
+                    </div>
+                    <span
+                      v-if="group.isPersonExtension"
+                      class="contacts-source-chip contacts-source-chip-custom"
+                    >
+                      {{ t('人物专属', 'Person only') }}
                     </span>
-                    <strong class="contacts-world-field-type-chip">{{ field.typeLabel }}</strong>
-                  </span>
-                  <p
-                    class="contacts-world-field-control__helper"
-                    :data-testid="`contacts-profile-template-helper-${field.id}`"
-                  >
-                    {{ field.helper }}
-                  </p>
-                  <select
-                    v-if="field.controlKind === 'select'"
-                    v-model="profileTemplateDraft.values[field.id]"
-                    :data-testid="`contacts-profile-template-value-${field.id}`"
-                  >
-                    <option value="">{{ t('未填写', 'Not filled') }}</option>
-                    <option v-for="option in field.options" :key="option" :value="option">
-                      {{ option }}
-                    </option>
-                  </select>
-                  <textarea
-                    v-else-if="field.controlKind === 'textarea'"
-                    v-model="profileTemplateDraft.values[field.id]"
-                    :data-testid="`contacts-profile-template-value-${field.id}`"
-                    :placeholder="field.placeholder"
-                    rows="3"
-                  ></textarea>
-                  <input
-                    v-else
-                    v-model="profileTemplateDraft.values[field.id]"
-                    :data-testid="`contacts-profile-template-value-${field.id}`"
-                    :placeholder="field.placeholder"
-                  />
-                  <div
-                    v-if="field.hasTagPreview"
-                    class="contacts-world-field-tag-preview"
-                    :data-testid="`contacts-profile-template-tag-preview-${field.id}`"
-                  >
-                    <span v-for="tag in field.tagPreview" :key="`${field.id}-${tag}`">
-                      {{ tag }}
-                    </span>
-                    <em v-if="field.tagPreview.length === 0">
-                      {{ tagPreviewEmptyText }}
-                    </em>
+                  </header>
+                  <div class="contacts-world-field-category__fields">
+                    <label
+                      v-for="field in group.fields"
+                      :key="field.id"
+                      class="contacts-world-field-control"
+                      :class="`contacts-world-field-control--${field.type}`"
+                      :data-testid="`contacts-profile-template-field-${field.id}`"
+                    >
+                      <span class="contacts-world-field-control__head">
+                        <span class="contacts-world-field-control__label">
+                          <i :class="field.iconClass" aria-hidden="true"></i>
+                           <span>{{ field.label }}</span>
+                           <small v-if="field.required">{{ t('必填', 'Required') }}</small>
+                           <small v-else-if="field.isPersonExtension">{{ t('人物专属', 'Person only') }}</small>
+                        </span>
+                        <strong class="contacts-world-field-type-chip">{{ field.typeLabel }}</strong>
+                      </span>
+                      <p
+                        class="contacts-world-field-control__helper"
+                        :data-testid="`contacts-profile-template-helper-${field.id}`"
+                      >
+                        {{ field.helper }}
+                      </p>
+                      <select
+                        v-if="field.controlKind === 'select'"
+                        v-model="profileTemplateDraft.values[field.id]"
+                        :data-testid="`contacts-profile-template-value-${field.id}`"
+                      >
+                        <option value="">{{ t('未填写', 'Not filled') }}</option>
+                        <option
+                          v-for="option in field.controlOptions"
+                          :key="`${field.id}-${option.value}`"
+                          :value="option.value"
+                        >
+                          {{ option.label }}
+                        </option>
+                      </select>
+                      <textarea
+                        v-else-if="field.controlKind === 'textarea'"
+                        v-model="profileTemplateDraft.values[field.id]"
+                        :data-testid="`contacts-profile-template-value-${field.id}`"
+                        :placeholder="field.placeholder"
+                        rows="3"
+                      ></textarea>
+                      <input
+                        v-else
+                        v-model="profileTemplateDraft.values[field.id]"
+                        :type="field.inputType"
+                        :data-testid="`contacts-profile-template-value-${field.id}`"
+                        :placeholder="field.placeholder"
+                      />
+                      <div
+                        v-if="field.hasTagPreview"
+                        class="contacts-world-field-tag-preview"
+                        :data-testid="`contacts-profile-template-tag-preview-${field.id}`"
+                      >
+                        <span v-for="tag in field.tagPreview" :key="`${field.id}-${tag}`">
+                          {{ tag }}
+                        </span>
+                        <em v-if="field.tagPreview.length === 0">
+                          {{ tagPreviewEmptyText }}
+                        </em>
+                      </div>
+                      <select
+                        v-model="profileTemplateDraft.visibility[field.id]"
+                        :data-testid="`contacts-profile-template-visibility-${field.id}`"
+                      >
+                        <option
+                          v-for="option in profileTemplateVisibilityOptions"
+                          :key="`${field.id}-${option.value}`"
+                          :value="option.value"
+                        >
+                          {{ option.label }}
+                        </option>
+                      </select>
+                      <em v-if="field.description">{{ field.description }}</em>
+                    </label>
                   </div>
+                </section>
+              </div>
+              <p
+                v-else-if="profileTemplateDraft.templateId && !isProfileExtensionFieldComposerOpen"
+                class="contacts-empty-detail"
+              >
+                {{ emptyTemplateFieldText }}
+              </p>
+
+              <div class="flex flex-wrap items-center gap-2">
+                <button
+                  v-if="!isProfileExtensionFieldComposerOpen"
+                  type="button"
+                  class="contacts-small-action"
+                  data-testid="contacts-add-person-profile-field"
+                  @click="openProfileExtensionFieldComposer"
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                  {{ t('添加资料', 'Add profile detail') }}
+                </button>
+                <span class="text-[11px] leading-4 text-gray-500">
+                  {{ t('可以只给当前人物，也可以主动加入当前世界模板。', 'Keep it person-only or explicitly add it to the current-world template.') }}
+                </span>
+              </div>
+
+              <section
+                v-if="isProfileExtensionFieldComposerOpen"
+                class="contacts-world-field-category contacts-world-field-category--editor space-y-3"
+                data-testid="contacts-profile-extension-composer"
+              >
+                <header class="contacts-world-field-category__head">
+                  <div>
+                    <h4>{{ t('新增资料字段', 'Add profile field') }}</h4>
+                    <p>{{ t('这仍然属于同一张人物资料卡，不会建立另一套备注。', 'This stays in the same profile card and does not create a second notes system.') }}</p>
+                  </div>
+                  <button
+                    type="button"
+                    class="contacts-small-action"
+                    data-testid="contacts-cancel-profile-extension"
+                    @click="resetProfileExtensionFieldDraft"
+                  >
+                    {{ t('取消新增', 'Cancel addition') }}
+                  </button>
+                </header>
+
+                <label class="contacts-world-field-control">
+                  <span class="contacts-world-field-control__head">
+                    <span class="contacts-world-field-control__label">{{ t('放在哪个类目', 'Category') }}</span>
+                  </span>
                   <select
-                    v-model="profileTemplateDraft.visibility[field.id]"
-                    :data-testid="`contacts-profile-template-visibility-${field.id}`"
+                    v-model="profileExtensionFieldDraft.categoryId"
+                    data-testid="contacts-profile-extension-category"
                   >
                     <option
-                      v-for="option in profileTemplateVisibilityOptions"
-                      :key="`${field.id}-${option.value}`"
+                      v-for="category in profileTemplateDraftCategories"
+                      :key="`extension-category-${category.id}`"
+                      :value="category.id"
+                    >
+                      {{ category.label }}{{ category.isPersonExtension ? t(' · 人物专属', ' · Person only') : '' }}
+                    </option>
+                    <option :value="PROFILE_EXTENSION_NEW_CATEGORY_ID">
+                      {{ t('新建类目…', 'Create a category…') }}
+                    </option>
+                  </select>
+                </label>
+
+                <label
+                  v-if="profileExtensionFieldDraft.categoryId === PROFILE_EXTENSION_NEW_CATEGORY_ID"
+                  class="contacts-world-field-control"
+                >
+                  <span class="contacts-world-field-control__head">
+                    <span class="contacts-world-field-control__label">{{ t('新类目名称', 'New category name') }}</span>
+                  </span>
+                  <input
+                    v-model="profileExtensionFieldDraft.newCategoryLabel"
+                    type="text"
+                    data-testid="contacts-profile-extension-new-category-label"
+                    :placeholder="t('例如：称呼与相处', 'For example: Names and interaction')"
+                  />
+                </label>
+
+                <label class="contacts-world-field-control">
+                  <span class="contacts-world-field-control__head">
+                    <span class="contacts-world-field-control__label">{{ t('资料名称', 'Field name') }}</span>
+                  </span>
+                  <input
+                    v-model="profileExtensionFieldDraft.label"
+                    type="text"
+                    data-testid="contacts-profile-extension-label"
+                    :placeholder="t('例如：不喜欢的称呼', 'For example: Disliked form of address')"
+                  />
+                </label>
+
+                <label class="contacts-world-field-control">
+                  <span class="contacts-world-field-control__head">
+                    <span class="contacts-world-field-control__label">{{ t('填写方式', 'Field type') }}</span>
+                  </span>
+                  <select
+                    v-model="profileExtensionFieldDraft.type"
+                    data-testid="contacts-profile-extension-type"
+                  >
+                    <option
+                      v-for="option in profileExtensionFieldTypeOptions"
+                      :key="option.value"
                       :value="option.value"
                     >
                       {{ option.label }}
                     </option>
                   </select>
-                  <em v-if="field.description">{{ field.description }}</em>
                 </label>
-              </div>
-              <p v-else-if="profileTemplateDraft.templateId" class="contacts-empty-detail">
-                {{ emptyTemplateFieldText }}
-              </p>
+
+                <label class="contacts-world-field-control">
+                  <span class="contacts-world-field-control__head">
+                    <span class="contacts-world-field-control__label">{{ t('当前人物的内容', 'Value for this person') }}</span>
+                  </span>
+                  <select
+                    v-if="profileExtensionFieldDraft.type === PROFILE_TEMPLATE_FIELD_TYPES.BOOLEAN"
+                    v-model="profileExtensionFieldDraft.value"
+                    data-testid="contacts-profile-extension-value"
+                  >
+                    <option value="">{{ t('暂不填写', 'Leave empty') }}</option>
+                    <option value="true">{{ t('是', 'Yes') }}</option>
+                    <option value="false">{{ t('否', 'No') }}</option>
+                  </select>
+                  <textarea
+                    v-else-if="profileExtensionFieldDraft.type === PROFILE_TEMPLATE_FIELD_TYPES.LONG_TEXT"
+                    v-model="profileExtensionFieldDraft.value"
+                    rows="3"
+                    data-testid="contacts-profile-extension-value"
+                  ></textarea>
+                  <input
+                    v-else
+                    v-model="profileExtensionFieldDraft.value"
+                    :type="profileExtensionFieldDraft.type === PROFILE_TEMPLATE_FIELD_TYPES.DATE ? 'date' : 'text'"
+                    data-testid="contacts-profile-extension-value"
+                    :placeholder="profileExtensionFieldDraft.type === PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS ? t('用逗号分隔多个标签', 'Separate tags with commas') : t('可以暂时留空', 'You can leave this empty')"
+                  />
+                </label>
+
+                <label class="contacts-world-field-control">
+                  <span class="contacts-world-field-control__head">
+                    <span class="contacts-world-field-control__label">{{ t('可见范围', 'Visibility') }}</span>
+                  </span>
+                  <select
+                    v-model="profileExtensionFieldDraft.visibilityLevel"
+                    data-testid="contacts-profile-extension-visibility"
+                  >
+                    <option
+                      v-for="option in profileTemplateVisibilityOptions"
+                      :key="`extension-visibility-${option.value}`"
+                      :value="option.value"
+                    >
+                      {{ option.label }}
+                    </option>
+                  </select>
+                </label>
+
+                <fieldset class="space-y-2" data-testid="contacts-profile-extension-save-scope">
+                  <legend class="text-sm font-medium">{{ t('保存到哪里', 'Save scope') }}</legend>
+                  <label class="flex cursor-pointer items-start gap-2 rounded-xl border border-gray-200 p-3">
+                    <input
+                      v-model="profileExtensionFieldDraft.saveScope"
+                      type="radio"
+                      :value="PROFILE_EXTENSION_SAVE_SCOPES.PERSON"
+                      data-testid="contacts-profile-extension-scope-person"
+                    />
+                    <span>
+                      <strong class="block text-sm">{{ t('只给这个人物', 'Only this person') }}</strong>
+                      <small class="text-[11px] leading-4 text-gray-500">{{ t('不会出现在其他人物的资料卡中。', 'It will not appear on other profiles.') }}</small>
+                    </span>
+                  </label>
+                  <label
+                    class="flex items-start gap-2 rounded-xl border border-gray-200 p-3"
+                    :class="canSaveProfileExtensionToWorldTemplate ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'"
+                  >
+                    <input
+                      v-model="profileExtensionFieldDraft.saveScope"
+                      type="radio"
+                      :value="PROFILE_EXTENSION_SAVE_SCOPES.WORLD_TEMPLATE"
+                      :disabled="!canSaveProfileExtensionToWorldTemplate"
+                      data-testid="contacts-profile-extension-scope-world"
+                    />
+                    <span>
+                      <strong class="block text-sm">{{ t('加入当前世界模板', 'Add to current-world template') }}</strong>
+                      <small class="text-[11px] leading-4 text-gray-500">
+                        {{
+                          canSaveProfileExtensionToWorldTemplate
+                            ? t('会生成模板新版本；其他人物仍通过模板复核接收。', 'Creates a new template version; other profiles still receive it through template review.')
+                            : t('需要先选择一个当前世界模板。', 'Choose a current-world template first.')
+                        }}
+                      </small>
+                    </span>
+                  </label>
+                </fieldset>
+
+                <div class="flex justify-end">
+                  <button
+                    type="button"
+                    class="contacts-primary-action"
+                    data-testid="contacts-save-profile-extension"
+                    @click="saveProfileExtensionField"
+                  >
+                    {{ t('保存新增资料', 'Save new profile detail') }}
+                  </button>
+                </div>
+              </section>
 
               <div class="contacts-world-field-editor__actions">
                 <button
@@ -3777,7 +4330,7 @@ onBeforeUnmount(() => {
                   }}
                 </button>
                 <button type="button" class="contacts-primary-action" data-testid="contacts-save-world-profile-fields" @click="saveProfileTemplateValues">
-                  {{ t('保存世界字段', 'Save world fields') }}
+                  {{ t('保存人物资料', 'Save profile card') }}
                 </button>
               </div>
               <p
@@ -5208,6 +5761,79 @@ onBeforeUnmount(() => {
   gap: 9px;
 }
 
+.contacts-world-field-categories,
+.contacts-world-field-category__fields {
+  display: grid;
+  gap: 9px;
+}
+
+.contacts-world-field-category {
+  min-width: 0;
+  border: 1px solid rgba(66, 111, 143, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.66);
+  padding: 11px;
+}
+
+.contacts-world-field-category--custom {
+  border-style: dashed;
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.contacts-world-field-category--editor {
+  background: rgba(232, 242, 245, 0.36);
+}
+
+.contacts-world-field-category__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  margin-bottom: 9px;
+}
+
+.contacts-world-field-category__head h4,
+.contacts-world-field-category__head p,
+.contacts-world-field-category__empty,
+.contacts-world-field-category__prompt {
+  margin: 0;
+}
+
+.contacts-world-field-category__head h4 {
+  color: var(--contacts-text);
+  font-size: 13px;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.contacts-world-field-category__head p,
+.contacts-world-field-category__empty {
+  margin-top: 3px;
+  color: var(--contacts-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.contacts-world-field-category__prompt {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: 9px;
+  border-radius: 11px;
+  background: rgba(191, 115, 84, 0.1);
+  color: #7f4b38;
+  padding: 8px 9px;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.contacts-world-field-category__prompt i {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
 .contacts-world-field-editor {
   border: 1px solid rgba(66, 111, 143, 0.16);
   border-radius: 14px;
@@ -6063,7 +6689,8 @@ onBeforeUnmount(() => {
 
   .contacts-world-profile-fields > .flex,
   .contacts-world-field-editor__head,
-  .contacts-world-field-editor__actions {
+  .contacts-world-field-editor__actions,
+  .contacts-world-field-category__head {
     align-items: stretch;
     flex-direction: column;
   }

@@ -9,6 +9,7 @@ const defaultT = (zh, en) => en || zh
 
 export const contactsEntityTypeLabel = (entityType, t = defaultT) => {
   if (entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE) return t('自我档案', 'Self Profile')
+  if (entityType === CONTACTS_ENTITY_TYPES.SUPPORTING_ROLE) return t('次要角色', 'Supporting Role')
   if (entityType === CONTACTS_ENTITY_TYPES.NPC) return t('NPC / 世界角色', 'NPC / World Role')
   return t('主要角色', 'Main Role')
 }

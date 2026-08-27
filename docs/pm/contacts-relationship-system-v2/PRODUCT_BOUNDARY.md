@@ -1,6 +1,6 @@
 # Contacts Relationship Product Boundary / 通讯录关系语义边界
 
-Updated: 2026-08-15
+Updated: 2026-08-27
 
 This document explains the current product meaning of each related module in plain language, so future engineers and AI assistants do not let the same field mean two different things.
 
@@ -18,7 +18,7 @@ The system can mirror or consume data across modules, but the product meaning mu
 
 | Module / 模块 | What it means to the user / 对用户的意思 | What it owns / 它拥有的语义 | What it must not own / 它不该拥有的语义 |
 | --- | --- | --- | --- |
-| `Contacts / 通讯录` | 人物档案库与角色中心 | global role archive, visible role ID, role detail fields, memory review and memory-care presentation, destructive relationship actions | chat-thread ownership, relationship-memory or pressure-projection truth, provider/service transport logic |
+| `Contacts / 通讯录` | 人物档案库、用户世界身份与角色中心 | global role archive; Self Profile/Main Role/Supporting Role/World NPC identity and lifecycle; visible role ID, concrete profile values, profile revisions, role detail fields, memory review and memory-care presentation, destructive relationship actions | chat-thread ownership, relationship-memory or pressure-projection truth, organization work records, event progression, provider/service transport logic |
 | `Chat Directory / 会话通讯录` | 谁能进入聊天、哪些是服务号 | chat-side role binding, service-account entries, open/unbind/delete chat target | current affinity/stage truth, role-centered destructive relationship management |
 | `Chat / 聊天` | 对话发生的地方 | conversations, messages, message deletion, thread prefs, prompt assembly | global role archive, relationship truth ownership |
 | `Relationship Runtime / 关系运行时` | 关系进度和共同记忆的后台真相层 | affinity, trust, intimacy, tension, dependency, relationship stage, milestones, growth traits, memory groups, read-only per-role memory-pressure projection | visible role editing UI, general chat message ownership |
@@ -46,6 +46,10 @@ Owns:
 - plain-language presentation of Relationship Runtime's read-only memory-care state and suggested existing memories
 - role delete and relationship reset entry
 - stable Self Profile identity and visibility-scoped world values that may later be projected read-only for event eligibility
+- user-confirmed persona materialized as structured Self Profile values and a new profile revision
+- stable Main Role/Supporting Role/World NPC identity, capability, template-link, archive, and lifecycle state
+- person-specific profile-card categories and fields stored as `profileExtensions` inside the same Contacts-owned role profile and backup envelope
+- purpose-specific identity projection policy, while consumer-specific records remain owned by their consumer Modules
 
 Must not own:
 
@@ -62,7 +66,36 @@ Must not own:
 
 Self Profile now supplies one bounded, structured, revision-aware Player Context V1 projection containing only the K-pop allowlisted occupation, affiliation, public identity mode, and exact world/template references. Only manual `public` or matching-world `world_specific` template values qualify; the projection is read-only and body-free.
 
-Contacts remains the identity owner, not the event judge. Free-text biography or role prose cannot independently authorize an event, and Runtime must fail closed on stale/missing/mismatched references. Dynamic values remain with their natural owners or a separately justified minimal Player State owner. The full direction is `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md`.
+Contacts remains the identity owner, not the event judge. The user's persona is an accepted identity source, but source and canonical value are not the same thing:
+
+1. structured manual fields may become canonical through an explicit user save;
+2. user-authored free text may produce a structured candidate;
+3. AI may draft the same candidate through an optional Adapter;
+4. neither candidate becomes identity until the user reviews and confirms it;
+5. confirmation writes structured Contacts-owned values and increments the Self Profile revision;
+6. Runtime reads the saved projection and exact revision rather than the original prose or model output.
+
+Therefore unconfirmed biography, role prose, or model classification cannot independently authorize an event. A user-confirmed persona may establish canonical identity after materialization into structured fields. Runtime must still fail closed on stale, missing, or mismatched profile/world/template references. Dynamic values remain with their natural owners or a separately justified minimal Player State Module. The full direction is `CONTACTS_V3_IDENTITY_AND_ROLE_CORE_PLAN.md` and `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md`.
+
+### 3.2 Person Depth And Relationship Labels
+
+Contacts uses person depth to decide how deeply a non-self person participates:
+
+- Main Role: core continuity and full relationship/route capability by default;
+- Supporting Role: recurring supporting continuity, Chat/event participation, and lightweight memory without full progression by default;
+- World NPC: lightweight world or functional identity, referenced without automatically entering primary Contacts, Chat, or relationship surfaces.
+
+The stored `npc` value remains the compatibility value for World NPC. Supporting Role is a formal `supporting_role` type, not a display-only tag. Existing NPCs are not automatically reclassified.
+
+Relationship labels such as family, friend, colleague, manager, rival, and enemy are separate multi-select context. They do not change the person type, create a Chat binding, grant full relationship progression, or establish organization authority.
+
+Upgrading `World NPC -> Supporting Role -> Main Role`, including an explicit direct World NPC -> Main Role upgrade, must preserve the same profile/role IDs, profile values, Chat binding/history, relationship references, world/organization references, event lineage, archive state, and backup compatibility.
+
+Profile-template fields are normal Contacts information first. Date, yes/no, and organization references join the original text/select/tag/person-reference types. `chat_context`, `event_eligibility`, `work_hub_matching`, and `public_content` are additive read-purpose markers, not permissions or outcomes. Old fields gain no markers automatically; consumers must still enforce entity type, visibility, world, template version, and their own authority checks. Self Profile organization references may help select a user Work Hub but cannot grant workspace access. Non-self organization references may express confirmed character setting without requiring the character to register through Work Hub.
+
+WorldBook owns the reusable profile-card structure and provides the manual category/field editor. Contacts owns each person's concrete values and now renders that confirmed structure inside the existing person page: reading shows saved values and natural-language prompts by category, while explicit editing shows the full applicable form. Old flat templates fall back to a default category and out-of-template values remain custom details. Renaming or moving a category/field does not change its stable ID; saving a template revision must not silently delete or overwrite existing person values. A form field's visibility or purpose marker does not transfer Contacts ownership to Chat, Event Runtime, Work Hub, or a public-content surface.
+
+Person-specific structure is not a second notes system. Contacts merges `profileExtensions` with the selected world template for display and editing while preserving their separate ownership on save. A person-only category or field cannot appear on another person. Adding the structure to the current world template requires an explicit choice and one confirmed template-version write; it does not auto-fill other people, and cancellation must leave both the person and template unchanged.
 
 ## 4. Chat Directory / 会话通讯录
 
@@ -222,3 +255,5 @@ If any of these happens, treat it as a product-semantic bug:
 11. Contacts turns friend/block/refusal social snapshots into event decisions or relationship metrics.
 12. Contacts becomes the Store for volatile player/world state merely because the values describe the user.
 13. a future forum/social/news post or model classification is treated as canonical Self Profile identity or owner-confirmed world truth.
+14. unconfirmed persona text or an AI draft silently creates occupation, affiliation, organization membership, permission, Work Hub mode, or event eligibility.
+15. Chat, Event Runtime, Work Hub, and future public surfaces each rebuild visibility, capability, world, template, and revision rules from the complete Contacts profile instead of consuming a bounded projection.

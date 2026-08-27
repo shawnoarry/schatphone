@@ -8,7 +8,7 @@ Supersession: this file preserves the 2026-08-24 `NEXT / 机会`-first career pl
 
 ## 1. Accepted Product Boundary
 
-- `Work Hub / 工作台` owns work **inside an organization**: affiliation, team, channels, tasks, reporting, schedule proposals, approval requests, and credential/authorization projections.
+- `Work Hub / 工作台` owns the user's work **inside an organization**: the user's active membership/workspace, channels, tasks, reporting, schedule proposals, approval requests, and credential/authorization projections. It is not an enrollment App that every Main Role or NPC must personally use.
 - `NEXT / 机会` owns work **outside the current organization**: public jobs, external auditions, casting, headhunting, and cross-organization invitations.
 - Calendar owns confirmed time commitments. Agenda Journey owns today/near-term execution. Map owns place, route, departure, arrival, and place-session truth. Activity Session owns the timed activity itself.
 - `生活志 / Chronicle` will later project personal continuity from confirmed owner facts; it does not become a second schedule, event, work, Wallet, or relationship owner.
@@ -18,13 +18,23 @@ Internal recording, music-show, radio, performance, rehearsal, class, assignment
 
 ## 2. Accepted Production Order
 
-1. Correct and deepen Work Hub so its organization boundary, records, states, and actions are unambiguous.
-2. Establish one ordinary non-event organization work loop.
-3. Build the first Work Hub-native career event on top of that ordinary loop.
-4. Build `生活志 / Chronicle` after the event chain produces meaningful canonical facts worth reviewing.
-5. Add Messages/SMS only when a concrete number/short-code scenario proves the missing product need.
+1. Complete the Contacts V3 extensible profile card, persona confirmation, and bounded Event/Work Hub identity projections from `CONTACTS_V3_2A_EXECUTION_PLAN.md`.
+2. Correct and deepen Work Hub so its organization boundary, records, states, and actions are unambiguous.
+3. Establish one ordinary non-event organization work loop.
+4. Build the first Work Hub-native career event on top of that ordinary loop.
+5. Build `生活志 / Chronicle` after the event chain produces meaningful canonical facts worth reviewing.
+6. Add Messages/SMS only when a concrete number/short-code scenario proves the missing product need.
 
 This order does not declare any implementation complete or authorize a new production Store by itself.
+
+Live dependency queue:
+
+1. `EVENT-PREP-1`: after Contacts `CARD-2`, align `occupation`, `affiliation`, and `public_identity` with the new field-purpose rules; documentation/tests only, no event creation.
+2. `EVENT-PROJECTION-1`: after Contacts `PERSONA-2`, implement the bounded confirmed-identity projection while preserving stale/missing/cross-world fail-closed behavior.
+3. `EVT-WORK-1` through `EVT-WORK-4`: begin only after the Work Hub identity projection is accepted.
+4. `EVT-CHRONICLE-1`: begin only after the owner-confirmed Work Hub/Calendar/Agenda/Map chain exists.
+
+Event Runtime must not create a parallel identity form while Contacts work is active.
 
 ## 3. Required Foundation Before The Event
 
@@ -38,7 +48,7 @@ The production Work Hub owner must provide at least:
 - stale, deleted, revoked, duplicate, cross-world, cross-profile, and revision-conflict behavior;
 - migration, backup/restore, write-failure rollback, and stable-ID dedupe.
 
-Self Profile prose, an App display name, a local organization alias, fixture membership, coordinates, or model inference cannot grant affiliation or authority. The same authority model must support artist, manager, assistant, producer, employee, student, and teacher templates without hard-coding UI text as permission.
+Self Profile prose, an App display name, a local organization alias, fixture membership, coordinates, or model inference cannot grant the user's affiliation authority. A confirmed Main Role or NPC may already have stable Contacts-owned affiliation and position as character identity and does not need to apply through Work Hub. When such a role issues an official organization record, the organization owner validates its stable role reference and issuer relation. The same user authority model must support artist, manager, assistant, producer, employee, student, and teacher templates without hard-coding UI text as permission.
 
 ### 3.2 Ordinary non-event organization loop
 
@@ -116,6 +126,7 @@ If an external opportunity succeeds and affiliation is formally created, subsequ
 
 - define canonical organization, membership, role, team, channel, work-record, proposal, and receipt contracts;
 - reconcile the current S1 fixture/local-preview state without silently upgrading it to authority;
+- keep user membership/authority confirmation separate from Main Role/NPC character affiliation; organization rosters and issuers reference existing Contacts profile IDs instead of making every role complete a Work Hub application;
 - add revision, revocation, stale-source, migration, backup, rollback, and dedupe rules;
 - preserve Calendar as schedule owner and Map as place/journey owner.
 

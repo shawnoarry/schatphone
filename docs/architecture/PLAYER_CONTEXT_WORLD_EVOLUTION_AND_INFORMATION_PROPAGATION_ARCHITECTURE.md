@@ -1,8 +1,8 @@
 # Player Context, World Evolution, And Information Propagation Architecture
 
-Updated: 2026-08-18
+Updated: 2026-08-27
 
-Status: `PLAYER_CONTEXT_V1_FOUNDATION_IMPLEMENTED / WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_DOCUMENTATION_ONLY`
+Status: `PLAYER_CONTEXT_V1_FOUNDATION_IMPLEMENTED / CONTACTS_V3_PERSONA_CONFIRMATION_DIRECTION_ACCEPTED / WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_DOCUMENTATION_ONLY`
 
 This document records the shared architecture direction for:
 
@@ -76,7 +76,27 @@ Contacts Self Profile may own stable structured identity such as:
 
 Contacts must not become the owner of volatile simulation values merely because they describe the user. Reputation, media heat, fatigue, active assignment pressure, legal risk, and similar changing values belong to their natural owner or a future minimal Player State Module.
 
-Free-text biography or role prose is not sufficient by itself to authorize an event. Runtime eligibility reads saved structured fields and source revisions through a bounded projection.
+Free-text biography or role prose is not sufficient by itself to authorize an event. User-authored persona is nevertheless an accepted source for canonical identity after an explicit confirmation flow materializes it into structured Contacts-owned values and a new Self Profile revision. Runtime eligibility reads those saved structured fields and source revisions through a bounded projection, never the unconfirmed prose or provider output.
+
+### 3.1A Contacts V3 Persona Confirmation Direction
+
+Contacts V3 adds a planned identity-intake direction without broadening the implemented Player Context V1 event allowlist:
+
+`user-authored persona -> structured identity candidate -> user review and confirmation -> Contacts Self Profile revision -> bounded projection`
+
+Rules:
+
+1. structured manual input may save through an explicit user action;
+2. free-text persona may be interpreted into a draft candidate;
+3. AI may provide one optional drafting Adapter through the existing provider transport;
+4. draft candidates are transient and cannot grant identity, affiliation, permission, Work Hub mode, publication entitlement, or event eligibility;
+5. explicit user confirmation writes structured profile values through the future Contacts Profile Owner Module and increments the profile revision;
+6. current and future Player Context projections continue to validate exact world, template, profile, visibility, source, and revision evidence;
+7. identity-conditioned events remain separately gated and cannot be promoted by the Contacts plan alone.
+
+`CONTACTS-V3-0` additionally freezes one global device account plus one independent Contacts Self Profile per world. The current runtime remains a single-world compatibility baseline: legacy-unscoped profiles remain readable but are not silently assigned to another world, and missing or ambiguous world Self Profile selection fails closed. `system.user` persona fields remain compatibility input rather than canonical world identity after a confirmed Self Profile exists.
+
+The detailed owner migration, persona confirmation, purpose-specific projection, lifecycle, and delivery direction is `docs/pm/contacts-relationship-system-v2/CONTACTS_V3_IDENTITY_AND_ROLE_CORE_PLAN.md`; the current-state inventory and accepted selection/compatibility rules are `docs/pm/contacts-relationship-system-v2/CONTACTS_V3_0_ARCHITECTURE_AND_DECISION_FREEZE.md`.
 
 ### 3.2 Dynamic State Boundary
 
@@ -104,7 +124,7 @@ The frozen K-pop V1 identity allowlist is deliberately small:
 - `affiliation` -> `identity.affiliationIds`;
 - `public_identity` -> `identity.publicIdentityMode`.
 
-Only template-declared Self Profile fields with `public` or matching-world `world_specific` visibility and `manual` source kind enter the snapshot. Biography, role prose, relationship text, hidden/familiar/intimate fields, event-attached values, unknown custom fields, and copied owner bodies are excluded. The local evaluator proves only two family gates: `manager` for a manager incident, and `idol + public_figure` for an idol public-incident family. It creates no Event Instance, random incident, owner fact, post, state mutation, route, Store, or visible surface.
+Only template-declared Self Profile fields with `public` or matching-world `world_specific` visibility and `manual` source kind enter the current V1 snapshot. Biography, role prose, relationship text, hidden/familiar/intimate fields, event-attached values, unknown custom fields, unconfirmed persona candidates, AI drafts, and copied owner bodies are excluded. A later Contacts V3 confirmation flow may save user-confirmed structured values as manual/profile-owned values, but it does not silently change this frozen V1 projection contract. The local evaluator proves only two family gates: `manager` for a manager incident, and `idol + public_figure` for an idol public-incident family. It creates no Event Instance, random incident, owner fact, post, state mutation, route, Store, or visible surface.
 
 It should expose only bounded, structured, revision-aware inputs required by one eligibility decision:
 

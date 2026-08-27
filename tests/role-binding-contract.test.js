@@ -102,6 +102,29 @@ describe('role binding contract helpers', () => {
     expect(context.profileAssetFolderBindings.profileImage.folderId).toBe('')
   })
 
+  test('keeps supporting role canonical while exposing legacy isMain as false', () => {
+    const contract = createRoleBindingContract({
+      contact: {
+        id: 12,
+        kind: 'role',
+        name: 'Recurring colleague',
+        profileId: 22,
+      },
+      profile: {
+        id: 22,
+        name: 'Recurring colleague',
+        entityType: 'supporting_role',
+        isMain: true,
+      },
+    })
+
+    expect(contract.profile).toMatchObject({
+      id: 22,
+      entityType: 'supporting_role',
+      isMain: false,
+    })
+  })
+
   test('empty pack helper always returns all expected categories', () => {
     const empty = createEmptyRoleAssetPack()
     expect(empty).toEqual({

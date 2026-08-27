@@ -1,8 +1,24 @@
-# Contacts Relationship V2 Implementation Workstreams / 通讯录关系系统 V2 实施工作流
+# Contacts Relationship V2 And Identity Core V3 Workstreams / 通讯录关系 V2 与身份核心 V3 实施工作流
 
-Updated: 2026-08-18
+Updated: 2026-08-27
 
 This document translates the Contacts/relationship package into execution-ready workstreams.
+
+## Contacts V3 Accepted Next Lane
+
+Contacts V2 and relationship-memory 4.2 remain complete at their named acceptance. Contacts V3 Identity And Role Core is now active from `CONTACTS_V3_IDENTITY_AND_ROLE_CORE_PLAN.md`.
+
+Implementation order:
+
+1. `CONTACTS-V3-0 DONE 2026-08-27`: the per-world Self Profile decision, current ownership map, migration inventory, compatibility Adapter, stable-ID/revision rules, rollback, and first implementation file set are frozen in `CONTACTS_V3_0_ARCHITECTURE_AND_DECISION_FREEZE.md`;
+2. `CONTACTS-V3-1 DONE 2026-08-27`: Contacts now owns profile normalization, immutable reads, revision-safe writes, detail/classification/assets, NPC upgrade, removal, snapshot replacement, and persistence copies while Chat retains the current carrier and compatibility methods;
+3. `CONTACTS-V3-2A ACTIVE / CARD-1 DONE 2026-08-27 / ROLE-0 DECISION_DONE 2026-08-27 / ROLE-1 DONE 2026-08-27 / CARD-2 DONE 2026-08-27 / CARD-3 DONE 2026-08-27 / CARD-4 DONE 2026-08-27 / CARD-5 DONE 2026-08-27 / CARD-6 DONE 2026-08-27 / PERSONA-1 NEXT`: the category carrier, four-person-type baseline, field-purpose rules, added input types, manual WorldBook category/field editing, read-first dynamic person-page form, Contacts-owned person-specific extensions, and reviewable current-world template proposals are landed locally; next classify pasted persona text into the same review-only card draft;
+4. `CONTACTS-V3-2B`: add Persona Confirmation for structured manual input and optional AI drafting, with explicit user confirmation and stale/write-failure handling;
+5. `CONTACTS-V3-3`: deepen formal Chat, Event Runtime, and Work Hub purpose-specific projections;
+6. `CONTACTS-V3-4`: concentrate create/update/archive/restore/NPC-upgrade/delete behavior in the Role Lifecycle Module;
+7. `CONTACTS-V3-5`: migrate consumers while preserving Contacts V2, Chat history, relationship truth, and backup/restore behavior.
+
+The documentation/inventory round, owner foundation, category carrier, Supporting Role compatibility baseline, field-purpose rules, added input types, manual WorldBook form editor, dynamic person page, person-specific extension path, and deterministic/optional-AI current-world proposal flow are complete. The next slice follows `CONTACTS_V3_2A_EXTENSIBLE_PROFILE_CARD_DESIGN.md` and classifies pasted persona text into review-only field candidates while preserving conflicts and unclassified text. It must not infer importance for old NPCs, move `roleProfiles` to a second persisted Store, change the complete-backup shape, silently save AI output, automatically change confirmed identities, or migrate downstream consumers.
 
 ## 1. Workstream A: Data Model And Ownership
 
@@ -24,7 +40,7 @@ Main tasks:
 8. keep the AI classification seam limited to `src/lib/ai.js`, shared JSON parsing, registry normalization, and confidence/save-policy output.
 9. keep Contacts relationship classification controls as profile-side editing only: runtime snapshot is read first, while event judgement remains outside Contacts.
 10. allow Contacts to read/display Chat social-channel snapshots only; do not let Contacts decide or apply friend/block/refusal social events.
-11. keep stable structured Self Profile identity available only through a future bounded profile/world/revision projection when a named event family is separately accepted; keep volatile player/world state and publication records outside Contacts.
+11. keep stable structured Self Profile identity available through the landed bounded profile/world/revision projection; Contacts V3 may add a user-confirmed persona intake Module and further purpose-specific projections, but must keep volatile player/world state and publication records outside Contacts.
 12. keep the current Chat disclosure seam role-scoped and supporting-only: Chat supplies one explicit user-authored message source, the shared Relationship Adapter normalizes it, and Relationship Runtime remains the owner of memory aggregation and review state.
 
 Semantic traps to avoid:
@@ -34,7 +50,9 @@ Semantic traps to avoid:
 - reading raw relationship premise prose as an event condition instead of stored classification fields;
 - allowing AI, confirmed AI, or world-template writes to silently overwrite a `user_edited` classification;
 - treating Chat social-channel state as relationship truth or as a Contacts-authored event outcome;
-- using free-text Self Profile prose or model classification as canonical occupation/event eligibility;
+- using unconfirmed free-text Self Profile prose or model classification as canonical occupation/event eligibility;
+- forcing users to duplicate confirmed persona identity in Chat, Work Hub, Event settings, or another App instead of consuming a Contacts projection;
+- moving role-profile storage before stable IDs, Chat binding, backup/restore, receiving-account definitions, cleanup, and rollback are migration-protected;
 - turning Contacts into the owner of reputation, media heat, fatigue, world arcs, or forum/news posts;
 - letting one event create several competing memories.
 - treating a saved message, assistant reply, or ordinary Chat history as an accepted role-memory fact without the explicit disclosure action.
@@ -88,6 +106,8 @@ Current landed baseline:
 - Contacts World profile fields now support V1 concrete value authoring from WorldBook templates: choose a current-world template, fill role/self/NPC values, set visibility levels, and save `templateLink/profileValues` on the role profile.
 - Contacts World profile fields now include AI draft assistance for empty editor fields only; the AI helper normalizes provider JSON against the chosen template and never saves or overwrites manual values without the user's Save action.
 - Contacts World profile fields now include a current-world adaptation review for profiles using missing, outdated, or other-world templates. The review recommends a current-world template, shows reusable/custom-preserved counts, and can open the editor with AI-migrated draft values without saving.
+- Contacts person-page profile data now renders by template category in a default reading state, expands only saved values, and uses natural-language missing-data prompts instead of completion fractions. An explicit Edit action opens the complete grouped form; old flat templates and custom values remain readable without a new route or second profile format.
+- Contacts person-page editing now adds person-specific categories/fields through the same grouped card. Draft cancellation is side-effect free; `profileExtensions` stays inside the Contacts owner/storage/backup path; person-only data is isolated; and explicit world-template promotion creates one template version without auto-filling other people.
 - The WorldBook -> Contacts value-flow now has committed E2E coverage, so future work should not rebuild the basic handoff/value chain unless the product flow changes.
 - Contacts first entry now feels like a phone contact list: Search -> My Profile -> Recent interactions -> Main Roles -> NPC / World Roles. Recent interactions is a shortcut layer and keeps full list membership intact.
 - Contacts first-entry search/grouping/recent-interaction logic now lives behind `src/composables/useContactsHomeListModel.js`, so future architecture cleanup should not repeat that home-list seam.
@@ -109,7 +129,7 @@ Main tasks:
 4. after this completed baseline, move deeper memory dedupe/merge and recall rules into Workstream 4.2 instead of extending 4.1 further;
 5. richer Chat-bound state and navigation hints;
 6. keep danger-zone action semantics guarded while future UI polish avoids changing delete/reset execution;
-7. continue from the landed richer field widgets, template-change review, AI-assisted draft completion, and Contacts-side template adaptation by first turning adaptation review into a user-readable visual diff, then improving true template editing and eventual form-builder-quality WorldBook authoring.
+7. continue from the landed dynamic profile card, person-extension path, and current-world proposal flow with `PERSONA-1`: classify pasted text into existing-field candidates, explicit new-field suggestions, conflicts, and retained unclassified text without saving.
 8. later true-device polish for Contacts touch feel and detail-panel progressive disclosure.
 9. for architecture-only cleanup, either move to Contacts template-adaptation visual diff or shift to WorldBook/Home seams while preserving delete/reset, review-status writes, profile-template writes, AI draft actions, and relationship-runtime ownership.
 

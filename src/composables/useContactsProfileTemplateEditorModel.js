@@ -1,5 +1,9 @@
 import { computed } from 'vue'
-import { PROFILE_TEMPLATE_FIELD_TYPES } from '../lib/profile-template-schema'
+import {
+  PROFILE_TEMPLATE_DEFAULT_CATEGORY_ID,
+  PROFILE_TEMPLATE_FIELD_TYPES,
+  mergeProfileTemplateExtensions,
+} from '../lib/profile-template-schema'
 
 const defaultT = (zh, en) => en || zh
 
@@ -11,12 +15,26 @@ const readArray = (source) => {
 
 const readDraftValue = (draft, fieldId = '') => String(draft?.values?.[fieldId] || '')
 
+const profileTemplateDraftCategoryLabel = (category = {}, t = defaultT) => {
+  const label = String(category?.label || category?.title || '').trim()
+  if (category?.id === PROFILE_TEMPLATE_DEFAULT_CATEGORY_ID && (!label || label === 'General')) {
+    return t('基本资料', 'General')
+  }
+  return label || t('人物资料', 'Profile details')
+}
+
 export const profileTemplateFieldPlaceholder = (field = {}, t = defaultT) => {
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS) {
     return t('\u7528\u9017\u53f7\u5206\u9694\u591a\u4e2a\u6807\u7b7e', 'Separate tags with commas')
   }
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.PERSON_REFERENCE) {
     return t('\u586b\u5199\u76f8\u5173\u4eba\u7269\u6216\u89d2\u8272 ID', 'Enter related person or role ID')
+  }
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.ORGANIZATION_REFERENCE) {
+    return t('\u586b\u5199\u7ec4\u7ec7\u3001\u516c\u53f8\u3001\u5b66\u6821\u6216\u56e2\u961f ID', 'Enter an organization, company, school, or team ID')
+  }
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.DATE) {
+    return t('\u9009\u62e9\u65e5\u671f', 'Choose a date')
   }
   return t('\u586b\u5199\u8fd9\u4e2a\u89d2\u8272\u7684\u5177\u4f53\u503c', 'Enter this profile value')
 }
@@ -25,7 +43,10 @@ export const profileTemplateFieldTypeLabel = (field = {}, t = defaultT) => {
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.LONG_TEXT) return t('\u957f\u6587\u672c', 'Notes')
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.SINGLE_SELECT) return t('\u5355\u9009', 'Choice')
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS) return t('\u6807\u7b7e', 'Tags')
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.DATE) return t('\u65e5\u671f', 'Date')
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.BOOLEAN) return t('\u662f / \u5426', 'Yes / No')
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.PERSON_REFERENCE) return t('\u4eba\u7269', 'Person')
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.ORGANIZATION_REFERENCE) return t('\u7ec4\u7ec7', 'Organization')
   return t('\u6587\u672c', 'Text')
 }
 
@@ -33,7 +54,10 @@ export const profileTemplateFieldIconClass = (field = {}) => {
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.LONG_TEXT) return 'fas fa-align-left'
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.SINGLE_SELECT) return 'fas fa-list-ul'
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS) return 'fas fa-tags'
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.DATE) return 'fas fa-calendar-day'
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.BOOLEAN) return 'fas fa-toggle-on'
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.PERSON_REFERENCE) return 'fas fa-user-tag'
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.ORGANIZATION_REFERENCE) return 'fas fa-building'
   return 'fas fa-pen'
 }
 
@@ -48,6 +72,24 @@ export const profileTemplateFieldHelper = (field = {}, t = defaultT) => {
     return t(
       '\u586b\u5199\u76f8\u5173\u4eba\u7269\u59d3\u540d\u6216\u89d2\u8272 ID\uff1b\u6b63\u5f0f\u9009\u62e9\u5668\u540e\u7eed\u518d\u63a5\u5165\u3002',
       'Enter a related person or role ID; a picker can be added later.',
+    )
+  }
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.ORGANIZATION_REFERENCE) {
+    return t(
+      '\u4fdd\u5b58\u7a33\u5b9a\u7684\u7ec4\u7ec7\u5f15\u7528\u3002\u7528\u6237\u81ea\u5df1\u7684\u7ec4\u7ec7\u8d44\u6599\u53ea\u7528\u4e8e\u5339\u914d Work Hub\uff0c\u4e0d\u4f1a\u81ea\u52a8\u6388\u4e88\u5de5\u4f5c\u533a\u6743\u9650\u3002',
+      'Save a stable organization reference. A Self Profile match can suggest a Work Hub, but cannot grant workspace access.',
+    )
+  }
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.DATE) {
+    return t(
+      '\u9002\u5408\u751f\u65e5\u3001\u5165\u5b66\u65e5\u6216\u5176\u4ed6\u7a33\u5b9a\u4eba\u7269\u65e5\u671f\uff0c\u4e0d\u7528\u4e8e\u4fdd\u5b58\u65e5\u5386\u884c\u7a0b\u3002',
+      'Use this for stable profile dates such as a birthday or enrollment date, not Calendar schedules.',
+    )
+  }
+  if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.BOOLEAN) {
+    return t(
+      '\u7528\u660e\u786e\u7684\u662f\u6216\u5426\u4fdd\u5b58\u7a33\u5b9a\u4eba\u7269\u7279\u5f81\uff0c\u4e0d\u4f1a\u56e0\u6b64\u81ea\u52a8\u89e6\u53d1\u4e8b\u4ef6\u3002',
+      'Save a stable yes/no profile trait. This alone does not trigger an event.',
     )
   }
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.LONG_TEXT) {
@@ -82,8 +124,19 @@ export const buildProfileTemplateEditorFieldRow = (field = {}, draft = {}, t = d
   placeholder: profileTemplateFieldPlaceholder(field, t),
   tagPreview: profileTemplateDraftTagList(field, draft),
   hasTagPreview: field.type === PROFILE_TEMPLATE_FIELD_TYPES.MULTI_SELECT_TAGS,
+  inputType: field.type === PROFILE_TEMPLATE_FIELD_TYPES.DATE ? 'date' : 'text',
+  controlOptions:
+    field.type === PROFILE_TEMPLATE_FIELD_TYPES.BOOLEAN
+      ? [
+          { value: 'true', label: t('\u662f', 'Yes') },
+          { value: 'false', label: t('\u5426', 'No') },
+        ]
+      : Array.isArray(field.options)
+        ? field.options.map((option) => ({ value: option, label: option }))
+        : [],
   controlKind:
-    field.type === PROFILE_TEMPLATE_FIELD_TYPES.SINGLE_SELECT && field.options?.length > 0
+    field.type === PROFILE_TEMPLATE_FIELD_TYPES.BOOLEAN ||
+    (field.type === PROFILE_TEMPLATE_FIELD_TYPES.SINGLE_SELECT && field.options?.length > 0)
       ? 'select'
       : field.type === PROFILE_TEMPLATE_FIELD_TYPES.LONG_TEXT
         ? 'textarea'
@@ -93,6 +146,7 @@ export const buildProfileTemplateEditorFieldRow = (field = {}, draft = {}, t = d
 export function useContactsProfileTemplateEditorModel({
   profileTemplateDraft,
   selectedProfileValues,
+  selectedProfileExtensions,
   fieldMatchesSelectedProfileEntity = () => true,
   getProfileTemplateById = () => null,
   formatProfileValue = () => '',
@@ -106,10 +160,33 @@ export function useContactsProfileTemplateEditorModel({
       : null,
   )
 
+  const profileTemplateDraftStructure = computed(() =>
+    mergeProfileTemplateExtensions({
+      templateCategories: Array.isArray(profileTemplateDraftTemplate.value?.categories)
+        ? profileTemplateDraftTemplate.value.categories
+        : [],
+      templateFields: Array.isArray(profileTemplateDraftTemplate.value?.fields)
+        ? profileTemplateDraftTemplate.value.fields
+        : [],
+      profileExtensions: readValue(selectedProfileExtensions) || {},
+    }),
+  )
+
+  const profileTemplateDraftPersonFieldIds = computed(
+    () => new Set(profileTemplateDraftStructure.value.personFieldIds),
+  )
+
+  const profileTemplateDraftPersonCategoryIds = computed(
+    () => new Set(profileTemplateDraftStructure.value.personCategoryIds),
+  )
+
   const profileTemplateDraftFields = computed(() =>
-    Array.isArray(profileTemplateDraftTemplate.value?.fields)
-      ? profileTemplateDraftTemplate.value.fields.filter(fieldMatchesSelectedProfileEntity)
-      : [],
+    profileTemplateDraftStructure.value.fields
+      .filter(fieldMatchesSelectedProfileEntity)
+      .map((field) => ({
+        ...field,
+        isPersonExtension: profileTemplateDraftPersonFieldIds.value.has(field.id),
+      })),
   )
 
   const profileTemplateDraftFieldIds = computed(
@@ -137,6 +214,33 @@ export function useContactsProfileTemplateEditorModel({
       buildProfileTemplateEditorFieldRow(field, profileTemplateDraft, t),
     ),
   )
+
+  const profileTemplateDraftCategories = computed(() => {
+    return profileTemplateDraftStructure.value.categories.map((category) => ({
+      ...category,
+      isPersonExtension: profileTemplateDraftPersonCategoryIds.value.has(category.id),
+    }))
+  })
+
+  const profileTemplateDraftFieldGroups = computed(() => {
+    const categories = profileTemplateDraftCategories.value
+    const fallbackCategoryId = categories[0]?.id || PROFILE_TEMPLATE_DEFAULT_CATEGORY_ID
+    return categories
+      .map((category) => {
+        const fields = profileTemplateDraftFieldRows.value.filter(
+          (field) => (field.categoryId || fallbackCategoryId) === category.id,
+        )
+        if (fields.length === 0) return null
+        return {
+          key: category.id,
+          label: profileTemplateDraftCategoryLabel(category, t),
+          description: category.description || '',
+          fields,
+          isPersonExtension: category.isPersonExtension === true,
+        }
+      })
+      .filter(Boolean)
+  })
 
   const profileTemplateChangeReview = computed(() => ({
     updateCount: profileTemplateDraftFields.value.length,
@@ -193,6 +297,10 @@ export function useContactsProfileTemplateEditorModel({
     profileTemplateDraftTemplate,
     profileTemplateDraftFields,
     profileTemplateDraftFieldIds,
+    profileTemplateDraftFieldGroups,
+    profileTemplateDraftCategories,
+    profileTemplateDraftPersonCategoryIds,
+    profileTemplateDraftPersonFieldIds,
     profileTemplateDraftFieldRows,
     profileTemplateDraftPreservedValues,
     profileTemplateDraftPreservedRows,

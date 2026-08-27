@@ -1,6 +1,6 @@
 # Contacts V2 Role Profile Template Decision Log / 通讯录角色档案模板决策记录
 
-Updated: 2026-08-15
+Updated: 2026-08-27
 
 Status: `GRILL_DONE`
 
@@ -278,7 +278,9 @@ V1 WorldBook-driven role-profile templates should support five field types first
 
 All field types should support a shared `visibilityLevel / 可见等级`.
 
-V1 should not require strong typed numeric, date, formula, or cycle-calculation fields yet. Concepts like heat cycle, cultivation level, or ability stats can initially be represented by text, select, or tags until real calculation needs appear.
+The original V1 remains readable with these five types. V3-2A `CARD-2` adds `date`, `boolean`, and `organization_reference` without migrating old fields. Numeric, formula, and cycle-calculation fields remain deferred; concepts like heat cycle, cultivation level, or ability stats continue to use text, select, tags, or another natural owner until a real calculation contract exists.
+
+Every field is normal profile information first. Extra read scopes are additive markers: `chat_context`, `event_eligibility`, `work_hub_matching`, and `public_content`. Old fields receive no markers automatically. Invalid precision combinations are removed safely: long text cannot become an event or Work Hub matching field, while date/boolean cannot become a Work Hub role/organization match. These markers authorize consideration only; they do not grant organization access, create events, or bypass visibility/world/version checks.
 
 ## 14. Template Scope
 
@@ -352,6 +354,23 @@ Reason:
 
 - service accounts are module or Chat Directory targets, not world-person profiles;
 - including them would make Contacts drift back into a mixed utility list.
+
+### 16.1 2026-08-27 Supporting Role Split
+
+The earlier three-type list remains a historical record, but its broad `NPC` meaning is superseded by the implemented Contacts V3 compatibility model.
+
+Accepted target types:
+
+1. `Self Profile / 用户自我档案`;
+2. `Main Role / 主要角色`;
+3. `Supporting Role / 次要角色` for recurring supporting characters with stable continuity but without full relationship/route progression by default;
+4. `World NPC / 世界 NPC` for lightweight world or functional people that do not enter the primary Contacts/Chat/relationship surfaces by default.
+
+The internal legacy value `npc` remains the compatibility value for World NPC. V3 now includes `supporting_role`; it does not infer which existing NPC records are recurring supporting characters. Reclassification requires explicit user action.
+
+Role depth and relationship grouping are separate. Family, friend, colleague, manager, rival, enemy, and world-specific relationship labels may be multi-select metadata and do not replace the entity type.
+
+The non-self progression path is `World NPC -> Supporting Role -> Main Role`. Any upgrade preserves stable profile/role IDs, profile values, Chat binding and history, relationship references, world/organization references, event lineage, archive state, and backup compatibility. Existing direct NPC -> Main Role behavior remains compatibility-protected.
 
 ## 17. Future Onboarding And User Manual Rule
 

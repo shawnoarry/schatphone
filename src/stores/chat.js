@@ -2,6 +2,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 import { resolveAvatarWithHierarchy, sanitizeAvatarUrl } from '../lib/avatar'
+import { createContactsProfileOwner } from '../lib/contacts-profile-owner'
 import { normalizeImageSource } from '../lib/image-source-contract'
 import { normalizeSharedExperienceId } from '../lib/shared-experience-contract'
 import {
@@ -11,44 +12,19 @@ import {
 } from '../lib/planned-module-registry'
 import { buildServiceAccountSourceNotificationPlan } from '../lib/service-account-source-plan'
 import {
-  RELATIONSHIP_CLASSIFICATION_SOURCE,
-  cloneRelationshipProfileFields,
-  normalizeRelationshipProfileFields,
-} from '../lib/relationship-classification-schema'
-import {
-  ROLE_ASSET_FOLDER_SLOT_KEYS,
   cloneRoleAssetFolderBindings as cloneRoleProfileAssetFolderBindingsShared,
   cloneRoleAssetPack as cloneRoleProfileAssetPackShared,
   createEmptyRoleAssetFolderBindings as createEmptyRoleProfileAssetFolderBindingsShared,
   createEmptyRoleAssetPack as createEmptyRoleAssetPackShared,
   createRoleBindingContract,
-  normalizeRoleAssetFolderBindings as normalizeRoleProfileAssetFolderBindingsShared,
-  normalizeRoleAssetPack as normalizeRoleProfileAssetPackShared,
   sanitizeRoleBindingAssetId,
   toRoleBindingAssetContext,
 } from '../lib/role-binding-contract'
 import {
   CONTACTS_ENTITY_TYPES,
-  cloneRoleDetailItems,
-  createRoleDetailItem,
-  createDefaultCapabilitiesForEntityType,
-  createRoleIdFromProfileId,
-  ensureUniqueRoleProfileRoleIds,
-  filterRoleDetailItemsForMemoryDelete,
-  filterRoleDetailItemsForReset,
-  isValidRoleId,
-  normalizeContactsEntityType,
   normalizeProfileCapabilities,
   normalizeProfileTemplateLink,
-  normalizeProfileValues,
-  normalizeRoleDetailItems,
-  normalizeRoleDetailSection,
-  normalizeRoleId,
 } from '../lib/role-profile-schema'
-import {
-  cloneRolePayeeAccounts,
-  normalizeRolePayeeAccounts,
-} from '../lib/wallet-banking'
 
 const CHAT_STORAGE_KEY = 'store:chat'
 const CHAT_STORAGE_VERSION = 2
@@ -147,8 +123,6 @@ const MAX_INTERNAL_ROUTE_LENGTH = 2048
 const MAX_BLOCK_COUNT = 16
 const MAX_SERVICE_ACTION_COUNT = 3
 const MAX_INLINE_IMAGE_DATA_URL_LENGTH = 8 * 1024 * 1024 + 512
-const MAX_ROLE_KNOWLEDGE_POINT_IDS = 80
-const MAX_KNOWLEDGE_POINT_ID_LENGTH = 64
 const SAFE_ROUTE_FALLBACK = '/home'
 const SAFE_TRANSFER_ROUTE_FALLBACK = '/wallet'
 
@@ -317,53 +291,15 @@ const normalizeShareCardAiContext = (value = {}) => {
   }
 }
 
-const sanitizeKnowledgePointId = (value) => {
-  const raw = trimTo(value, MAX_KNOWLEDGE_POINT_ID_LENGTH)
-  if (!raw) return ''
-  return /^[a-z0-9_-]+$/i.test(raw) ? raw : ''
-}
-
-const normalizeKnowledgePointIds = (rawIds) => {
-  if (!Array.isArray(rawIds)) return []
-  const unique = []
-  rawIds.forEach((rawId) => {
-    const id = sanitizeKnowledgePointId(rawId)
-    if (!id || unique.includes(id)) return
-    unique.push(id)
-  })
-  return unique.slice(0, MAX_ROLE_KNOWLEDGE_POINT_IDS)
-}
-
 const createEmptyRoleAssetPack = () => createEmptyRoleAssetPackShared()
-
-const normalizeRoleProfileAssetPack = (rawPack) => normalizeRoleProfileAssetPackShared(rawPack)
 
 const cloneRoleProfileAssetPack = (assetPack) => cloneRoleProfileAssetPackShared(assetPack)
 
 const createEmptyRoleProfileAssetFolderBindings = () =>
   createEmptyRoleProfileAssetFolderBindingsShared()
 
-const normalizeRoleProfileAssetFolderBindings = (rawBindings) =>
-  normalizeRoleProfileAssetFolderBindingsShared(rawBindings)
-
 const cloneRoleProfileAssetFolderBindings = (bindings) =>
   cloneRoleProfileAssetFolderBindingsShared(bindings)
-
-const mergeRoleProfileAssetFolderBindings = (currentBindings, updates) => {
-  const base = normalizeRoleProfileAssetFolderBindings(currentBindings)
-  if (!updates || typeof updates !== 'object') return base
-
-  const merged = {}
-  ROLE_ASSET_FOLDER_SLOT_KEYS.forEach((slotKey) => {
-    const currentSlot = base[slotKey] && typeof base[slotKey] === 'object' ? base[slotKey] : {}
-    const nextSlot = updates[slotKey] && typeof updates[slotKey] === 'object' ? updates[slotKey] : {}
-    merged[slotKey] = {
-      ...currentSlot,
-      ...nextSlot,
-    }
-  })
-  return normalizeRoleProfileAssetFolderBindings(merged)
-}
 
 const sanitizeRoutePath = (value, fallback = SAFE_ROUTE_FALLBACK) => {
   const route = trimTo(value, MAX_INTERNAL_ROUTE_LENGTH)
@@ -880,97 +816,6 @@ const normalizeAvatarImageSource = (rawSource = {}, legacyAvatar = '', fallbackA
 const avatarImageToLegacyAvatar = (avatarImage = {}) =>
   avatarImage?.sourceType === 'url' && typeof avatarImage.url === 'string' ? avatarImage.url : ''
 
-const normalizeRoleProfileRevision = (value) => {
-  const parsed = Number(value)
-  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 1
-}
-
-const normalizeRoleProfile = (rawProfile, fallbackIndex = 0) => {
-  const parsedId = Number(rawProfile?.id)
-  const id = Number.isFinite(parsedId) && parsedId > 0 ? Math.floor(parsedId) : nowTs() + fallbackIndex
-  const name =
-    typeof rawProfile?.name === 'string' && rawProfile.name.trim()
-      ? rawProfile.name.trim()
-      : `角色 ${id}`
-  const legacyAvatar = typeof rawProfile?.avatar === 'string' ? rawProfile.avatar : ''
-  const avatarImage = normalizeAvatarImageSource(rawProfile?.avatarImage, legacyAvatar, name)
-  const entityType = normalizeContactsEntityType(
-    rawProfile?.entityType,
-    rawProfile?.isSelfProfile
-      ? CONTACTS_ENTITY_TYPES.SELF_PROFILE
-      : rawProfile?.isMain === false
-        ? CONTACTS_ENTITY_TYPES.NPC
-        : CONTACTS_ENTITY_TYPES.MAIN_ROLE,
-  )
-  const relationshipFields = normalizeRelationshipProfileFields(rawProfile)
-  const roleId = normalizeRoleId(rawProfile?.roleId, createRoleIdFromProfileId(id, fallbackIndex))
-  return {
-    id,
-    roleId,
-    name,
-    role: typeof rawProfile?.role === 'string' ? rawProfile.role : '',
-    entityType,
-    isMain:
-      typeof rawProfile?.isMain === 'boolean'
-        ? rawProfile.isMain
-        : entityType === CONTACTS_ENTITY_TYPES.MAIN_ROLE,
-    avatar: avatarImageToLegacyAvatar(avatarImage) || legacyAvatar,
-    avatarImage,
-    bio: typeof rawProfile?.bio === 'string' ? rawProfile.bio : '',
-    ...relationshipFields,
-    encyclopediaEntryIds: normalizeKnowledgePointIds(
-      rawProfile?.encyclopediaEntryIds || rawProfile?.knowledgePointIds,
-    ),
-    knowledgePointIds: normalizeKnowledgePointIds(
-      rawProfile?.encyclopediaEntryIds || rawProfile?.knowledgePointIds,
-    ),
-    templateLink: normalizeProfileTemplateLink(rawProfile?.templateLink),
-    profileValues: normalizeProfileValues(rawProfile?.profileValues),
-    capabilities: normalizeProfileCapabilities(rawProfile?.capabilities, entityType),
-    detailItems: normalizeRoleDetailItems(rawProfile?.detailItems, fallbackIndex),
-    payeeAccounts: normalizeRolePayeeAccounts(rawProfile?.payeeAccounts, {
-      profileId: id,
-      roleId,
-      entityType,
-    }),
-    assetPack: normalizeRoleProfileAssetPack(rawProfile?.assetPack),
-    assetFolderBindings: normalizeRoleProfileAssetFolderBindings(rawProfile?.assetFolderBindings),
-    tags: Array.isArray(rawProfile?.tags)
-      ? rawProfile.tags
-          .map((item) => (typeof item === 'string' ? item.trim() : ''))
-          .filter(Boolean)
-      : [],
-    revision: normalizeRoleProfileRevision(rawProfile?.revision),
-    createdAt:
-      typeof rawProfile?.createdAt === 'number' && Number.isFinite(rawProfile.createdAt)
-        ? Math.max(0, Math.floor(rawProfile.createdAt))
-        : nowTs(),
-    updatedAt:
-      typeof rawProfile?.updatedAt === 'number' && Number.isFinite(rawProfile.updatedAt)
-        ? Math.max(0, Math.floor(rawProfile.updatedAt))
-        : nowTs(),
-  }
-}
-
-const normalizeRoleProfileList = (rawProfiles = []) =>
-  ensureUniqueRoleProfileRoleIds(
-    Array.isArray(rawProfiles)
-      ? rawProfiles.map((item, index) => normalizeRoleProfile(item, index))
-      : [],
-  )
-
-const RELATIONSHIP_PROFILE_FIELD_KEYS = [
-  'relationshipLabelText',
-  'relationshipLabelNote',
-  'initialRelationshipSeed',
-  'primaryRelationshipCategoryId',
-  'relationshipModifierIds',
-  'classificationConfidence',
-  'classificationSource',
-  'classificationUpdatedAt',
-  'classificationExplanation',
-]
-
 const normalizeChatContactSocialState = (value, kind = 'role') => {
   if (kind !== 'role') return CHAT_CONTACT_SOCIAL_STATES.CONNECTED
   const state = typeof value === 'string' ? value.trim() : ''
@@ -1170,6 +1015,7 @@ const recalledQuotePreviewForRole = (role) =>
 
 export const useChatStore = defineStore('chat', () => {
   const roleProfiles = reactive([])
+  const profileOwner = createContactsProfileOwner({ profiles: roleProfiles, now: nowTs })
   const contacts = reactive([])
   const moduleAvatarOverrides = reactive(
     normalizeModuleAvatarOverrides(DEFAULT_CHAT_MODULE_AVATAR_OVERRIDES),
@@ -1183,142 +1029,49 @@ export const useChatStore = defineStore('chat', () => {
   const getRoleProfileById = (profileId) =>
     roleProfiles.find((item) => Number(item.id) === Number(profileId)) || null
 
-  const touchRoleProfile = (profile) => {
-    if (!profile || typeof profile !== 'object') return null
-    profile.revision = Math.min(
-      Number.MAX_SAFE_INTEGER,
-      normalizeRoleProfileRevision(profile.revision) + 1,
-    )
-    profile.updatedAt = nowTs()
-    return profile
-  }
-
   const getRoleProfileByRoleId = (roleId) => {
-    const normalized = normalizeRoleId(roleId)
-    if (!normalized) return null
-    return roleProfiles.find((item) => normalizeRoleId(item.roleId).toLowerCase() === normalized.toLowerCase()) || null
+    const snapshot = profileOwner.getProfileByRoleId(roleId)
+    return snapshot ? getRoleProfileById(snapshot.id) : null
   }
 
-  const isRoleIdAvailable = (roleId, excludeProfileId = 0) => {
-    const normalized = normalizeRoleId(roleId)
-    if (!isValidRoleId(normalized)) return false
-    const excluded = Number(excludeProfileId) || 0
-    return !roleProfiles.some(
-      (item) =>
-        Number(item.id) !== excluded &&
-        normalizeRoleId(item.roleId).toLowerCase() === normalized.toLowerCase(),
-    )
-  }
+  const isRoleIdAvailable = (roleId, excludeProfileId = 0) =>
+    profileOwner.isRoleIdAvailable(roleId, excludeProfileId)
 
   const getRoleProfileAssetPack = (profileId) => {
-    const profile = getRoleProfileById(profileId)
+    const profile = profileOwner.getProfileSnapshot(profileId)
     return cloneRoleProfileAssetPack(profile?.assetPack)
   }
 
   const getRoleProfileAssetFolderBindings = (profileId) => {
-    const profile = getRoleProfileById(profileId)
+    const profile = profileOwner.getProfileSnapshot(profileId)
     return cloneRoleProfileAssetFolderBindings(profile?.assetFolderBindings)
   }
 
-  const setRoleProfileAssetPack = (profileId, nextPack = {}) => {
-    const target = getRoleProfileById(profileId)
-    if (!target) return false
-    const current = normalizeRoleProfileAssetPack(target.assetPack)
-    const normalized = normalizeRoleProfileAssetPack({
-      ...current,
-      ...(nextPack && typeof nextPack === 'object' ? nextPack : {}),
-    })
-    const changed =
-      JSON.stringify(current) !== JSON.stringify(normalized)
-    if (!changed) return false
-    target.assetPack = normalized
-    touchRoleProfile(target)
-    return true
-  }
+  const setRoleProfileAssetPack = (profileId, nextPack = {}) =>
+    profileOwner.setAssetPack(profileId, nextPack).ok
 
-  const setRoleProfileAssetFolderBindings = (profileId, nextBindings = {}) => {
-    const target = getRoleProfileById(profileId)
-    if (!target) return false
-    const current = normalizeRoleProfileAssetFolderBindings(target.assetFolderBindings)
-    const normalized = mergeRoleProfileAssetFolderBindings(current, nextBindings)
-    const changed = JSON.stringify(current) !== JSON.stringify(normalized)
-    if (!changed) return false
-    target.assetFolderBindings = normalized
-    touchRoleProfile(target)
-    return true
-  }
+  const setRoleProfileAssetFolderBindings = (profileId, nextBindings = {}) =>
+    profileOwner.setAssetFolderBindings(profileId, nextBindings).ok
 
-  const listRoleDetailItems = (profileId, section = '') => {
-    const profile = getRoleProfileById(profileId)
-    if (!profile) return []
-    const normalizedSection = section ? normalizeRoleDetailSection(section) : ''
-    return cloneRoleDetailItems(profile.detailItems).filter(
-      (item) => !normalizedSection || item.section === normalizedSection,
-    )
-  }
+  const listRoleDetailItems = (profileId, section = '') =>
+    profileOwner.listDetailItems(profileId, section)
 
   const addRoleDetailItem = (profileId, section, input = {}) => {
-    const profile = getRoleProfileById(profileId)
-    if (!profile) return null
-    const item = createRoleDetailItem(section, input)
-    if (!item) return null
-    profile.detailItems = normalizeRoleDetailItems([item, ...(profile.detailItems || [])])
-    touchRoleProfile(profile)
-    return { ...item }
+    const receipt = profileOwner.addDetailItem(profileId, section, input)
+    return receipt.ok ? { ...receipt.item } : null
   }
 
-  const removeRoleDetailItem = (profileId, itemId) => {
-    const profile = getRoleProfileById(profileId)
-    const id = typeof itemId === 'string' ? itemId.trim() : ''
-    if (!profile || !id) return false
-    const current = normalizeRoleDetailItems(profile.detailItems)
-    const next = current.filter((item) => item.id !== id)
-    if (next.length === current.length) return false
-    profile.detailItems = next
-    touchRoleProfile(profile)
-    return true
-  }
+  const removeRoleDetailItem = (profileId, itemId) =>
+    profileOwner.removeDetailItem(profileId, itemId).ok
 
   const updateRoleDetailItem = (profileId, itemId, updates = {}) => {
-    const profile = getRoleProfileById(profileId)
-    const id = typeof itemId === 'string' ? itemId.trim() : ''
-    if (!profile || !id || !updates || typeof updates !== 'object') return null
-    const current = normalizeRoleDetailItems(profile.detailItems)
-    const index = current.findIndex((item) => item.id === id)
-    if (index < 0) return null
-    const existing = current[index]
-    const nextItem = createRoleDetailItem(existing.section, {
-      ...existing,
-      ...updates,
-      id: existing.id,
-      sourceKind: existing.sourceKind,
-      sourceModule: existing.sourceModule,
-      sourceId: existing.sourceId,
-      memoryKey: existing.memoryKey,
-      relationshipEventId: existing.relationshipEventId,
-      createdAt: existing.createdAt,
-      updatedAt: nowTs(),
-    })
-    if (!nextItem) return null
-    const next = [...current]
-    next.splice(index, 1, nextItem)
-    profile.detailItems = normalizeRoleDetailItems(next)
-    touchRoleProfile(profile)
-    return { ...nextItem }
+    const receipt = profileOwner.updateDetailItem(profileId, itemId, updates)
+    return receipt.ok ? { ...receipt.item } : null
   }
 
   const clearRoleEventAttachedDetailItems = (profileId, options = {}) => {
-    const profile = getRoleProfileById(profileId)
-    if (!profile) return 0
-    const current = normalizeRoleDetailItems(profile.detailItems)
-    const next = options?.memoryKey || Array.isArray(options?.sourceRefs)
-      ? filterRoleDetailItemsForMemoryDelete(current, options)
-      : filterRoleDetailItemsForReset(current)
-    const removedCount = current.length - next.length
-    if (removedCount <= 0) return 0
-    profile.detailItems = next
-    touchRoleProfile(profile)
-    return removedCount
+    const receipt = profileOwner.clearEventAttachedDetailItems(profileId, options)
+    return receipt.ok ? receipt.removedCount : 0
   }
 
   const getRoleBindingContract = (contactId, options = {}) => {
@@ -2610,191 +2363,47 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   const addRoleProfile = (payload = {}) => {
-    const maxProfileId = roleProfiles.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0)
-    const nextId = payload.id ?? maxProfileId + 1
-    const normalized = normalizeRoleProfile(
-      {
-        ...payload,
-        id: nextId,
-      },
-      roleProfiles.length,
-    )
-    if (!isValidRoleId(normalized.roleId) || !isRoleIdAvailable(normalized.roleId)) {
-      return null
-    }
-    roleProfiles.push(normalized)
-    return normalized
+    const receipt = profileOwner.createProfile(payload)
+    return receipt.ok ? getRoleProfileById(receipt.profileId) : null
   }
 
-  const updateRoleProfile = (profileId, updates = {}) => {
-    const target = getRoleProfileById(profileId)
-    if (!target || !updates || typeof updates !== 'object') return false
-
-    if (Object.prototype.hasOwnProperty.call(updates, 'roleId')) {
-      const roleId = normalizeRoleId(updates.roleId)
-      if (!isValidRoleId(roleId) || !isRoleIdAvailable(roleId, target.id)) return false
-      target.roleId = roleId
-    }
-
-    if (typeof updates.name === 'string' && updates.name.trim()) {
-      target.name = updates.name.trim()
-    }
-    if (typeof updates.role === 'string') {
-      target.role = updates.role
-    }
-    if (typeof updates.avatar === 'string') {
-      target.avatar = updates.avatar
-      target.avatarImage = normalizeAvatarImageSource(target.avatarImage, updates.avatar, target.name)
-    }
-    if (updates.avatarImage && typeof updates.avatarImage === 'object') {
-      target.avatarImage = normalizeAvatarImageSource(updates.avatarImage, target.avatar, target.name)
-      target.avatar = avatarImageToLegacyAvatar(target.avatarImage)
-    }
-    if (typeof updates.bio === 'string') {
-      target.bio = updates.bio
-    }
-    if (typeof updates.isMain === 'boolean') {
-      target.isMain = updates.isMain
-    }
-    if (typeof updates.entityType === 'string') {
-      const entityType = normalizeContactsEntityType(updates.entityType, target.entityType)
-      target.entityType = entityType
-      target.isMain = entityType === CONTACTS_ENTITY_TYPES.MAIN_ROLE
-      target.capabilities = normalizeProfileCapabilities(target.capabilities, entityType)
-    }
-    if (Array.isArray(updates.payeeAccounts)) {
-      target.payeeAccounts = normalizeRolePayeeAccounts(updates.payeeAccounts, {
-        profileId: target.id,
-        roleId: target.roleId,
-        entityType: target.entityType,
-      })
-    } else {
-      target.payeeAccounts = normalizeRolePayeeAccounts(target.payeeAccounts, {
-        profileId: target.id,
-        roleId: target.roleId,
-        entityType: target.entityType,
-      })
-    }
-    if (updates.templateLink && typeof updates.templateLink === 'object') {
-      target.templateLink = normalizeProfileTemplateLink(updates.templateLink)
-    }
-    if (Array.isArray(updates.profileValues)) {
-      target.profileValues = normalizeProfileValues(updates.profileValues)
-    }
-    if (updates.capabilities && typeof updates.capabilities === 'object') {
-      target.capabilities = normalizeProfileCapabilities(updates.capabilities, target.entityType)
-    }
-    if (Array.isArray(updates.tags)) {
-      target.tags = updates.tags
-        .map((item) => (typeof item === 'string' ? item.trim() : ''))
-        .filter(Boolean)
-    }
-    if (Array.isArray(updates.encyclopediaEntryIds) || Array.isArray(updates.knowledgePointIds)) {
-      const nextIds = normalizeKnowledgePointIds(updates.encyclopediaEntryIds || updates.knowledgePointIds)
-      target.encyclopediaEntryIds = nextIds
-      target.knowledgePointIds = nextIds
-    }
-    if (Array.isArray(updates.detailItems)) {
-      target.detailItems = normalizeRoleDetailItems(updates.detailItems)
-    }
-    if (updates.assetPack && typeof updates.assetPack === 'object') {
-      target.assetPack = normalizeRoleProfileAssetPack({
-        ...target.assetPack,
-        ...updates.assetPack,
-      })
-    }
-    if (updates.assetFolderBindings && typeof updates.assetFolderBindings === 'object') {
-      target.assetFolderBindings = mergeRoleProfileAssetFolderBindings(
-        target.assetFolderBindings,
-        updates.assetFolderBindings,
-      )
-    }
-    if (RELATIONSHIP_PROFILE_FIELD_KEYS.some((key) => Object.prototype.hasOwnProperty.call(updates, key))) {
-      Object.assign(
-        target,
-        normalizeRelationshipProfileFields({
-          ...target,
-          ...updates,
-        }),
-      )
-    }
-    touchRoleProfile(target)
-    return true
-  }
+  const updateRoleProfile = (profileId, updates = {}) =>
+    profileOwner.reviseProfile(profileId, updates).ok
 
   const updateRoleRelationshipPremise = (profileId, updates = {}) => {
-    if (!updates || typeof updates !== 'object') return false
-    const premiseUpdates = {}
-    const premiseFieldKeys = ['relationshipLabelText', 'relationshipLabelNote', 'initialRelationshipSeed']
-    premiseFieldKeys.forEach((key) => {
-      if (Object.prototype.hasOwnProperty.call(updates, key) && updates[key] !== undefined) {
-        premiseUpdates[key] = updates[key]
-      }
-    })
-    if (Object.keys(premiseUpdates).length === 0) return false
-    return updateRoleProfile(profileId, premiseUpdates)
+    return profileOwner.updateRelationshipPremise(profileId, updates).ok
   }
 
   const saveRoleRelationshipClassification = (profileId, classification = {}, options = {}) => {
-    const target = getRoleProfileById(profileId)
-    if (!target) return { ok: false, reason: 'profile_not_found' }
-
-    const input = classification && typeof classification === 'object' ? classification : {}
-    const requestedSource = options.source || input.classificationSource || ''
-    const protectedUserEdit =
-      target.classificationSource === RELATIONSHIP_CLASSIFICATION_SOURCE.USER_EDITED &&
-      requestedSource !== RELATIONSHIP_CLASSIFICATION_SOURCE.USER_EDITED &&
-      options.force !== true
-    if (protectedUserEdit) return { ok: false, reason: 'user_edited_protected' }
-
-    const normalized = normalizeRelationshipProfileFields({
-      ...target,
-      ...input,
-      classificationSource: requestedSource || input.classificationSource,
-      classificationUpdatedAt: Object.prototype.hasOwnProperty.call(input, 'classificationUpdatedAt')
-        ? input.classificationUpdatedAt
-        : nowTs(),
-    })
-    Object.assign(target, normalized)
-    touchRoleProfile(target)
-    return {
-      ok: true,
-      profile: {
-        ...target,
-        ...cloneRelationshipProfileFields(target),
-      },
-    }
+    const receipt = profileOwner.saveRelationshipClassification(
+      profileId,
+      classification,
+      options,
+    )
+    return receipt.ok
+      ? { ok: true, profile: { ...receipt.profile } }
+      : { ok: false, reason: receipt.code }
   }
 
   const upgradeNpcToMainRole = (profileId, options = {}) => {
-    const target = getRoleProfileById(profileId)
-    if (!target || target.entityType !== CONTACTS_ENTITY_TYPES.NPC) return null
+    const receipt = profileOwner.upgradeNpcToMainRole(profileId, options)
+    return receipt.ok ? getRoleProfileById(receipt.profileId) : null
+  }
 
-    const relationshipMode = options.relationshipMode === 'full' ? 'full' : 'lightweight'
-    target.entityType = CONTACTS_ENTITY_TYPES.MAIN_ROLE
-    target.isMain = true
-    if (typeof options.role === 'string') target.role = options.role
-    if (typeof options.bio === 'string') target.bio = options.bio
-    target.capabilities = normalizeProfileCapabilities(
-      {
-        ...createDefaultCapabilitiesForEntityType(CONTACTS_ENTITY_TYPES.MAIN_ROLE),
-        canUseFullRelationshipProgress: relationshipMode === 'full',
-        canUseMemoryGroups: relationshipMode === 'full',
-        canUseRouteProgression: relationshipMode === 'full',
-      },
-      CONTACTS_ENTITY_TYPES.MAIN_ROLE,
-    )
-    touchRoleProfile(target)
-    return target
+  const upgradeNpcToSupportingRole = (profileId, options = {}) => {
+    const receipt = profileOwner.upgradeNpcToSupportingRole(profileId, options)
+    return receipt.ok ? getRoleProfileById(receipt.profileId) : null
+  }
+
+  const upgradeSupportingRoleToMainRole = (profileId, options = {}) => {
+    const receipt = profileOwner.upgradeSupportingRoleToMainRole(profileId, options)
+    return receipt.ok ? getRoleProfileById(receipt.profileId) : null
   }
 
   const removeRoleProfile = (profileId, options = {}) => {
-    const numericId = Number(profileId)
-    if (!Number.isFinite(numericId) || numericId <= 0) return false
-    const index = roleProfiles.findIndex((item) => Number(item.id) === numericId)
-    if (index < 0) return false
-
-    roleProfiles.splice(index, 1)
+    const receipt = profileOwner.removeProfile(profileId)
+    if (!receipt.ok) return false
+    const numericId = receipt.profileId
 
     const removeBindings = options?.removeBindings !== false
     if (removeBindings) {
@@ -3052,25 +2661,23 @@ export const useChatStore = defineStore('chat', () => {
       ? legacyContacts.map((item, index) => normalizeContact(item, index))
       : DEFAULT_CONTACTS.map((item, index) => normalizeContact(item, index))
 
-    resetReactiveObject(roleProfiles)
+    const sourceProfiles = Array.isArray(legacyContacts)
+      ? normalizedContacts
+          .filter((contact) => (contact.kind || 'role') === 'role')
+          .map((contact) => ({
+            id: contact.profileId || contact.id,
+            name: contact.name,
+            role: contact.role,
+            avatar: contact.avatar,
+            bio: contact.bio,
+            isMain: contact.isMain,
+          }))
+      : DEFAULT_ROLE_PROFILES
+    const replacement = profileOwner.replaceAllProfiles(sourceProfiles)
+    if (!replacement.ok) return false
+
     applyModuleAvatarOverrides(DEFAULT_CHAT_MODULE_AVATAR_OVERRIDES)
     applyModuleIdentity(DEFAULT_CHAT_MODULE_IDENTITY)
-    const sourceProfiles = Array.isArray(legacyContacts)
-      ? normalizeRoleProfileList(
-          normalizedContacts
-            .filter((contact) => (contact.kind || 'role') === 'role')
-            .map((contact) => ({
-              id: contact.profileId || contact.id,
-              name: contact.name,
-              role: contact.role,
-              avatar: contact.avatar,
-              bio: contact.bio,
-              isMain: contact.isMain,
-            })),
-        )
-      : normalizeRoleProfileList(DEFAULT_ROLE_PROFILES)
-
-    roleProfiles.push(...sourceProfiles)
 
     normalizedContacts.forEach((contact) => {
       if ((contact.kind || 'role') !== 'role') return
@@ -3107,10 +2714,29 @@ export const useChatStore = defineStore('chat', () => {
       conversations[key].updatedAt = conversations[key].lastMessageAt
       syncConversationSummary(contact.id)
     })
+    return true
   }
 
   const hydrateFromSnapshot = (persisted = {}) => {
     if (!persisted || typeof persisted !== 'object') return false
+
+    const normalizedContacts = Array.isArray(persisted.contacts)
+      ? persisted.contacts.map((item, index) => normalizeContact(item, index))
+      : DEFAULT_CONTACTS.map((item, index) => normalizeContact(item, index))
+    const sourceProfiles = Array.isArray(persisted.roleProfiles) && persisted.roleProfiles.length > 0
+      ? persisted.roleProfiles
+      : normalizedContacts
+          .filter((contact) => (contact.kind || 'role') === 'role')
+          .map((contact) => ({
+            id: contact.profileId || contact.id,
+            name: contact.name,
+            role: contact.role,
+            avatar: contact.avatar,
+            bio: contact.bio,
+            isMain: contact.isMain,
+          }))
+    const replacement = profileOwner.replaceAllProfiles(sourceProfiles)
+    if (!replacement.ok) return false
 
     applyModuleAvatarOverrides(
       persisted.moduleAvatarOverrides && typeof persisted.moduleAvatarOverrides === 'object'
@@ -3123,34 +2749,6 @@ export const useChatStore = defineStore('chat', () => {
         : null,
       persisted.moduleAvatarOverrides?.selfAvatar,
     )
-
-    const normalizedProfiles = Array.isArray(persisted.roleProfiles)
-      ? normalizeRoleProfileList(persisted.roleProfiles)
-      : []
-    resetReactiveObject(roleProfiles)
-    if (normalizedProfiles.length > 0) {
-      roleProfiles.push(...normalizedProfiles)
-    }
-
-    const normalizedContacts = Array.isArray(persisted.contacts)
-      ? persisted.contacts.map((item, index) => normalizeContact(item, index))
-      : DEFAULT_CONTACTS.map((item, index) => normalizeContact(item, index))
-
-    if (roleProfiles.length === 0) {
-      const derivedProfiles = normalizeRoleProfileList(
-        normalizedContacts
-          .filter((contact) => (contact.kind || 'role') === 'role')
-          .map((contact) => ({
-            id: contact.profileId || contact.id,
-            name: contact.name,
-            role: contact.role,
-            avatar: contact.avatar,
-            bio: contact.bio,
-            isMain: contact.isMain,
-          })),
-      )
-      roleProfiles.push(...derivedProfiles)
-    }
 
     normalizedContacts.forEach((contact) => {
       if ((contact.kind || 'role') !== 'role') return
@@ -3169,6 +2767,7 @@ export const useChatStore = defineStore('chat', () => {
         bio: contact.bio,
         isMain: contact.isMain,
       })
+      if (!createdProfile) return
       contact.profileId = createdProfile.id
     })
 
@@ -3203,12 +2802,10 @@ export const useChatStore = defineStore('chat', () => {
 
     const hasNewShape = persisted.conversations && persisted.messagesByConversation
     if (!hasNewShape) {
-      hydrateFromLegacyShape(persisted.contacts, persisted.chatHistory)
-      return true
+      return hydrateFromLegacyShape(persisted.contacts, persisted.chatHistory)
     }
 
-    hydrateFromSnapshot(persisted)
-    return true
+    return hydrateFromSnapshot(persisted)
   }
 
   const hydrateFromStorageAsync = async () => {
@@ -3221,12 +2818,10 @@ export const useChatStore = defineStore('chat', () => {
 
     const hasNewShape = persisted.conversations && persisted.messagesByConversation
     if (!hasNewShape) {
-      hydrateFromLegacyShape(persisted.contacts, persisted.chatHistory)
-      return true
+      return hydrateFromLegacyShape(persisted.contacts, persisted.chatHistory)
     }
 
-    hydrateFromSnapshot(persisted)
-    return true
+    return hydrateFromSnapshot(persisted)
   }
 
   const persistToStorage = () => {
@@ -3275,25 +2870,7 @@ export const useChatStore = defineStore('chat', () => {
       {
         moduleAvatarOverrides: normalizeModuleAvatarOverrides(moduleAvatarOverrides),
         moduleIdentity: normalizeModuleIdentity(moduleIdentity),
-        roleProfiles: roleProfiles.map((profile) => ({
-          ...profile,
-          ...cloneRelationshipProfileFields(profile),
-          encyclopediaEntryIds: Array.isArray(profile.encyclopediaEntryIds)
-            ? [...profile.encyclopediaEntryIds]
-            : [],
-          knowledgePointIds: Array.isArray(profile.knowledgePointIds)
-            ? [...profile.knowledgePointIds]
-            : [],
-          templateLink: { ...profile.templateLink },
-          profileValues: Array.isArray(profile.profileValues)
-            ? profile.profileValues.map((item) => ({ ...item }))
-            : [],
-          capabilities: { ...profile.capabilities },
-          detailItems: cloneRoleDetailItems(profile.detailItems),
-          payeeAccounts: cloneRolePayeeAccounts(profile.payeeAccounts),
-          assetPack: cloneRoleProfileAssetPack(profile.assetPack),
-          assetFolderBindings: cloneRoleProfileAssetFolderBindings(profile.assetFolderBindings),
-        })),
+        roleProfiles: profileOwner.createPersistenceSnapshot(),
         contacts: contactsSnapshot,
         conversations: conversationsSnapshot,
         messagesByConversation: messagesSnapshot,
@@ -3314,8 +2891,7 @@ export const useChatStore = defineStore('chat', () => {
       return hydrateFromSnapshot(snapshot)
     }
 
-    hydrateFromLegacyShape(snapshot.contacts, snapshot.chatHistory)
-    return true
+    return hydrateFromLegacyShape(snapshot.contacts, snapshot.chatHistory)
   }
 
   const contactsForList = computed(() => {
@@ -3449,6 +3025,8 @@ export const useChatStore = defineStore('chat', () => {
     updateRoleRelationshipPremise,
     saveRoleRelationshipClassification,
     upgradeNpcToMainRole,
+    upgradeNpcToSupportingRole,
+    upgradeSupportingRoleToMainRole,
     removeRoleProfile,
     isRoleProfileBound,
     bindRoleProfile,

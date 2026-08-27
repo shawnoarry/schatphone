@@ -73,6 +73,46 @@ describe('Contacts profile entity model', () => {
     expect(binding.profileId).toBe(npc.id)
   })
 
+  test('persists and restores supporting role with stable binding and lightweight memory defaults', () => {
+    const store = useChatStore()
+    const supporting = store.addRoleProfile({
+      roleId: '1006',
+      name: 'Recurring stylist',
+      entityType: CONTACTS_ENTITY_TYPES.SUPPORTING_ROLE,
+      profileValues: [{ fieldId: 'agency', value: 'Aurora Entertainment' }],
+    })
+    const binding = store.bindRoleProfile(supporting.id)
+
+    expect(supporting).toMatchObject({
+      entityType: CONTACTS_ENTITY_TYPES.SUPPORTING_ROLE,
+      isMain: false,
+      capabilities: {
+        canAppearInChatDirectory: true,
+        canUseFullRelationshipProgress: false,
+        canUseMemoryGroups: true,
+        canUseRouteProgression: false,
+      },
+    })
+    expect(binding.profileId).toBe(supporting.id)
+
+    const backup = {
+      roleProfiles: JSON.parse(JSON.stringify(store.roleProfiles)),
+      contacts: JSON.parse(JSON.stringify(store.contacts)),
+      conversations: JSON.parse(JSON.stringify(store.conversations)),
+      messagesByConversation: JSON.parse(JSON.stringify(store.messagesByConversation)),
+    }
+
+    setActivePinia(createPinia())
+    const restored = useChatStore()
+    expect(restored.restoreFromBackup(backup)).toBe(true)
+    expect(restored.getRoleProfileById(supporting.id)).toMatchObject({
+      entityType: CONTACTS_ENTITY_TYPES.SUPPORTING_ROLE,
+      isMain: false,
+      profileValues: [expect.objectContaining({ fieldId: 'agency' })],
+    })
+    expect(restored.getContactById(binding.id).profileId).toBe(supporting.id)
+  })
+
   test('upgrades NPC to main role while preserving values and existing chat binding', () => {
     const store = useChatStore()
     const npc = store.addRoleProfile({
@@ -99,6 +139,34 @@ describe('Contacts profile entity model', () => {
     expect(store.getContactById(binding.id).profileId).toBe(npc.id)
   })
 
+  test('upgrades NPC through supporting role without replacing its Chat binding', () => {
+    const store = useChatStore()
+    const npc = store.addRoleProfile({
+      roleId: '1007',
+      name: 'World passerby',
+      entityType: CONTACTS_ENTITY_TYPES.NPC,
+    })
+    const binding = store.bindRoleProfile(npc.id)
+
+    const supporting = store.upgradeNpcToSupportingRole(npc.id)
+    expect(supporting.entityType).toBe(CONTACTS_ENTITY_TYPES.SUPPORTING_ROLE)
+
+    const main = store.upgradeSupportingRoleToMainRole(npc.id, {
+      relationshipMode: 'full',
+    })
+
+    expect(main).toMatchObject({
+      id: npc.id,
+      entityType: CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+      capabilities: {
+        canUseFullRelationshipProgress: true,
+        canUseMemoryGroups: true,
+        canUseRouteProgression: true,
+      },
+    })
+    expect(store.getContactById(binding.id).profileId).toBe(npc.id)
+  })
+
   test('stores one primary world/template context plus supplemental knowledge points', () => {
     const store = useChatStore()
     const profile = store.addRoleProfile({
@@ -118,5 +186,85 @@ describe('Contacts profile entity model', () => {
       profileTemplateVersion: 2,
       supplementalKnowledgePointIds: ['kp_a'],
     })
+  })
+
+  test('persists and restores person-only profile categories and fields with their values', () => {
+    const store = useChatStore()
+    const profile = store.addRoleProfile({
+      roleId: '1008',
+      name: 'Private profile extension',
+      profileExtensions: {
+        categories: [{ id: 'private_story', label: 'Private story' }],
+        fields: [
+          {
+            id: 'private_nickname_rule',
+            categoryId: 'private_story',
+            label: 'Nickname rule',
+            type: 'long_text',
+          },
+        ],
+      },
+      profileValues: [
+        {
+          fieldId: 'private_nickname_rule',
+          value: 'Do not use the full name in private.',
+          visibilityLevel: 'hidden',
+        },
+      ],
+    })
+
+    store.saveNow()
+    const persisted = JSON.parse(localStorage.getItem('schatphone:store:chat') || '{}')
+    expect(persisted.data.roleProfiles.find((item) => item.id === profile.id)).toMatchObject({
+      profileExtensions: {
+        categories: [expect.objectContaining({ id: 'private_story' })],
+        fields: [expect.objectContaining({ id: 'private_nickname_rule' })],
+      },
+      profileValues: [expect.objectContaining({ fieldId: 'private_nickname_rule' })],
+    })
+
+    const backup = {
+      roleProfiles: persisted.data.roleProfiles,
+      contacts: persisted.data.contacts,
+      conversations: persisted.data.conversations,
+      messagesByConversation: persisted.data.messagesByConversation,
+    }
+    setActivePinia(createPinia())
+    const restored = useChatStore()
+    expect(restored.restoreFromBackup(backup)).toBe(true)
+    expect(restored.getRoleProfileById(profile.id)).toMatchObject({
+      profileExtensions: {
+        categories: [expect.objectContaining({ label: 'Private story' })],
+        fields: [expect.objectContaining({ label: 'Nickname rule' })],
+      },
+      profileValues: [
+        expect.objectContaining({
+          fieldId: 'private_nickname_rule',
+          value: 'Do not use the full name in private.',
+        }),
+      ],
+    })
+  })
+
+  test('rejects an ambiguous backup with duplicate profile IDs without changing current data', () => {
+    const store = useChatStore()
+    const clone = (value) => JSON.parse(JSON.stringify(value))
+    const before = clone(store.roleProfiles)
+    const roleProfiles = clone(store.roleProfiles)
+    roleProfiles.push({
+      ...clone(roleProfiles[0]),
+      roleId: '9999',
+      name: 'Duplicate profile ID',
+    })
+
+    const restored = store.restoreFromBackup({
+      roleProfiles,
+      contacts: clone(store.contacts),
+      conversations: clone(store.conversations),
+      messagesByConversation: clone(store.messagesByConversation),
+    })
+
+    expect(restored).toBe(false)
+    expect(store.roleProfiles).toEqual(before)
   })
 })

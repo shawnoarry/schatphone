@@ -26,6 +26,7 @@ import {
 import { buildWorldServiceTemplateGenerationRowsForPacks } from '../lib/world-pack-service-accounts'
 import { extractWorldServiceTemplateProposals } from '../lib/world-service-template-proposals'
 import { formatApiErrorForUi } from '../lib/ai'
+import { CONTACTS_ENTITY_TYPES } from '../lib/role-profile-schema'
 import { resolveWorldviewText } from '../lib/world-interface'
 import { getChatAppearanceClasses } from '../lib/chat-appearance'
 import { useDialog } from '../composables/useDialog'
@@ -1474,7 +1475,12 @@ const batchDeleteSelectedServices = async () => {
   )
 }
 
-const roleTypeTag = (profile) => (profile?.isMain ? t('主角色', 'Main') : t('NPC', 'NPC'))
+const roleTypeTag = (profile) => {
+  if (profile?.entityType === CONTACTS_ENTITY_TYPES.SUPPORTING_ROLE) {
+    return t('次要角色', 'Supporting')
+  }
+  return profile?.isMain ? t('主角色', 'Main') : t('NPC', 'NPC')
+}
 
 const serviceKindTag = (contact) =>
   contact.kind === 'official' ? t('公众号', 'Official') : t('服务号', 'Service')

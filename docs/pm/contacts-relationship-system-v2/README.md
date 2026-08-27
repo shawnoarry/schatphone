@@ -1,17 +1,21 @@
 # Contacts Relationship System V2 Package
 
-Updated: 2026-08-18
+Updated: 2026-08-27
 
 Use this package for work touching Contacts, Chat Directory boundary, role identity, relationship reset/delete, one-memory delete, role detail IA, or World Hub cleanup semantics tied to one role.
 
 ## Read This Package In This Order
 
 1. `STATUS_AND_HANDOFF.md`
-2. `PRODUCT_BOUNDARY.md`
-3. `DESTRUCTIVE_ACTIONS.md`
-4. `ROLE_HUB_INFORMATION_ARCHITECTURE.md`
-5. `IMPLEMENTATION_WORKSTREAMS.md`
-6. `ROLE_PROFILE_TEMPLATE_DECISION_LOG.md` when the task touches WorldBook-driven profile templates, Self Profile, NPC, or NPC -> Main Role upgrade
+2. `CONTACTS_V3_IDENTITY_AND_ROLE_CORE_PLAN.md` for the accepted next identity-owner, persona-confirmation, projection, lifecycle, and migration direction
+3. `CONTACTS_V3_0_ARCHITECTURE_AND_DECISION_FREEZE.md` for the frozen current-state inventory, per-world Self Profile decision, compatibility/rollback rules, and `CONTACTS-V3-1` file set
+4. `CONTACTS_V3_2A_EXTENSIBLE_PROFILE_CARD_DESIGN.md` when the task touches extensible profile-card categories, world-generated forms, user-added fields, or free-text classification
+5. `CONTACTS_V3_2A_EXECUTION_PLAN.md` for the live step-by-step implementation order and the dependent event queue
+6. `PRODUCT_BOUNDARY.md`
+7. `DESTRUCTIVE_ACTIONS.md`
+8. `ROLE_HUB_INFORMATION_ARCHITECTURE.md`
+9. `IMPLEMENTATION_WORKSTREAMS.md`
+10. `ROLE_PROFILE_TEMPLATE_DECISION_LOG.md` when the task touches WorldBook-driven profile templates, Self Profile, Supporting Role, World NPC, or person-depth upgrade
 
 Also read these when needed:
 
@@ -36,6 +40,13 @@ Current cross-device handoff and execution record:
 
 ## Fast Product Meaning
 
+- Contacts V2 remains complete at its accepted role, relationship, memory, WorldBook-field, cleanup, and Role Hub baseline. Contacts V3 is now in implementation: `CONTACTS-V3-0`, `CONTACTS-V3-1`, the profile-card category carrier, the four-person-type compatibility baseline, field-purpose/input-type rules, manual WorldBook category/field editing, dynamic Contacts person-page rendering, person-specific extensions, and reviewable current-world profile-card proposals are complete. The next safe slice classifies a pasted persona description into the same profile-card draft without saving before review.
+- `CONTACTS-V3-0` freezes one global device account plus one independent Self Profile per world. `CONTACTS-V3-1` now keeps `store:chat.roleProfiles` as the compatibility carrier while moving profile normalization, revision, CRUD, detail, classification, asset, NPC-upgrade, removal, hydration, and persistence-copy rules into `src/lib/contacts-profile-owner.js`.
+- Contacts is now the executable owner of Self Profile, Main Role, Supporting Role, and World NPC record behavior. Chat keeps the old method names and storage envelope for compatibility, but no longer implements the profile rules itself.
+- The executable baseline has four person types. Supporting Role sits between Main Role and World NPC; the legacy `npc` value remains World NPC, old NPCs are not automatically reclassified, and family/friend/colleague/etc. remain separate relationship labels.
+- Profile-template fields now support date, yes/no, and organization references in addition to the original five types. Extra Chat/event/Work Hub/public uses are explicit additive markers; old fields gain none automatically, and no marker grants organization access or creates an event by itself.
+- User-authored persona is an accepted identity source. Structured manual input may save through explicit user action; free-text or AI-assisted interpretation must remain a reviewable candidate until the user confirms it into Contacts-owned profile values and a new profile revision.
+- Formal Chat, Event Runtime, Work Hub, and future public surfaces should consume bounded purpose-specific identity projections. They must not each rebuild identity, visibility, world, template, revision, and capability rules from the complete profile object.
 - `Contacts` owns the global role archive, visible role ID, and role-centered destructive actions.
 - `Contacts` role profiles now own profile-side relationship premise/classification fields: free-text label, label note, initial seed values, stored primary category, modifiers, confidence/source/timestamp, and explanation.
 - Non-self role profiles own their stable fictional receiving-account definitions. Chat may disclose them through a system-generated account card, while Wallet owns disclosed references, confirmed transfers, and receipts.
@@ -64,8 +75,10 @@ Current cross-device handoff and execution record:
 - Contacts now detects when a role profile is using an unavailable, older-version, or other-world template and offers a current-world adaptation review. AI can draft migrated values into the editor, but the old values stay preserved as custom fields and nothing changes until the user saves.
 - The complete WorldBook -> Contacts world-field loop now has E2E coverage, so incoming workers should treat the value-flow guardrail as landed and continue from the visual-diff/adaptation clarity tasks rather than rebuilding the basic chain.
 - WorldBook's Profile Templates panel may link users into Contacts, and Contacts shows a focused handoff note for that entry path; concrete role, self-profile, and NPC values remain Contacts-owned.
-- Contacts role detail now has a V1 `世界字段 / World profile fields` editor: users can choose a current-world template, fill concrete values, set visibility levels, and save those values back to the role profile without editing the WorldBook template itself.
-- Contacts entity types now include Self Profile, Main Role, and NPC. Chat Directory is a chat target list, not a Main Role filter; Self Profile must not be bound as a Chat target, and NPC can be bound before upgrade.
+- Contacts role detail now presents `人物资料 / Profile card` as a read-first, category-driven surface. Saved values and natural-language prompts appear by WorldBook category; the full existing editor opens only after an explicit Edit action. Old flat templates fall back to General, out-of-template values remain visible as custom details, and no `3/4` completion score is shown.
+- The same person page now accepts person-specific categories and fields. They persist as Contacts-owned `profileExtensions`, remain isolated to that person unless the user explicitly promotes the structure into a new current-world template version, and never auto-fill other people.
+- WorldBook now offers deterministic current-world profile-card suggestions plus optional AI suggestions. Both paths open the existing editable template draft; Cancel writes nothing, only explicit Save creates one v1 world template, and an AI failure leaves rule-based and manual creation available.
+- Contacts entity types now include Self Profile, Main Role, Supporting Role, and World NPC. Chat Directory is a chat target list, not a Main Role filter; Self Profile must not be bound as a Chat target, and Supporting Roles or World NPCs can be bound before upgrade when their capabilities allow it.
 - Formal role deletion removes Wallet's disclosed payee references for that profile; relationship reset keeps the profile account because the person still exists.
 - Eligible Main Role/NPC profiles can now start Chat directly from Contacts through the Chat-owned seam; bound targets are reused, invalid route context is discarded, and Network recovery returns to the same role without making WorldBook content mandatory.
 - Contacts first opens like a phone contact list: Search, My Profile, Recent interactions, Main Roles, and NPC / World Roles. Recent interactions is only a shortcut layer; it does not remove roles/NPCs from the complete lists.

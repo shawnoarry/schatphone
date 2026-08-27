@@ -39,6 +39,7 @@ const createModel = ({
 describe('Contacts role hub model interface', () => {
   test('labels entity types and chat social states', () => {
     expect(contactsEntityTypeLabel(CONTACTS_ENTITY_TYPES.SELF_PROFILE, t)).toBe('Self Profile')
+    expect(contactsEntityTypeLabel(CONTACTS_ENTITY_TYPES.SUPPORTING_ROLE, t)).toBe('Supporting Role')
     expect(contactsEntityTypeLabel(CONTACTS_ENTITY_TYPES.NPC, t)).toBe('NPC / World Role')
     expect(contactsEntityTypeLabel(CONTACTS_ENTITY_TYPES.MAIN_ROLE, t)).toBe('Main Role')
     expect(chatSocialSnapshotLabel(CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST, t)).toBe('Greeting request pending')

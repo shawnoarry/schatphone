@@ -17,16 +17,22 @@ import { LEGACY_SINGLE_WORLD_ID, resolveActiveWorldOverview } from '../lib/world
 import { buildWorldAppBindingRows } from '../lib/world-pack-app-bindings'
 import { extractWorldAppTemplateProposals } from '../lib/world-app-template-registry'
 import { analyzeWorldProfileWithAI } from '../lib/world-profile-analysis'
+import {
+  buildDeterministicWorldProfileTemplateProposal,
+  extractWorldProfileTemplateProposalWithAI,
+} from '../lib/world-profile-template-proposals'
 import { buildWorldServiceTemplateGenerationRowsForPacks } from '../lib/world-pack-service-accounts'
 import { isBuiltInBookTextAssetId } from '../lib/built-in-book-assets'
 import { estimateTextTokens, estimateTokenParts } from '../lib/ai-token-estimate'
 import { useWorldBookKnowledgeModel } from '../composables/useWorldBookKnowledgeModel'
 import { useWorldBookProfileTemplateModel } from '../composables/useWorldBookProfileTemplateModel'
+import { createBlankWorldProfileTemplateDraft } from '../composables/useWorldBookProfileTemplateEditor'
 import { useWorldBookSourceModel } from '../composables/useWorldBookSourceModel'
 import { useWorldSettingWorkspaceModel } from '../composables/useWorldSettingWorkspaceModel'
 import CurrentWorldPackPanel from '../components/worldbook/CurrentWorldPackPanel.vue'
 import WorldBookOverview from '../components/worldbook/WorldBookOverview.vue'
 import WorldSettingWorkspace from '../components/worldbook/WorldSettingWorkspace.vue'
+import WorldBookProfileTemplateEditor from '../components/worldbook/WorldBookProfileTemplateEditor.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -98,6 +104,12 @@ const worldAppTemplateProposalNoticeTone = ref('info')
 const worldPackRecommendationReview = computed(() => systemStore.buildWorldPackRecommendationReview())
 const worldProfileAnalysisLoading = ref(false)
 const worldProfileAnalysisNotice = ref('')
+const editingWorldProfileTemplate = ref(null)
+const isCreatingWorldProfileTemplate = ref(false)
+const worldProfileTemplateProposalReview = ref(null)
+const worldProfileTemplateProposalLoading = ref(false)
+const worldProfileTemplateProposalNotice = ref('')
+const worldProfileTemplateProposalNoticeTone = ref('info')
 
 const sourceDirectory = reactive({
   open: false,
@@ -1072,6 +1084,122 @@ const copyProfileTemplatePreset = (presetId) => {
   }
   systemStore.saveNow()
   pulseSaved(t('角色档案模板已复制到当前世界观。', 'Profile template copied into this worldview.'))
+}
+
+const openNewWorldProfileTemplate = () => {
+  worldProfileTemplateProposalReview.value = null
+  worldProfileTemplateProposalNotice.value = ''
+  editingWorldProfileTemplate.value = createBlankWorldProfileTemplateDraft({
+    worldId: LEGACY_SINGLE_WORLD_ID,
+    categoryLabel: t('基础资料', 'Basic profile'),
+  })
+  isCreatingWorldProfileTemplate.value = true
+}
+
+const openWorldProfileTemplateEditor = (template) => {
+  if (!template?.id) return
+  const current = systemStore.getProfileTemplateById(template.id)
+  if (!current) {
+    uiNotice.value = t('找不到这份资料卡模板。', 'This profile-card template is missing.')
+    return
+  }
+  worldProfileTemplateProposalReview.value = null
+  worldProfileTemplateProposalNotice.value = ''
+  editingWorldProfileTemplate.value = current
+  isCreatingWorldProfileTemplate.value = false
+}
+
+const closeWorldProfileTemplateEditor = () => {
+  editingWorldProfileTemplate.value = null
+  isCreatingWorldProfileTemplate.value = false
+  worldProfileTemplateProposalReview.value = null
+}
+
+const openWorldProfileTemplateProposal = (review) => {
+  if (!review?.draft) return false
+  worldProfileTemplateProposalReview.value = review
+  editingWorldProfileTemplate.value = review.draft
+  isCreatingWorldProfileTemplate.value = true
+  return true
+}
+
+const proposeWorldProfileTemplateFromRules = () => {
+  const activePack = worldOverview.value.activePack || systemStore.getActiveWorldPack()
+  const review = buildDeterministicWorldProfileTemplateProposal({
+    worldContextText: buildWorldAppTemplateContextText(),
+    worldPack: activePack,
+    worldPacks: enabledWorldPacks.value,
+    worldId: LEGACY_SINGLE_WORLD_ID,
+    locale: settings.value.system?.language || 'zh-CN',
+    existingTemplates: systemStore.listWorldProfileTemplates(LEGACY_SINGLE_WORLD_ID),
+  })
+  if (!openWorldProfileTemplateProposal(review)) return
+  worldProfileTemplateProposalNoticeTone.value = 'info'
+  worldProfileTemplateProposalNotice.value = t(
+    `已生成 ${review.categoryCount} 个类目、${review.fieldCount} 个字段的待复核草稿；取消不会保存。`,
+    `Generated a review draft with ${review.categoryCount} categories and ${review.fieldCount} fields; Cancel saves nothing.`,
+  )
+}
+
+const proposeWorldProfileTemplateWithAI = async () => {
+  if (worldProfileTemplateProposalLoading.value) return
+  worldProfileTemplateProposalLoading.value = true
+  worldProfileTemplateProposalNotice.value = ''
+  try {
+    const result = await extractWorldProfileTemplateProposalWithAI({
+      worldContextText: buildWorldAppTemplateContextText(),
+      worldPacks: enabledWorldPacks.value,
+      existingTemplates: systemStore.listWorldProfileTemplates(LEGACY_SINGLE_WORLD_ID),
+      worldId: LEGACY_SINGLE_WORLD_ID,
+      locale: settings.value.system?.language || 'zh-CN',
+      settings: settings.value,
+    })
+    if (!result.ok || !openWorldProfileTemplateProposal(result.review)) {
+      worldProfileTemplateProposalNoticeTone.value = 'warning'
+      worldProfileTemplateProposalNotice.value = t(
+        'AI 暂时没有生成可用草稿；仍可使用规则建议或手动新建。',
+        'AI did not produce a usable draft; rule suggestions and manual creation remain available.',
+      )
+      return
+    }
+    worldProfileTemplateProposalNoticeTone.value = 'info'
+    worldProfileTemplateProposalNotice.value = t(
+      `AI 已生成 ${result.review.categoryCount} 个类目、${result.review.fieldCount} 个字段的待复核草稿；取消不会保存。`,
+      `AI generated a review draft with ${result.review.categoryCount} categories and ${result.review.fieldCount} fields; Cancel saves nothing.`,
+    )
+  } catch (error) {
+    worldProfileTemplateProposalNoticeTone.value = 'danger'
+    worldProfileTemplateProposalNotice.value = formatApiErrorForUi(
+      error,
+      t(
+        'AI 生成失败；仍可使用规则建议或手动新建。',
+        'AI generation failed; rule suggestions and manual creation remain available.',
+      ),
+    )
+  } finally {
+    worldProfileTemplateProposalLoading.value = false
+  }
+}
+
+const saveWorldProfileTemplateDraft = (draft) => {
+  const wasCreating = isCreatingWorldProfileTemplate.value
+  const saved = wasCreating
+    ? systemStore.createWorldProfileTemplate({
+        ...draft,
+        worldId: LEGACY_SINGLE_WORLD_ID,
+      })
+    : systemStore.updateWorldProfileTemplate(draft?.id, draft)
+  if (!saved) {
+    uiNotice.value = t('资料卡模板保存失败，旧版本没有改变。', 'Profile-card save failed; the previous version is unchanged.')
+    return
+  }
+  systemStore.saveNow()
+  closeWorldProfileTemplateEditor()
+  pulseSaved(
+    wasCreating
+      ? t('新的资料卡模板已创建。', 'New profile-card template created.')
+      : t('资料卡模板已保存为新版本。', 'Profile-card template saved as a new version.'),
+  )
 }
 
 const toggleWorldProfileTemplateEnabled = (template) => {
@@ -2117,10 +2245,85 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="worldbook-template-section">
-          <p class="text-sm font-semibold">{{ worldTemplateSection.title }}</p>
-          <p class="text-xs text-gray-500">
-            {{ worldTemplateSection.detail }}
+          <div class="worldbook-template-section__head">
+            <div>
+              <p class="text-sm font-semibold">{{ worldTemplateSection.title }}</p>
+              <p class="text-xs text-gray-500">
+                {{ worldTemplateSection.detail }}
+              </p>
+            </div>
+            <div class="worldbook-template-section__actions">
+              <button
+                type="button"
+                class="worldbook-secondary-action"
+                data-testid="worldbook-profile-template-propose"
+                @click="proposeWorldProfileTemplateFromRules"
+              >
+                {{ t('根据当前世界生成建议', 'Suggest from current world') }}
+              </button>
+              <button
+                type="button"
+                class="worldbook-secondary-action"
+                data-testid="worldbook-profile-template-propose-ai"
+                :disabled="worldProfileTemplateProposalLoading"
+                @click="proposeWorldProfileTemplateWithAI"
+              >
+                {{
+                  worldProfileTemplateProposalLoading
+                    ? t('AI 正在生成…', 'Generating with AI…')
+                    : t('用 AI 生成建议', 'Suggest with AI')
+                }}
+              </button>
+              <button
+                type="button"
+                class="worldbook-primary-action"
+                data-testid="worldbook-profile-template-create"
+                @click="openNewWorldProfileTemplate"
+              >
+                <i class="fas fa-plus" aria-hidden="true"></i>
+                {{ t('新建资料卡', 'New profile card') }}
+              </button>
+            </div>
+          </div>
+          <div
+            v-if="worldProfileTemplateProposalReview"
+            class="worldbook-profile-template-proposal-review"
+            data-testid="worldbook-profile-template-proposal-review"
+          >
+            <strong>
+              {{
+                worldProfileTemplateProposalReview.source === 'ai'
+                  ? t('AI 待复核草稿', 'AI review draft')
+                  : t('规则待复核草稿', 'Rule-based review draft')
+              }}
+            </strong>
+            <span>
+              {{
+                t(
+                  `${worldProfileTemplateProposalReview.categoryCount} 个类目 · ${worldProfileTemplateProposalReview.fieldCount} 个字段；只有保存才创建模板。`,
+                  `${worldProfileTemplateProposalReview.categoryCount} categories · ${worldProfileTemplateProposalReview.fieldCount} fields; only Save creates a template.`,
+                )
+              }}
+            </span>
+            <small v-if="worldProfileTemplateProposalReview.matchedRuleLabels?.length">
+              {{ worldProfileTemplateProposalReview.matchedRuleLabels.join(' · ') }}
+            </small>
+          </div>
+          <p
+            v-if="worldProfileTemplateProposalNotice"
+            class="worldbook-profile-template-proposal-notice"
+            :data-notice-tone="worldProfileTemplateProposalNoticeTone"
+            data-testid="worldbook-profile-template-proposal-notice"
+          >
+            {{ worldProfileTemplateProposalNotice }}
           </p>
+          <WorldBookProfileTemplateEditor
+            v-if="editingWorldProfileTemplate"
+            :template="editingWorldProfileTemplate"
+            :is-new="isCreatingWorldProfileTemplate"
+            @cancel="closeWorldProfileTemplateEditor"
+            @save="saveWorldProfileTemplateDraft"
+          />
           <p v-if="worldProfileTemplateRows.length === 0" class="text-sm text-gray-500">
             {{ worldTemplateSection.emptyCopy }}
           </p>
@@ -2131,14 +2334,24 @@ onBeforeUnmount(() => {
                 {{ template.versionLabel }} · {{ template.fieldCountLabel }} · {{ template.stateLabel }}
               </p>
             </div>
-            <button
-              type="button"
-              class="worldbook-secondary-action"
-              :data-testid="`worldbook-template-toggle-${template.id}`"
-              @click="toggleWorldProfileTemplateEnabled(template)"
-            >
-              {{ template.toggleLabel }}
-            </button>
+            <div class="worldbook-template-row__actions">
+              <button
+                type="button"
+                class="worldbook-secondary-action"
+                :data-testid="`worldbook-template-edit-${template.id}`"
+                @click="openWorldProfileTemplateEditor(template)"
+              >
+                {{ t('编辑资料卡', 'Edit profile card') }}
+              </button>
+              <button
+                type="button"
+                class="worldbook-secondary-action"
+                :data-testid="`worldbook-template-toggle-${template.id}`"
+                @click="toggleWorldProfileTemplateEnabled(template)"
+              >
+                {{ template.toggleLabel }}
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -3199,6 +3412,57 @@ onBeforeUnmount(() => {
 .worldbook-template-section {
   display: grid;
   gap: 9px;
+}
+
+.worldbook-template-section__head,
+.worldbook-template-row__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+}
+
+.worldbook-template-section__head > div {
+  display: grid;
+  gap: 3px;
+}
+
+.worldbook-template-section__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.worldbook-profile-template-proposal-review {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-sm);
+  background: var(--system-control-bg);
+  color: var(--system-text);
+}
+
+.worldbook-profile-template-proposal-review span,
+.worldbook-profile-template-proposal-review small,
+.worldbook-profile-template-proposal-notice {
+  color: var(--system-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.worldbook-profile-template-proposal-notice {
+  margin: 0;
+}
+
+.worldbook-profile-template-proposal-notice[data-notice-tone='danger'] {
+  color: var(--system-danger);
+}
+
+.worldbook-template-section__head p {
+  margin: 0;
 }
 
 .worldbook-template-section > p {
@@ -4389,6 +4653,20 @@ onBeforeUnmount(() => {
   .worldbook-template-row {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .worldbook-template-section__head,
+  .worldbook-template-row__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .worldbook-template-section__head .worldbook-primary-action,
+  .worldbook-template-section__actions,
+  .worldbook-template-section__actions .worldbook-secondary-action,
+  .worldbook-template-section__actions .worldbook-primary-action,
+  .worldbook-template-row__actions .worldbook-secondary-action {
+    width: 100%;
   }
 
   .worldbook-source-review-head {

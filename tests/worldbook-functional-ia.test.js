@@ -256,6 +256,115 @@ describe('WorldBook functional IA', () => {
     wrapper.unmount()
   })
 
+  test('creates, edits, and cancels manual profile-card drafts without AI', async () => {
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    const wrapper = await mountWorldBook()
+
+    await wrapper.get('[data-testid="worldbook-panel-tab-templates"]').trigger('click')
+    await nextTick()
+    await wrapper.get('[data-testid="worldbook-profile-template-create"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="worldbook-profile-template-editor"]').text()).toContain(
+      'New profile card',
+    )
+    await wrapper.get('[data-testid="worldbook-profile-template-title"]').setValue('Manual idol profile')
+    const addFieldButton = wrapper.get('[data-testid^="worldbook-profile-add-field-"]')
+    await addFieldButton.trigger('click')
+    await nextTick()
+
+    const fieldCard = wrapper.get('[data-testid^="worldbook-profile-field-card-"]')
+    const fieldId = fieldCard.attributes('data-testid').replace('worldbook-profile-field-card-', '')
+    await wrapper.get(`[data-testid="worldbook-profile-field-label-${fieldId}"]`).setValue('Agency')
+    await wrapper.get(`[data-testid="worldbook-profile-field-type-${fieldId}"]`).setValue(
+      'organization_reference',
+    )
+    await wrapper.get('[data-testid="worldbook-profile-template-save"]').trigger('click')
+    await flushPromises()
+
+    const created = systemStore
+      .listWorldProfileTemplates('legacy_single_world')
+      .find((template) => template.title === 'Manual idol profile')
+    expect(created).toMatchObject({ version: 1 })
+    expect(created.fields).toEqual([
+      expect.objectContaining({
+        id: fieldId,
+        label: 'Agency',
+        type: 'organization_reference',
+      }),
+    ])
+    expect(wrapper.find('[data-testid="worldbook-profile-template-editor"]').exists()).toBe(false)
+
+    await wrapper.get(`[data-testid="worldbook-template-edit-${created.id}"]`).trigger('click')
+    await nextTick()
+    await wrapper.get('[data-testid="worldbook-profile-template-title"]').setValue('Unsaved title')
+    await wrapper.get('[data-testid="worldbook-profile-template-cancel"]').trigger('click')
+    await nextTick()
+    expect(systemStore.getProfileTemplateById(created.id).title).toBe('Manual idol profile')
+
+    await wrapper.get(`[data-testid="worldbook-template-edit-${created.id}"]`).trigger('click')
+    await nextTick()
+    await wrapper.get('[data-testid="worldbook-profile-template-title"]').setValue('Manual idol profile v2')
+    await wrapper.get('[data-testid="worldbook-profile-template-save"]').trigger('click')
+    await flushPromises()
+
+    expect(systemStore.getProfileTemplateById(created.id)).toMatchObject({
+      title: 'Manual idol profile v2',
+      version: 2,
+    })
+    expect(systemStore.getProfileTemplateById(created.id).fields[0].id).toBe(fieldId)
+
+    wrapper.unmount()
+  })
+
+  test('reviews a current-world profile-card proposal before creating one v1 template', async () => {
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.activateWorldPack('fandom_parallel')
+    const before = systemStore.listWorldProfileTemplates('legacy_single_world')
+    const wrapper = await mountWorldBook()
+
+    await wrapper.get('[data-testid="worldbook-panel-tab-templates"]').trigger('click')
+    await nextTick()
+    await wrapper.get('[data-testid="worldbook-profile-template-propose"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="worldbook-profile-template-proposal-review"]').text()).toContain(
+      'Rule-based review draft',
+    )
+    expect(wrapper.get('[data-testid="worldbook-profile-template-proposal-review"]').text()).toContain(
+      'Idol and entertainment',
+    )
+    expect(wrapper.get('[data-testid="worldbook-profile-template-editor"]').text()).toContain(
+      'Stage name',
+    )
+    expect(wrapper.get('[data-testid="worldbook-profile-template-editor"]').text()).toContain(
+      'Group role',
+    )
+
+    await wrapper.get('[data-testid="worldbook-profile-template-cancel"]').trigger('click')
+    await nextTick()
+    expect(systemStore.listWorldProfileTemplates('legacy_single_world')).toEqual(before)
+
+    await wrapper.get('[data-testid="worldbook-profile-template-propose"]').trigger('click')
+    await nextTick()
+    await wrapper.get('[data-testid="worldbook-profile-template-save"]').trigger('click')
+    await flushPromises()
+
+    const after = systemStore.listWorldProfileTemplates('legacy_single_world')
+    expect(after).toHaveLength(before.length + 1)
+    expect(after.at(-1)).toMatchObject({
+      title: 'Fandom profile suggestion',
+      version: 1,
+    })
+    expect(after.at(-1).fields.map((field) => field.id)).toEqual(
+      expect.arrayContaining(['occupation', 'affiliation', 'public_identity', 'stage_name']),
+    )
+
+    wrapper.unmount()
+  })
+
   test('reviews and activates a built-in world pack from WorldBook', async () => {
     const systemStore = useSystemStore()
     const chatStore = useChatStore()

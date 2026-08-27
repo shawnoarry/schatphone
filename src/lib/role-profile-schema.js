@@ -1,9 +1,11 @@
 export {
   CONTACTS_ENTITY_TYPES,
   PROFILE_VISIBILITY_LEVELS,
+  cloneProfileExtensions,
   createDefaultCapabilitiesForEntityType,
   normalizeContactsEntityType,
   normalizeProfileCapabilities,
+  normalizeProfileExtensions,
   normalizeProfileTemplateLink,
   normalizeProfileValues,
 } from './profile-template-schema'
@@ -29,6 +31,8 @@ const MAX_DETAIL_ID_LENGTH = 140
 const MAX_DETAIL_TITLE_LENGTH = 80
 const MAX_DETAIL_TEXT_LENGTH = 600
 const MAX_SOURCE_TEXT_LENGTH = 140
+const MAX_ROLE_KNOWLEDGE_POINT_IDS = 80
+const MAX_KNOWLEDGE_POINT_ID_LENGTH = 64
 
 const toInt = (value, fallback = 0) => {
   const num = Number(value)
@@ -58,6 +62,20 @@ export const normalizeRoleId = (value, fallback = '') => {
 }
 
 export const isValidRoleId = (value) => ROLE_PROFILE_ID_PATTERN.test(normalizeRoleId(value))
+
+export const normalizeRoleKnowledgePointIds = (rawIds = []) => {
+  if (!Array.isArray(rawIds)) return []
+  const seen = new Set()
+  return rawIds
+    .map((value) => normalizeText(value, '', MAX_KNOWLEDGE_POINT_ID_LENGTH))
+    .filter((value) => /^[a-z0-9_-]+$/i.test(value))
+    .filter((value) => {
+      if (seen.has(value)) return false
+      seen.add(value)
+      return true
+    })
+    .slice(0, MAX_ROLE_KNOWLEDGE_POINT_IDS)
+}
 
 export const createRoleIdFromProfileId = (profileId, fallbackIndex = 0) => {
   const parsedId = toInt(profileId, 0)

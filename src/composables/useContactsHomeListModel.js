@@ -39,7 +39,11 @@ export function useContactsHomeListModel({
   )
 
   const npcRoleProfiles = computed(() =>
-    allRoleProfiles.value.filter((item) => item.entityType === CONTACTS_ENTITY_TYPES.NPC),
+    allRoleProfiles.value.filter(
+      (item) =>
+        item.entityType === CONTACTS_ENTITY_TYPES.NPC ||
+        item.entityType === CONTACTS_ENTITY_TYPES.SUPPORTING_ROLE,
+    ),
   )
 
   const normalizedContactsSearchQuery = computed(() =>

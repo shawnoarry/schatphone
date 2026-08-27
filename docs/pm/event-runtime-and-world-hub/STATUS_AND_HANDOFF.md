@@ -130,6 +130,7 @@ Roadmap 4.3 review quality and 4.4 service-account continuity are complete. Do n
 
 Current safe sequence after the user's event-lane reprioritization:
 
+0. follow the dependency queue in `CONTACTS_V3_2A_EXECUTION_PLAN.md`: `EVENT-PREP-1` waits for Contacts `CARD-2`, `EVENT-PROJECTION-1` waits for `PERSONA-2`, and Work Hub event production waits for the accepted Contacts/Work Hub identity projection. Do not create a second event-owned identity form while Contacts V3 is active.
 1. keep landed EVE-1 pure and empty-by-default; do not add persistence, effect authority, implicit host activation, or UI to the projection Modules.
 2. preserve the frozen EVE-2A Interfaces/fixtures and selected production-arrival-briefing archetype; change meaning only through a new schema/fixture version.
 3. preserve the landed EVE-2B runtime contracts, the Simulation V7 carrier and V1-V6 migration chain, one-call/no-retry Composer policy, durable Event Instance V2 retention, durable review notes, and local K-pop fallback; change frozen meaning only through a new schema/fixture version.

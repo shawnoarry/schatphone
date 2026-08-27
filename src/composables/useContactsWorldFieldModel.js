@@ -1,8 +1,11 @@
 import { computed } from 'vue'
 import { buildProfileTemplateAdaptationReview } from '../lib/profile-template-adaptation-assistant'
 import {
+  PROFILE_TEMPLATE_DEFAULT_CATEGORY_ID,
+  PROFILE_TEMPLATE_FIELD_TYPES,
   PROFILE_TEMPLATE_SCOPES,
   PROFILE_VISIBILITY_LEVELS,
+  mergeProfileTemplateExtensions,
 } from '../lib/profile-template-schema'
 
 const defaultT = (zh, en) => en || zh
@@ -11,6 +14,31 @@ const readValue = (source) => (source && typeof source === 'object' && 'value' i
 const readArray = (source) => {
   const value = readValue(source)
   return Array.isArray(value) ? value : []
+}
+
+const profileTemplateCategoryLabel = (category = {}, t = defaultT) => {
+  const label = String(category?.label || category?.title || '').trim()
+  if (category?.id === PROFILE_TEMPLATE_DEFAULT_CATEGORY_ID && (!label || label === 'General')) {
+    return t('基本资料', 'General')
+  }
+  return label || t('人物资料', 'Profile details')
+}
+
+const buildCategoryPrompt = (rows = [], t = defaultT) => {
+  const missingRequired = rows.filter((row) => row.isMissing && row.required)
+  const missingRecommended = rows.filter(
+    (row) => row.isMissing && !row.required && row.recommended,
+  )
+  const candidates = missingRequired.length > 0 ? missingRequired : missingRecommended
+  if (candidates.length === 0) return ''
+
+  const labels = [...new Set(candidates.map((row) => row.title).filter(Boolean))]
+  const visibleLabels = labels.slice(0, 2)
+  const zhFields = `${visibleLabels.join('、')}${labels.length > 2 ? '等资料' : ''}`
+  const enFields = `${visibleLabels.join(' and ')}${labels.length > 2 ? ' and other details' : ''}`
+  return missingRequired.length > 0
+    ? t(`请补充${zhFields}。`, `Add ${enFields}.`)
+    : t(`建议补充${zhFields}。`, `Consider adding ${enFields}.`)
 }
 
 export const createProfileTemplateVisibilityOptions = (t = defaultT) => [
@@ -33,9 +61,14 @@ export const fieldMatchesProfileEntity = (field = {}, entityType = '') => {
   return entityTypes.length === 0 || entityTypes.includes(entityType)
 }
 
-export const formatProfileValue = (value) => {
+export const formatProfileValue = (value, field = {}, t = defaultT) => {
   if (Array.isArray(value?.value)) return value.value.join(', ')
-  return typeof value?.value === 'string' ? value.value : ''
+  const rawValue = typeof value?.value === 'string' ? value.value : ''
+  if (field?.type === PROFILE_TEMPLATE_FIELD_TYPES.BOOLEAN) {
+    if (rawValue === 'true') return t('\u662f', 'Yes')
+    if (rawValue === 'false') return t('\u5426', 'No')
+  }
+  return rawValue
 }
 
 export const profileVisibilityLevelLabel = (level = '', options = [], t = defaultT) =>
@@ -96,12 +129,13 @@ const buildWorldFieldRow = ({
   title = '',
   description = '',
   isTemplateField = false,
+  isPersonExtension = false,
   visibilityOptions = [],
   t = defaultT,
 } = {}) => {
   const visibilityLevel = value?.visibilityLevel || field?.defaultVisibilityLevel || ''
   const visibilityLabel = profileVisibilityLevelLabel(visibilityLevel, visibilityOptions, t)
-  const displayValue = formatProfileValue(value)
+  const displayValue = formatProfileValue(value, field, t)
 
   return {
     key,
@@ -110,14 +144,20 @@ const buildWorldFieldRow = ({
     title,
     description,
     isTemplateField,
+    isPersonExtension,
     displayValue,
+    isMissing: !displayValue,
+    required: field?.required === true,
+    recommended: field ? field.recommended !== false : false,
     visibilityLevel,
     visibilityLabel,
     badgeLabel: isTemplateField
       ? visibilityLabel
-      : value
-        ? t(`${visibilityLabel} \u00b7 \u81ea\u5b9a\u4e49`, `${visibilityLabel} \u00b7 Custom`)
-        : t('\u81ea\u5b9a\u4e49\u5b57\u6bb5', 'Custom field'),
+      : isPersonExtension
+        ? t(`${visibilityLabel} \u00b7 \u4eba\u7269\u4e13\u5c5e`, `${visibilityLabel} \u00b7 Person only`)
+        : value
+          ? t(`${visibilityLabel} \u00b7 \u81ea\u5b9a\u4e49`, `${visibilityLabel} \u00b7 Custom`)
+          : t('\u81ea\u5b9a\u4e49\u5b57\u6bb5', 'Custom field'),
   }
 }
 
@@ -125,6 +165,7 @@ export function useContactsWorldFieldModel({
   selectedProfile,
   selectedProfileEntityType,
   selectedProfileValues,
+  selectedProfileExtensions,
   currentWorldProfileTemplates,
   universalProfileTemplates,
   currentContactsWorldId,
@@ -178,6 +219,31 @@ export function useContactsWorldFieldModel({
       : [],
   )
 
+  const selectedProfileFieldStructure = computed(() => {
+    const template = selectedProfileTemplate.value
+    return mergeProfileTemplateExtensions({
+      templateCategories: Array.isArray(template?.categories) ? template.categories : [],
+      templateFields: selectedProfileTemplateFields.value,
+      profileExtensions: readValue(selectedProfileExtensions) || {},
+    })
+  })
+
+  const selectedProfileTemplateCategories = computed(
+    () => selectedProfileFieldStructure.value.categories,
+  )
+
+  const selectedProfilePersonFieldIds = computed(
+    () => new Set(selectedProfileFieldStructure.value.personFieldIds),
+  )
+
+  const selectedProfilePersonCategoryIds = computed(
+    () => new Set(selectedProfileFieldStructure.value.personCategoryIds),
+  )
+
+  const selectedProfileFields = computed(() =>
+    selectedProfileFieldStructure.value.fields.filter(fieldMatchesSelectedProfileEntity),
+  )
+
   const selectedProfileValueMap = computed(() => {
     const map = new Map()
     readArray(selectedProfileValues).forEach((value) => {
@@ -187,25 +253,27 @@ export function useContactsWorldFieldModel({
   })
 
   const profileValueLabel = (value) =>
-    buildProfileValueLabel(value, selectedProfileTemplateFields.value, t)
+    buildProfileValueLabel(value, selectedProfileFields.value, t)
 
   const selectedProfileWorldFieldRows = computed(() => {
     const templateFieldIds = new Set(selectedProfileTemplateFields.value.map((field) => field.id))
+    const knownFieldIds = new Set(selectedProfileFields.value.map((field) => field.id))
     const visibilityOptions = profileTemplateVisibilityOptions.value
-    const templateRows = selectedProfileTemplateFields.value.map((field) =>
+    const knownRows = selectedProfileFields.value.map((field) =>
       buildWorldFieldRow({
         key: field.id,
         field,
         value: selectedProfileValueMap.value.get(field.id) || null,
         title: field.label || field.id,
         description: field.description || '',
-        isTemplateField: true,
+        isTemplateField: templateFieldIds.has(field.id),
+        isPersonExtension: selectedProfilePersonFieldIds.value.has(field.id),
         visibilityOptions,
         t,
       }),
     )
     const extraRows = readArray(selectedProfileValues)
-      .filter((value) => value?.fieldId && !templateFieldIds.has(value.fieldId))
+      .filter((value) => value?.fieldId && !knownFieldIds.has(value.fieldId))
       .map((value) =>
         buildWorldFieldRow({
           key: value.fieldId,
@@ -214,11 +282,59 @@ export function useContactsWorldFieldModel({
           title: profileValueLabel(value),
           description: '',
           isTemplateField: false,
+          isPersonExtension: false,
           visibilityOptions,
           t,
         }),
       )
-    return [...templateRows, ...extraRows]
+    return [...knownRows, ...extraRows]
+  })
+
+  const selectedProfileWorldFieldGroups = computed(() => {
+    const rows = selectedProfileWorldFieldRows.value
+    const knownRows = rows.filter((row) => row.isTemplateField || row.isPersonExtension)
+    const customRows = rows.filter((row) => !row.isTemplateField && !row.isPersonExtension)
+    const categories = selectedProfileTemplateCategories.value
+    const fallbackCategoryId = categories[0]?.id || PROFILE_TEMPLATE_DEFAULT_CATEGORY_ID
+    const groups = categories
+      .map((category) => {
+        const categoryRows = knownRows.filter(
+          (row) => (row.field?.categoryId || fallbackCategoryId) === category.id,
+        )
+        if (categoryRows.length === 0) return null
+        const filledRows = categoryRows.filter((row) => !row.isMissing)
+        return {
+          key: category.id,
+          label: profileTemplateCategoryLabel(category, t),
+          description: category.description || '',
+          rows: categoryRows,
+          filledRows,
+          promptText: buildCategoryPrompt(categoryRows, t),
+          emptyText: t('暂时没有已填写内容。', 'No saved details yet.'),
+          isCustom: false,
+          isPersonExtension: selectedProfilePersonCategoryIds.value.has(category.id),
+        }
+      })
+      .filter(Boolean)
+
+    if (customRows.length > 0) {
+      groups.push({
+        key: 'custom_details',
+        label: t('补充资料', 'Custom details'),
+        description: t(
+          '这些内容来自旧模板或人物原有资料，仍会继续保留。',
+          'These details came from an older template or this person\'s existing profile and remain preserved.',
+        ),
+        rows: customRows,
+        filledRows: customRows.filter((row) => !row.isMissing),
+        promptText: '',
+        emptyText: t('暂时没有已填写内容。', 'No saved details yet.'),
+        isCustom: true,
+        isPersonExtension: false,
+      })
+    }
+
+    return groups
   })
 
   const selectedWorldFieldIntroText = computed(() =>
@@ -275,10 +391,15 @@ export function useContactsWorldFieldModel({
     profileVisibilityLevelLabel: (level = '') =>
       profileVisibilityLevelLabel(level, profileTemplateVisibilityOptions.value, t),
     selectedProfileTemplate,
+    selectedProfileTemplateCategories,
+    selectedProfileFields,
+    selectedProfilePersonCategoryIds,
+    selectedProfilePersonFieldIds,
     selectedProfileTemplateAdaptationDisplay,
     selectedProfileTemplateAdaptationReview,
     selectedProfileTemplateFields,
     selectedProfileValueMap,
+    selectedProfileWorldFieldGroups,
     selectedProfileWorldFieldRows,
     selectedWorldFieldIntroText,
   }

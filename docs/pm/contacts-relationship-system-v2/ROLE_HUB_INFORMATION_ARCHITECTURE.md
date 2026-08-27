@@ -193,7 +193,7 @@ NPC is a lightweight world-person record. NPCs can appear in world events, socia
 
 ## 5. WorldBook-Driven Extensible Sections
 
-WorldBook defines profile-template fields. Contacts stores concrete values for each Self Profile, Main Role, or NPC.
+WorldBook defines reusable profile-template structure. Contacts stores concrete values and person-specific extensions for each Self Profile, Main Role, Supporting Role, or World NPC.
 
 V1 rules:
 
@@ -204,6 +204,8 @@ V1 rules:
 - saving values should only replace fields covered by the selected template and preserve older/custom out-of-template values unless a later explicit cleanup flow is added;
 - AI assistance can draft empty world-field values inside the Contacts editor, but suggestions remain unsaved editor drafts and must not overwrite saved/manual values without the user pressing Save;
 - Contacts may flag an unavailable, older-version, or other-world template as needing current-world adaptation; AI can draft migrated values into the editor, but old values remain preserved as custom fields and only the user's Save action updates the profile;
+- the existing person page merges the selected world template with Contacts-owned `profileExtensions`; a person-only category/field stays isolated unless the user explicitly promotes its structure into a new current-world template version;
+- add/promote operations remain part of the outer edit draft, so cancellation changes neither the person nor the world template, and template promotion never auto-fills other people;
 - manual profile values remain higher priority than event-attached clues.
 
 ## 6. Visible Role ID Rule

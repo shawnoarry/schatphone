@@ -1,7 +1,11 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, test } from 'vitest'
 import { useSystemStore } from '../src/stores/system'
-import { PROFILE_TEMPLATE_SCOPES } from '../src/lib/profile-template-schema'
+import {
+  PROFILE_TEMPLATE_FIELD_PURPOSES,
+  PROFILE_TEMPLATE_FIELD_TYPES,
+  PROFILE_TEMPLATE_SCOPES,
+} from '../src/lib/profile-template-schema'
 
 describe('WorldBook profile templates in system store', () => {
   beforeEach(() => {
@@ -27,6 +31,25 @@ describe('WorldBook profile templates in system store', () => {
       version: 1,
     })
     expect(store.listWorldProfileTemplates('world_abo_custom')).toHaveLength(1)
+  })
+
+  test('creates a blank world template only when the editor saves it', () => {
+    const store = useSystemStore()
+    const created = store.createWorldProfileTemplate({
+      worldId: 'world_custom',
+      title: 'Custom profile',
+      description: 'Built manually.',
+      categories: [{ id: 'identity', label: 'Identity', order: 0 }],
+      fields: [{ id: 'occupation', label: 'Occupation', categoryId: 'identity' }],
+    })
+
+    expect(created).toMatchObject({
+      scope: PROFILE_TEMPLATE_SCOPES.WORLD,
+      worldId: 'world_custom',
+      title: 'Custom profile',
+      version: 1,
+    })
+    expect(created.fields[0]).toMatchObject({ id: 'occupation', categoryId: 'identity' })
   })
 
   test('updates a world-specific template by bumping version and preserving field ids', () => {
@@ -85,5 +108,52 @@ describe('WorldBook profile templates in system store', () => {
       version: 1,
       worldId: 'world_modern',
     })
+  })
+
+  test('persists new field types and purpose markers without granting legacy fields new uses', () => {
+    const store = useSystemStore()
+    const created = store.createWorldProfileTemplateFromPreset('preset_basic_modern', {
+      worldId: 'world_workplace',
+      title: 'Workplace profile',
+    })
+    const updated = store.updateWorldProfileTemplate(created.id, {
+      fields: [
+        ...created.fields,
+        {
+          id: 'agency',
+          label: 'Agency',
+          type: PROFILE_TEMPLATE_FIELD_TYPES.ORGANIZATION_REFERENCE,
+          purposes: [
+            PROFILE_TEMPLATE_FIELD_PURPOSES.CHAT_CONTEXT,
+            PROFILE_TEMPLATE_FIELD_PURPOSES.WORK_HUB_MATCHING,
+          ],
+        },
+        {
+          id: 'debut_date',
+          label: 'Debut date',
+          type: PROFILE_TEMPLATE_FIELD_TYPES.DATE,
+          purposes: [PROFILE_TEMPLATE_FIELD_PURPOSES.EVENT_ELIGIBILITY],
+        },
+      ],
+    })
+    store.saveNow()
+
+    setActivePinia(createPinia())
+    const restored = useSystemStore()
+    restored.restoreFromStorage()
+    const restoredTemplate = restored.getProfileTemplateById(updated.id)
+
+    expect(restoredTemplate.fields.find((field) => field.id === 'agency')).toMatchObject({
+      type: PROFILE_TEMPLATE_FIELD_TYPES.ORGANIZATION_REFERENCE,
+      purposes: [
+        PROFILE_TEMPLATE_FIELD_PURPOSES.CHAT_CONTEXT,
+        PROFILE_TEMPLATE_FIELD_PURPOSES.WORK_HUB_MATCHING,
+      ],
+    })
+    expect(restoredTemplate.fields.find((field) => field.id === 'debut_date')).toMatchObject({
+      type: PROFILE_TEMPLATE_FIELD_TYPES.DATE,
+      purposes: [PROFILE_TEMPLATE_FIELD_PURPOSES.EVENT_ELIGIBILITY],
+    })
+    expect(restoredTemplate.fields.find((field) => field.id === 'identity')?.purposes).toEqual([])
   })
 })

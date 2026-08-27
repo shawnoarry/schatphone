@@ -65,6 +65,11 @@ const openDetailSheet = async (wrapper, sheet) => {
   await flushUi()
 }
 
+const editWorldProfileFields = async (wrapper) => {
+  await wrapper.get('[data-testid="contacts-edit-world-profile-fields"]').trigger('click')
+  await flushUi()
+}
+
 describe('Contacts profile template entity UI', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -240,6 +245,7 @@ describe('Contacts profile template entity UI', () => {
     await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
     await flushUi()
     await openDetailSheet(wrapper, 'world-fields')
+    await editWorldProfileFields(wrapper)
 
     expect(wrapper.get('[data-testid="contacts-profile-template-select"]').element.value).toBe(template.id)
 
@@ -282,6 +288,7 @@ describe('Contacts profile template entity UI', () => {
     await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
     await flushUi()
     await openDetailSheet(wrapper, 'world-fields')
+    await editWorldProfileFields(wrapper)
 
     const select = wrapper.get('[data-testid="contacts-profile-template-select"]')
     expect(select.element.value).toBe('preset_basic_modern')
@@ -349,6 +356,7 @@ describe('Contacts profile template entity UI', () => {
     await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
     await flushUi()
     await openDetailSheet(wrapper, 'world-fields')
+    await editWorldProfileFields(wrapper)
 
     expect(wrapper.get('[data-testid="contacts-profile-template-select"]').element.value).toBe(template.id)
     expect(wrapper.get('[data-testid="contacts-profile-template-field-public_persona"]').text()).toContain('Choice')
@@ -452,6 +460,7 @@ describe('Contacts profile template entity UI', () => {
     await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
     await flushUi()
     await openDetailSheet(wrapper, 'world-fields')
+    await editWorldProfileFields(wrapper)
 
     expect(wrapper.get('[data-testid="contacts-profile-template-select"]').element.value).toBe(oldTemplate.id)
 
@@ -487,6 +496,223 @@ describe('Contacts profile template entity UI', () => {
     const customRow = wrapper.get('[data-testid="contacts-world-field-old_secret"]').text()
     expect(customRow).toContain('Keeps an old contract secret')
     expect(customRow).toContain('Custom')
+
+    wrapper.unmount()
+  })
+
+  test('keeps a person-only field isolated and discards the whole addition draft on cancel', async () => {
+    const systemStore = useSystemStore()
+    const template = systemStore.createWorldProfileTemplate({
+      worldId: 'default_world',
+      title: 'Person extension template',
+      categories: [{ id: 'identity', label: 'Identity' }],
+      fields: [
+        {
+          id: 'occupation',
+          categoryId: 'identity',
+          label: 'Occupation',
+          type: PROFILE_TEMPLATE_FIELD_TYPES.SHORT_TEXT,
+        },
+      ],
+    })
+    const chatStore = useChatStore()
+    const firstProfile = chatStore.addRoleProfile({
+      roleId: '1230',
+      name: 'Private extension role',
+      entityType: CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+      templateLink: {
+        primaryWorldId: 'legacy_single_world',
+        profileTemplateId: template.id,
+        profileTemplateVersion: template.version,
+      },
+    })
+    const secondProfile = chatStore.addRoleProfile({
+      roleId: '1231',
+      name: 'Unrelated role',
+      entityType: CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+      templateLink: {
+        primaryWorldId: 'legacy_single_world',
+        profileTemplateId: template.id,
+        profileTemplateVersion: template.version,
+      },
+    })
+
+    const wrapper = await mountContactsView()
+    await wrapper.get(`[data-testid="contacts-row-${firstProfile.id}"]`).trigger('click')
+    await flushUi()
+    await openDetailSheet(wrapper, 'world-fields')
+    await editWorldProfileFields(wrapper)
+
+    await wrapper.get('[data-testid="contacts-add-person-profile-field"]').trigger('click')
+    await wrapper
+      .get('[data-testid="contacts-profile-extension-category"]')
+      .setValue('__new_profile_category__')
+    await wrapper
+      .get('[data-testid="contacts-profile-extension-new-category-label"]')
+      .setValue('Private patterns')
+    await wrapper.get('[data-testid="contacts-profile-extension-label"]').setValue('Disliked nickname')
+    await wrapper
+      .get('[data-testid="contacts-profile-extension-type"]')
+      .setValue(PROFILE_TEMPLATE_FIELD_TYPES.LONG_TEXT)
+    await wrapper
+      .get('[data-testid="contacts-profile-extension-value"]')
+      .setValue('Do not use the full name in private.')
+    await wrapper.get('[data-testid="contacts-save-profile-extension"]').trigger('click')
+    await flushUi()
+
+    expect(chatStore.getRoleProfileById(firstProfile.id).profileExtensions).toEqual({
+      categories: [],
+      fields: [],
+    })
+    expect(systemStore.getProfileTemplateById(template.id).version).toBe(1)
+    expect(wrapper.get('[data-testid="contacts-world-profile-fields-editor"]').text()).toContain(
+      'Disliked nickname',
+    )
+
+    await wrapper.get('[data-testid="contacts-cancel-world-profile-fields"]').trigger('click')
+    await flushUi()
+
+    expect(chatStore.getRoleProfileById(firstProfile.id).profileExtensions).toEqual({
+      categories: [],
+      fields: [],
+    })
+    expect(chatStore.getRoleProfileById(firstProfile.id).profileValues).toEqual([])
+
+    await editWorldProfileFields(wrapper)
+    await wrapper.get('[data-testid="contacts-add-person-profile-field"]').trigger('click')
+    await wrapper
+      .get('[data-testid="contacts-profile-extension-category"]')
+      .setValue('__new_profile_category__')
+    await wrapper
+      .get('[data-testid="contacts-profile-extension-new-category-label"]')
+      .setValue('Private patterns')
+    await wrapper.get('[data-testid="contacts-profile-extension-label"]').setValue('Disliked nickname')
+    await wrapper
+      .get('[data-testid="contacts-profile-extension-value"]')
+      .setValue('Do not use the full name in private.')
+    await wrapper.get('[data-testid="contacts-save-profile-extension"]').trigger('click')
+    await wrapper.get('[data-testid="contacts-save-world-profile-fields"]').trigger('click')
+    await flushUi()
+
+    const updatedFirst = chatStore.getRoleProfileById(firstProfile.id)
+    const updatedSecond = chatStore.getRoleProfileById(secondProfile.id)
+    expect(updatedFirst.profileExtensions.categories).toEqual([
+      expect.objectContaining({ label: 'Private patterns' }),
+    ])
+    expect(updatedFirst.profileExtensions.fields).toEqual([
+      expect.objectContaining({ label: 'Disliked nickname', type: 'short_text' }),
+    ])
+    expect(updatedFirst.profileValues).toEqual([
+      expect.objectContaining({ value: 'Do not use the full name in private.' }),
+    ])
+    expect(updatedSecond.profileExtensions).toEqual({ categories: [], fields: [] })
+    expect(updatedSecond.profileValues).toEqual([])
+    expect(systemStore.getProfileTemplateById(template.id).version).toBe(1)
+    expect(wrapper.get('[data-testid="contacts-world-profile-fields-section"]').text()).toContain(
+      'Private patterns',
+    )
+    expect(wrapper.get('[data-testid="contacts-world-profile-fields-section"]').text()).toContain(
+      'Person only',
+    )
+
+    wrapper.unmount()
+  })
+
+  test('promotes an added field through a new world-template version without mutating other profiles', async () => {
+    const systemStore = useSystemStore()
+    const template = systemStore.createWorldProfileTemplate({
+      worldId: 'default_world',
+      title: 'World extension template',
+      categories: [{ id: 'identity', label: 'Identity' }],
+      fields: [
+        {
+          id: 'occupation',
+          categoryId: 'identity',
+          label: 'Occupation',
+          type: PROFILE_TEMPLATE_FIELD_TYPES.SHORT_TEXT,
+        },
+      ],
+    })
+    const chatStore = useChatStore()
+    const firstProfile = chatStore.addRoleProfile({
+      roleId: '1232',
+      name: 'Template author role',
+      entityType: CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+      templateLink: {
+        primaryWorldId: 'legacy_single_world',
+        profileTemplateId: template.id,
+        profileTemplateVersion: template.version,
+      },
+    })
+    const secondProfile = chatStore.addRoleProfile({
+      roleId: '1233',
+      name: 'Template review role',
+      entityType: CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+      templateLink: {
+        primaryWorldId: 'legacy_single_world',
+        profileTemplateId: template.id,
+        profileTemplateVersion: template.version,
+      },
+    })
+
+    const wrapper = await mountContactsView()
+    await wrapper.get(`[data-testid="contacts-row-${firstProfile.id}"]`).trigger('click')
+    await flushUi()
+    await openDetailSheet(wrapper, 'world-fields')
+    await editWorldProfileFields(wrapper)
+
+    await wrapper.get('[data-testid="contacts-add-person-profile-field"]').trigger('click')
+    await wrapper
+      .get('[data-testid="contacts-profile-extension-category"]')
+      .setValue('__new_profile_category__')
+    await wrapper
+      .get('[data-testid="contacts-profile-extension-new-category-label"]')
+      .setValue('Public activity')
+    await wrapper.get('[data-testid="contacts-profile-extension-label"]').setValue('Public call sign')
+    await wrapper
+      .get('[data-testid="contacts-profile-extension-value"]')
+      .setValue('Blue Hour')
+    await wrapper.get('[data-testid="contacts-profile-extension-scope-world"]').setValue(true)
+    await wrapper.get('[data-testid="contacts-save-profile-extension"]').trigger('click')
+    await flushUi()
+
+    expect(systemStore.getProfileTemplateById(template.id).version).toBe(1)
+    expect(chatStore.getRoleProfileById(firstProfile.id).profileValues).toEqual([])
+
+    await wrapper.get('[data-testid="contacts-save-world-profile-fields"]').trigger('click')
+    await flushUi()
+
+    const updatedTemplate = systemStore.getProfileTemplateById(template.id)
+    const updatedFirst = chatStore.getRoleProfileById(firstProfile.id)
+    const untouchedSecond = chatStore.getRoleProfileById(secondProfile.id)
+    const addedField = updatedTemplate.fields.find((field) => field.label === 'Public call sign')
+
+    expect(updatedTemplate.version).toBe(2)
+    expect(updatedTemplate.categories).toEqual(
+      expect.arrayContaining([expect.objectContaining({ label: 'Public activity' })]),
+    )
+    expect(addedField).toBeTruthy()
+    expect(updatedFirst.templateLink.profileTemplateVersion).toBe(2)
+    expect(updatedFirst.profileExtensions).toEqual({ categories: [], fields: [] })
+    expect(updatedFirst.profileValues).toEqual([
+      expect.objectContaining({ fieldId: addedField.id, value: 'Blue Hour' }),
+    ])
+    expect(untouchedSecond.templateLink.profileTemplateVersion).toBe(1)
+    expect(untouchedSecond.profileExtensions).toEqual({ categories: [], fields: [] })
+
+    await wrapper.get('[data-testid="contacts-profile-back"]').trigger('click')
+    await flushUi()
+    await wrapper.get(`[data-testid="contacts-row-${secondProfile.id}"]`).trigger('click')
+    await flushUi()
+    await openDetailSheet(wrapper, 'world-fields')
+
+    expect(wrapper.get('[data-testid="contacts-template-adaptation-review"]').text()).toContain(
+      'older template version',
+    )
+    expect(wrapper.get('[data-testid="contacts-world-profile-fields-section"]').text()).toContain(
+      'Public activity',
+    )
+    expect(chatStore.getRoleProfileById(secondProfile.id).profileValues).toEqual([])
 
     wrapper.unmount()
   })
@@ -541,6 +767,7 @@ describe('Contacts profile template entity UI', () => {
     await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
     await flushUi()
     await openDetailSheet(wrapper, 'world-fields')
+    await editWorldProfileFields(wrapper)
 
     await wrapper.get('[data-testid="contacts-ai-draft-world-profile-fields"]').trigger('click')
     await flushUi()
