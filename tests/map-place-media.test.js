@@ -127,6 +127,21 @@ const APPROVED_HERO_BATCH_09_IDS = [
   'seoul-ph129-cheongdam',
 ]
 
+const APPROVED_HERO_BATCH_10_IDS = [
+  'seoul-soonsoo-cheongdam',
+  'seoul-seven-eleven-myeongdong',
+  'seoul-club-nb2',
+  'seoul-club-aura',
+  'seoul-jk-plastic-surgery',
+  'seoul-lh-gangnam-complex-3',
+  'seoul-mokdong-apartment-district',
+  'seoul-jongno-five-pharmacy-street',
+  'seoul-gangnam-station-pharmacy-district',
+  'seoul-knotted-cheongdam',
+  'seoul-kyochon-chicken-yeoksam-1',
+  'seoul-eggdrop-gangnam-woosung',
+]
+
 const AREA_DETAIL_ONLY_PLACE_IDS = [
   'seoul-sm-hq',
   'seoul-myeongdong-kyoja-main',
@@ -194,6 +209,7 @@ const INTEGRATED_GALLERY_COUNTS = {
   ...Object.fromEntries(APPROVED_HERO_BATCH_07_IDS.map((placeId) => [placeId, 1])),
   ...Object.fromEntries(APPROVED_HERO_BATCH_08_IDS.map((placeId) => [placeId, 1])),
   ...Object.fromEntries(APPROVED_HERO_BATCH_09_IDS.map((placeId) => [placeId, 1])),
+  ...Object.fromEntries(APPROVED_HERO_BATCH_10_IDS.map((placeId) => [placeId, 1])),
   'seoul-yg-hq': 3,
   'seoul-samsung-medical-center': 2,
   'seoul-signiel': 3,
@@ -221,6 +237,18 @@ const INTEGRATED_GALLERY_COUNTS = {
   'seoul-club-ff': 2,
   'seoul-raemian-one-bailey': 2,
   'seoul-ph129-cheongdam': 2,
+  'seoul-soonsoo-cheongdam': 3,
+  'seoul-seven-eleven-myeongdong': 3,
+  'seoul-club-nb2': 3,
+  'seoul-club-aura': 3,
+  'seoul-jk-plastic-surgery': 2,
+  'seoul-lh-gangnam-complex-3': 2,
+  'seoul-mokdong-apartment-district': 2,
+  'seoul-jongno-five-pharmacy-street': 3,
+  'seoul-gangnam-station-pharmacy-district': 3,
+  'seoul-knotted-cheongdam': 4,
+  'seoul-kyochon-chicken-yeoksam-1': 2,
+  'seoul-eggdrop-gangnam-woosung': 3,
 }
 
 describe('map place media governance', () => {
@@ -238,7 +266,7 @@ describe('map place media governance', () => {
 
   test('validates the reviewed media registry', () => {
     const seoulPlaceIds = new Set(getMapPackById('real-seoul-v1').places.map((place) => place.id))
-    expect(MAP_PLACE_MEDIA_RECORDS).toHaveLength(191)
+    expect(MAP_PLACE_MEDIA_RECORDS).toHaveLength(224)
     for (const record of MAP_PLACE_MEDIA_RECORDS) {
       expect(validateMapPlaceMediaRecord(record)).toEqual({ valid: true, errors: [] })
     }
@@ -366,6 +394,20 @@ describe('map place media governance', () => {
     }
 
     for (const placeId of APPROVED_HERO_BATCH_06_SELECTED_IDS) {
+      expect(getMapPlaceMediaRecord('real-seoul-v1', placeId)).toMatchObject({
+        placeId,
+        kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+        authenticityGrade: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.EXACT_PLACE,
+        slot: MAP_PLACE_MEDIA_SLOT.HERO,
+        source: {
+          type: 'source_traced_external_photo',
+          rightsStatus: 'source_traced_personal_project_use',
+          usageScope: 'personal_project',
+        },
+      })
+    }
+
+    for (const placeId of APPROVED_HERO_BATCH_10_IDS) {
       expect(getMapPlaceMediaRecord('real-seoul-v1', placeId)).toMatchObject({
         placeId,
         kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
