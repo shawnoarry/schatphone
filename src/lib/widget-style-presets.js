@@ -172,6 +172,71 @@ export const OFFICIAL_WIDGET_STYLE_PRESETS = Object.freeze([
 .lp-agenda:after{content:"";position:absolute;inset:5px;border-radius:24px;border:1px solid rgba(174,170,181,.22)}.lp-agenda .hero,.lp-agenda .list{position:relative;z-index:1}.lp-agenda .hero{border-radius:21px;display:grid;align-content:center;justify-items:center;background:rgba(255,255,255,.3);border:1px solid rgba(255,255,255,.56)}.lp-agenda .hero small{font-size:9px;font-weight:800;color:rgba(63,64,70,.6)}.lp-agenda .hero strong{font-size:42px;line-height:.9;letter-spacing:0}.lp-agenda .list{display:grid;align-content:center;gap:7px}.lp-agenda h3{margin:0 0 2px;font-size:15px;letter-spacing:0}.lp-agenda p{margin:0;border-radius:14px;padding:8px 9px;display:grid;grid-template-columns:auto 1fr;gap:8px;background:rgba(255,255,255,.36);border:1px solid rgba(255,255,255,.48);font-size:9px;font-weight:750;color:rgba(63,64,70,.72)}.lp-agenda em{font-style:normal;color:#625d69;font-weight:850}
 </style><div class="lp-agenda"><div class="hero"><small>WED</small><strong>26</strong></div><div class="list"><h3>Today</h3><p><em>09:30</em><span>Morning notes</span></p><p><em>14:00</em><span>Theme review</span></p><p><em>20:00</em><span>Night Flight</span></p></div></div>`,
   },
+  {
+    id: 'cream_shell_status',
+    collectionId: 'cream-shell',
+    size: '1x1',
+    preview: 'cream-status',
+    icon: 'fas fa-sun',
+    nameZh: '奶油状态',
+    nameEn: 'Cream Status',
+    code: `<style>
+.cs-status{width:100%;height:100%;box-sizing:border-box;border-radius:25px;position:relative;overflow:hidden;display:grid;place-items:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#625d59;background:linear-gradient(180deg,#fffaf0,#fff4e4);border:1px solid rgba(121,104,84,.06);box-shadow:none}
+.cs-status span{position:relative;z-index:1;text-align:center}.cs-status strong{display:block;font-size:25px;line-height:1;font-weight:760}.cs-status small{display:block;margin-top:4px;font-size:8px;font-weight:750;letter-spacing:.08em;text-transform:uppercase;color:rgba(98,93,89,.64)}
+</style><div class="cs-status"><span><strong>24°</strong><small>soft day</small></span></div>`,
+  },
+  {
+    id: 'cream_shell_focus',
+    collectionId: 'cream-shell',
+    size: '2x1',
+    preview: 'cream-focus',
+    icon: 'fas fa-circle-check',
+    nameZh: '奶油专注',
+    nameEn: 'Cream Focus',
+    code: `<style>
+.cs-focus{width:100%;height:100%;box-sizing:border-box;border-radius:999px;padding:8px 11px;position:relative;overflow:hidden;display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:9px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#625d59;background:linear-gradient(180deg,#fffaf0,#fff4e4);border:1px solid rgba(121,104,84,.06);box-shadow:none}
+.cs-focus .mark{position:relative;z-index:1;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:#f9ead7;border:1px solid rgba(121,104,84,.06);box-shadow:none;font-size:17px;color:#8a6d5d}.cs-focus .copy{position:relative;z-index:1;min-width:0}.cs-focus strong,.cs-focus small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cs-focus strong{font-size:13px}.cs-focus small{margin-top:2px;font-size:9px;color:rgba(98,93,89,.64)}.cs-focus b{position:relative;z-index:1;font-size:9px;letter-spacing:.08em;color:#8a6d5d}
+</style><div class="cs-focus"><span class="mark">✓</span><span class="copy"><strong>One gentle thing</strong><small>keep today light</small></span><b>ON</b></div>`,
+  },
+  {
+    id: 'cream_shell_day',
+    collectionId: 'cream-shell',
+    size: '2x2',
+    preview: 'cream-day',
+    icon: 'fas fa-calendar-day',
+    nameZh: '奶油今日',
+    nameEn: 'Cream Day',
+    code: `<style>
+.cs-day{width:100%;height:100%;box-sizing:border-box;border-radius:28px;padding:14px;position:relative;overflow:hidden;display:grid;grid-template-rows:auto 1fr auto;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#625d59;background:linear-gradient(180deg,#fffaf0,#fff4e4);border:1px solid rgba(121,104,84,.06);box-shadow:none}
+.cs-day .top,.cs-day .date,.cs-day .note{position:relative;z-index:1}.cs-day .top{display:flex;justify-content:space-between;font-size:9px;font-weight:760;letter-spacing:.08em;color:rgba(98,93,89,.6)}.cs-day .top i{width:8px;height:8px;border-radius:50%;background:#e6bda7}.cs-day .date{align-self:center}.cs-day .date strong{display:block;font-size:48px;line-height:.84;font-weight:760}.cs-day .date small{display:block;margin-top:7px;font-size:11px;font-weight:720;color:#7b675c}.cs-day .note{border-radius:999px;padding:8px 10px;background:rgba(249,234,215,.7);border:1px solid rgba(121,104,84,.05);font-size:9px;font-weight:680;color:rgba(98,93,89,.72)}
+</style><div class="cs-day"><div class="top"><span>AUGUST</span><i></i></div><div class="date"><strong>27</strong><small>Thursday</small></div><div class="note">19:30 · quiet evening</div></div>`,
+  },
+  {
+    id: 'cream_shell_player',
+    collectionId: 'cream-shell',
+    size: '4x1',
+    preview: 'cream-player',
+    icon: 'fas fa-play',
+    nameZh: '奶油播放条',
+    nameEn: 'Cream Player',
+    code: `<style>
+.cs-player{width:100%;height:100%;box-sizing:border-box;border-radius:999px;padding:8px 13px;position:relative;overflow:hidden;display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:11px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#625d59;background:linear-gradient(180deg,#fffaf0,#fff4e4);border:1px solid rgba(121,104,84,.06);box-shadow:none}
+.cs-player .disc{position:relative;z-index:1;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle,#fff5ec 0 12%,#8a7062 13% 17%,#f8dfcb 18% 47%,#e8c5b0 48% 64%,#fff0e4 65%);box-shadow:none}.cs-player .copy{position:relative;z-index:1;min-width:0}.cs-player strong,.cs-player small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cs-player strong{font-size:13px}.cs-player small{margin-top:2px;font-size:9px;color:rgba(98,93,89,.64)}.cs-player .controls{position:relative;z-index:1;display:flex;gap:6px}.cs-player b{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#f9ead7;border:1px solid rgba(121,104,84,.05);font-size:10px;color:#785f52}
+</style><div class="cs-player"><span class="disc"></span><span class="copy"><strong>Vanilla Sky</strong><small>Soft Notes · 2:41</small></span><span class="controls"><b>Ⅱ</b><b>›</b></span></div>`,
+  },
+  {
+    id: 'cream_shell_agenda',
+    collectionId: 'cream-shell',
+    size: '4x2',
+    preview: 'cream-agenda',
+    icon: 'fas fa-list-check',
+    nameZh: '奶油日程板',
+    nameEn: 'Cream Agenda',
+    code: `<style>
+.cs-agenda{width:100%;height:100%;box-sizing:border-box;border-radius:30px;padding:15px;position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,.72fr) minmax(0,1.4fr);gap:13px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#625d59;background:linear-gradient(180deg,#fffaf0,#fff4e4);border:1px solid rgba(121,104,84,.06);box-shadow:none}
+.cs-agenda .hero,.cs-agenda .list{position:relative;z-index:1}.cs-agenda .hero{border-radius:22px;display:grid;align-content:center;justify-items:center;background:#f9ead7;border:1px solid rgba(121,104,84,.05);box-shadow:none}.cs-agenda .hero small{font-size:9px;font-weight:760;letter-spacing:.08em;color:rgba(98,93,89,.6)}.cs-agenda .hero strong{font-size:42px;line-height:.9;font-weight:760}.cs-agenda .list{display:grid;align-content:center;gap:7px}.cs-agenda h3{margin:0 0 2px;font-size:15px}.cs-agenda p{margin:0;border-radius:15px;padding:8px 9px;display:grid;grid-template-columns:auto 1fr;gap:8px;background:rgba(249,234,215,.64);border:1px solid rgba(121,104,84,.05);font-size:9px;font-weight:680;color:rgba(98,93,89,.72)}.cs-agenda em{font-style:normal;color:#7b6153;font-weight:800}
+</style><div class="cs-agenda"><div class="hero"><small>THU</small><strong>27</strong></div><div class="list"><h3>Today</h3><p><em>09:30</em><span>slow breakfast</span></p><p><em>14:00</em><span>theme review</span></p><p><em>19:30</em><span>quiet evening</span></p></div></div>`,
+  },
 ])
 
 export const WIDGET_STYLE_PRESET_COLLECTIONS = Object.freeze([
@@ -179,6 +244,11 @@ export const WIDGET_STYLE_PRESET_COLLECTIONS = Object.freeze([
     id: 'liquid-prism',
     labelZh: '彩光玻璃',
     labelEn: 'Chromatic Glass',
+  }),
+  Object.freeze({
+    id: 'cream-shell',
+    labelZh: '奶油软壳',
+    labelEn: 'Cream Shell',
   }),
 ])
 

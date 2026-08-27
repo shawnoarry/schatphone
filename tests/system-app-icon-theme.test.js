@@ -36,6 +36,7 @@ describe('system app icon themes', () => {
     )
     expect(normalizeSystemAppIconThemeId('chromatic-glass')).toBe('chromatic-glass')
     expect(normalizeSystemAppIconThemeId('sticker-pop')).toBe('sticker-pop')
+    expect(normalizeSystemAppIconThemeId('cream-shell')).toBe('cream-shell')
     expect(normalizeSystemAppIconThemeId('liquid-prism')).toBe('chromatic-glass')
     expect(normalizeSystemAppIconThemeId('unknown')).toBe('classic')
     expect(isSystemAppIconThemeTarget('app_chat')).toBe(false)
@@ -202,6 +203,33 @@ describe('system app icon themes', () => {
     const independent = resolveAppIconMeta('app_chat', {}, 'zh-CN', 'sticker-pop')
     expect(independent.material).toBe('')
     expect(independent.materialClass).toBe('')
+  })
+
+  test('applies Cream Shell material and fine-line glyphs only to system targets', () => {
+    const cream = resolveAppIconMeta('app_widgets', {}, 'zh-CN', 'cream-shell')
+    expect(cream.material).toBe('cream-shell')
+    expect(cream.materialClass).toBe('material-cream-shell')
+    expect(cream.liquidGlyph?.paths.length).toBeGreaterThan(0)
+
+    const independent = resolveAppIconMeta('app_chat', {}, 'zh-CN', 'cream-shell')
+    expect(independent.material).toBe('')
+    expect(independent.materialClass).toBe('')
+  })
+
+  test('previews Cream Shell as a matching cream material pack in Appearance', async () => {
+    const router = createTestRouter()
+    await router.push('/appearance')
+    await router.isReady()
+
+    const wrapper = mount(AppearanceView, {
+      global: { plugins: [router] },
+    })
+
+    await wrapper.get('[data-testid="appearance-system-icons-entry"]').trigger('click')
+    const option = wrapper.get('[data-testid="appearance-system-app-icon-theme-cream-shell"]')
+    expect(option.findAll('.material-cream-shell')).toHaveLength(4)
+    expect(option.text()).toContain('近乎无阴影的奶油白圆角底')
+    wrapper.unmount()
   })
 
   test('previews the first Chromatic Glass line-glyph batch in Appearance', async () => {

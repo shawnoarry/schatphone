@@ -631,7 +631,7 @@ describe('Widgets custom template starters', () => {
   })
 
   test('official style presets are complete rendered widgets across key Home sizes', () => {
-    expect(OFFICIAL_WIDGET_STYLE_PRESETS).toHaveLength(12)
+    expect(OFFICIAL_WIDGET_STYLE_PRESETS).toHaveLength(17)
     expect(OFFICIAL_WIDGET_STYLE_PRESETS.map((preset) => preset.size)).toEqual([
       '1x1',
       '2x1',
@@ -645,10 +645,18 @@ describe('Widgets custom template starters', () => {
       '2x2',
       '4x1',
       '4x2',
+      '1x1',
+      '2x1',
+      '2x2',
+      '4x1',
+      '4x2',
     ])
     expect(OFFICIAL_WIDGET_STYLE_PRESETS.map((preset) => preset.nameEn)).toContain('Theme Board')
     expect(OFFICIAL_WIDGET_STYLE_PRESETS.map((preset) => preset.nameEn)).toContain(
       'Chromatic Agenda',
+    )
+    expect(OFFICIAL_WIDGET_STYLE_PRESETS.map((preset) => preset.nameEn)).toContain(
+      'Cream Agenda',
     )
 
     OFFICIAL_WIDGET_STYLE_PRESETS.forEach((preset) => {

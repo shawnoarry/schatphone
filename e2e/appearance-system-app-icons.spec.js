@@ -448,6 +448,116 @@ test('Sticker Pop applies bold-outline surfaces and system icons across day and 
   expect(pageErrors).toEqual([])
 })
 
+test('Cream Shell keeps a milk-white Dock and cream system icons across day and night', async ({
+  page,
+}) => {
+  const pageErrors = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/appearance')
+  await page.getByTestId('appearance-theme-entry').click()
+  await page.getByTestId('appearance-style-kit-cream-shell').click()
+
+  await expect(page.locator('html')).toHaveAttribute('data-system-theme', 'cream-shell')
+  await expect(page.locator('html')).toHaveAttribute('data-system-icon-theme', 'cream-shell')
+  await expect(page.getByTestId('appearance-style-kit-status')).toContainText(
+    /套装已应用|Kit Applied/,
+  )
+  await expect
+    .poll(() =>
+      page
+        .locator('html')
+        .evaluate((root) => getComputedStyle(root).getPropertyValue('--app-bg').trim()),
+    )
+    .toBe('#fcead9')
+
+  await navigateInsideUnlockedApp(page, '/home')
+  const contactsIcon = page.getByTestId('home-dock-icon-app_contacts')
+  await expect(contactsIcon).toHaveClass(/material-cream-shell/)
+  await expect(contactsIcon.locator('svg')).toHaveCount(1)
+  await expect(page.getByTestId('home-dock-icon-app_chat')).not.toHaveClass(
+    /material-cream-shell/,
+  )
+  await expect
+    .poll(() =>
+      page.locator('.home-dock').evaluate((dock) => ({
+        background: getComputedStyle(dock).background,
+        border: getComputedStyle(dock).borderColor,
+        shadow: getComputedStyle(dock).boxShadow,
+      })),
+    )
+    .toMatchObject({
+      background: expect.stringContaining('linear-gradient'),
+      border: expect.stringContaining('rgba(255, 255, 255'),
+      shadow: 'none',
+    })
+  await expect
+    .poll(() =>
+      contactsIcon.evaluate((icon) => ({
+        background: getComputedStyle(icon).background,
+        shadow: getComputedStyle(icon).boxShadow,
+        glyphFill: getComputedStyle(icon.querySelector('path')).fill,
+      })),
+    )
+    .toMatchObject({
+      background: expect.stringContaining('linear-gradient'),
+      shadow: 'none',
+      glyphFill: expect.stringContaining('rgb'),
+    })
+
+  await navigateInsideUnlockedApp(page, '/appearance')
+  await page.getByTestId('appearance-theme-entry').click()
+  await page.getByTestId('appearance-color-mode-night').click()
+  await expect(page.locator('html')).toHaveAttribute('data-color-mode', 'night')
+  await expect
+    .poll(() =>
+      page
+        .locator('html')
+        .evaluate((root) => getComputedStyle(root).getPropertyValue('--app-bg').trim()),
+    )
+    .toBe('#efd9c6')
+
+  await navigateInsideUnlockedApp(page, '/home')
+  await expect(page.getByTestId('home-dock-icon-app_contacts')).toHaveClass(
+    /material-cream-shell/,
+  )
+  await expectNoHorizontalOverflow(page)
+
+  await navigateInsideUnlockedApp(page, '/lock')
+  const lockNotificationSurface = page.locator(
+    '.lock-notification-card, .lock-notification-empty',
+  ).first()
+  await expect(lockNotificationSurface).toBeVisible()
+  await expect
+    .poll(() =>
+      lockNotificationSurface.evaluate((surface) => ({
+        color: getComputedStyle(surface).color,
+        background: getComputedStyle(surface).background,
+        shadow: getComputedStyle(surface).boxShadow,
+      })),
+    )
+    .toMatchObject({
+      color: 'rgb(77, 80, 78)',
+      background: expect.stringContaining('rgba(255, 248, 236'),
+      shadow: 'none',
+    })
+  await expect
+    .poll(() =>
+      page.locator('.lock-unlock-button').evaluate((button) => ({
+        color: getComputedStyle(button).color,
+        shadow: getComputedStyle(button).boxShadow,
+      })),
+    )
+    .toMatchObject({
+      color: 'rgb(77, 80, 78)',
+      shadow: 'none',
+    })
+  await expectNoHorizontalOverflow(page)
+  expect(pageErrors).toEqual([])
+})
+
 test('Chromatic Glass optionally installs companion widgets without changing Home placement', async ({
   page,
 }) => {

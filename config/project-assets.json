@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "baseUrl": "https://cloudflare-imgbed-7z3.pages.dev",
-  "updatedAt": "2026-08-27T08:43:34.298Z",
+  "updatedAt": "2026-08-27T08:50:28.013Z",
   "assets": [
     {
       "batchId": "map-place-media-batch-08-20260824",
@@ -8223,6 +8223,18 @@
       "verifiedAt": "2026-08-24T17:12:56.717Z"
     },
     {
+      "batchId": "cream-shell-wallpaper-soft-haze-v2-20260827",
+      "path": "output/imagegen/cream-shell-wallpaper-20260827/cream-shell-soft-haze-v2.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/shared/backgrounds/cream-shell-soft-haze-v2.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/shared/backgrounds/cream-shell-soft-haze-v2.webp",
+      "bytes": 39876,
+      "sha256": "0fc08f7e51ee0099016adff21eb43f1f037c40d688c932776fb9d2fdd3d2fdcb",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-27T08:50:27.582Z"
+    },
+    {
       "batchId": "widgets-premium-candidates-20260812",
       "path": "output/imagegen/widgets-runtime-v1/ambient-scene-day.webp",
       "aliasPaths": [],
@@ -8497,6 +8509,18 @@
       "sha256": "cfea6bcf4f384ce2bd17a4976fef03b414acda6a996d9626bad3c5b3f1fbfbc3",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-16T05:55:20.038Z"
+    },
+    {
+      "batchId": "cream-shell-wallpaper-soft-haze-v2-20260827",
+      "path": "output/imagegen/cream-shell-wallpaper-20260827/cream-shell-soft-haze-v2.svg",
+      "aliasPaths": [],
+      "access": "protected",
+      "remoteKey": "schatphone-source/images/ui-assets/shared/backgrounds/cream-shell-soft-haze-v2.svg",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-source/images/ui-assets/shared/backgrounds/cream-shell-soft-haze-v2.svg",
+      "bytes": 3598,
+      "sha256": "e6052b0eab98094567a1e27d3a5f06cef2e5051ae074740c4f79961dbb20798f",
+      "mimeType": "image/svg+xml",
+      "verifiedAt": "2026-08-27T08:50:28.000Z"
     },
     {
       "batchId": "migration-2026-08-11",

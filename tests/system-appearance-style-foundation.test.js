@@ -44,6 +44,7 @@ describe('system appearance style foundation', () => {
     expect(resolveSystemAppearanceThemeMeta('liquid-prism').labelEn).toBe('Chromatic Glass')
     expect(resolveSystemAppearanceThemeMeta('chromatic-glass').labelEn).toBe('Chromatic Glass')
     expect(resolveSystemAppearanceThemeMeta('sticker-pop').labelEn).toBe('Sticker Pop')
+    expect(resolveSystemAppearanceThemeMeta('cream-shell').labelEn).toBe('Cream Shell')
     expect(resolveSystemAppearanceThemeWallpaper('cloud-pastel', 'day')).toContain(
       'cloud-pastel-day-v1.webp',
     )
@@ -141,6 +142,30 @@ describe('system appearance style foundation', () => {
     expect(status).toMatchObject({
       kit: { id: 'sticker-pop' },
       customized: false,
+    })
+  })
+
+  test('offers a Cream Shell wallpaper without replacing a personal wallpaper by default', () => {
+    const store = useSystemStore()
+    store.setAppearanceWallpaperUrl('https://example.com/pink-wallpaper.jpg')
+
+    const status = store.applyAppearanceStyleKit('cream-shell')
+
+    expect(store.settings.appearance.systemTheme).toBe('cream-shell')
+    expect(store.settings.appearance.systemAppIconTheme).toBe('cream-shell')
+    expect(store.settings.appearance.wallpaperMode).toBe('url')
+    expect(store.settings.appearance.wallpaper).toBe(
+      'https://example.com/pink-wallpaper.jpg',
+    )
+    expect(resolveSystemAppearanceThemeWallpaper('cream-shell', 'day')).toContain(
+      'cream-shell-soft-haze-v2.webp',
+    )
+    expect(status).toMatchObject({
+      kit: {
+        id: 'cream-shell',
+        companionWidgetCollectionId: 'cream-shell',
+      },
+      customized: true,
     })
   })
 
@@ -281,8 +306,12 @@ describe('system appearance style foundation', () => {
     expect(wrapper.find('[data-testid="appearance-system-theme-liquid-prism"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="appearance-system-theme-chromatic-glass"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="appearance-system-theme-sticker-pop"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="appearance-system-theme-cream-shell"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="appearance-style-kit-cloud-pastel"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="appearance-style-kit-sticker-pop"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="appearance-style-kit-cream-shell"]').text()).toContain(
+      '含 5 个可选配套组件',
+    )
     expect(wrapper.find('[data-testid="appearance-style-kit-liquid-prism"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="appearance-style-kit-chromatic-glass"]').text()).toContain(
       '含 5 个可选配套组件',

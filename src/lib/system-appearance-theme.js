@@ -116,6 +116,26 @@ export const SYSTEM_APPEARANCE_THEME_OPTIONS = Object.freeze([
       night: '',
     }),
   },
+  {
+    id: 'cream-shell',
+    labelZh: '奶油软壳',
+    labelEn: 'Cream Shell',
+    descriptionZh: '以奶油桃白、象牙白与平面圆角色块组成统一界面；暖灰只用于文字和必要轮廓。',
+    descriptionEn:
+      'A light, near-flat system of cream and ivory rounded blocks, using warm neutrals only for text and essential contrast.',
+    previews: Object.freeze({
+      day: 'linear-gradient(145deg, #fff5ec 0%, #fcead9 54%, #f1d5bd 100%)',
+      night: 'linear-gradient(145deg, #f9e9dc 0%, #efd9c6 56%, #dfc3ac 100%)',
+    }),
+    wallpapers: Object.freeze({
+      day: `${bundledAppearanceAssetUrl(
+        'images/ui-assets/shared/backgrounds/cream-shell-soft-haze-v2.webp',
+      )}?v=20260827-2`,
+      night: `${bundledAppearanceAssetUrl(
+        'images/ui-assets/shared/backgrounds/cream-shell-soft-haze-v2.webp',
+      )}?v=20260827-2`,
+    }),
+  },
 ])
 
 export const APPEARANCE_STYLE_KIT_OPTIONS = Object.freeze([
@@ -168,6 +188,17 @@ export const APPEARANCE_STYLE_KIT_OPTIONS = Object.freeze([
       'Sticker Pop surfaces, bold-outline system app icons, and a creamy paper-like background.',
     systemTheme: 'sticker-pop',
     systemAppIconTheme: 'sticker-pop',
+  },
+  {
+    id: 'cream-shell',
+    labelZh: '奶油软壳',
+    labelEn: 'Cream Shell',
+    descriptionZh: '奶油桃白平面界面、细线系统 App 图标、内置柔光壁纸与 5 个可选配套组件；仍可保留用户自己的壁纸。',
+    descriptionEn:
+      'Near-flat cream-peach surfaces, fine-line system app icons, an optional built-in wallpaper, and five companion widgets while preserving personal wallpaper when preferred.',
+    systemTheme: 'cream-shell',
+    systemAppIconTheme: 'cream-shell',
+    companionWidgetCollectionId: 'cream-shell',
   },
 ])
 

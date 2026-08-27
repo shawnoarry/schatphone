@@ -133,6 +133,28 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.customWidgets).toHaveLength(5)
     expect(store.settings.appearance.homeWidgetPages).toEqual(beforePages)
     expect(store.settings.appearance.homeLayoutSlotPlacements).toEqual(beforePlacements)
+
+    const creamInstall = store.installWidgetStylePresetCollection('cream-shell')
+    expect(creamInstall).toMatchObject({
+      installedCount: 5,
+      existingCount: 0,
+      totalCount: 5,
+    })
+    expect(store.settings.appearance.customWidgets.map((widget) => widget.sourcePresetId)).toEqual(
+      expect.arrayContaining([
+        'cream_shell_status',
+        'cream_shell_focus',
+        'cream_shell_day',
+        'cream_shell_player',
+        'cream_shell_agenda',
+      ]),
+    )
+
+    store.applyAppearanceStyleKit('cream-shell')
+    store.applyAppearanceStyleKit('system-classic')
+    expect(store.settings.appearance.customWidgets).toHaveLength(10)
+    expect(store.settings.appearance.homeWidgetPages).toEqual(beforePages)
+    expect(store.settings.appearance.homeLayoutSlotPlacements).toEqual(beforePlacements)
   })
 
   test('rejects unsafe appearance code in direct create and update paths', () => {

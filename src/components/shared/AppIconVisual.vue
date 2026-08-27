@@ -113,6 +113,58 @@ const isCloudPastelAnimal = computed(() =>
   transform: scale(0.94);
 }
 
+.app-icon-visual.material-cream-shell {
+  --cream-shell-fill-top: #fffaf0;
+  --cream-shell-fill-bottom: #fff5e5;
+  --cream-shell-ink: #625d59;
+  --cream-shell-edge: rgba(121, 104, 84, 0.055);
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+  color: var(--cream-shell-ink);
+  background: linear-gradient(180deg, var(--cream-shell-fill-top), var(--cream-shell-fill-bottom));
+  border: 1px solid var(--cream-shell-edge);
+  box-shadow: none;
+}
+
+.app-icon-visual.material-cream-shell.accent-warm {
+  --cream-shell-fill-bottom: #fdf2df;
+  --cream-shell-ink: #645f59;
+}
+
+.app-icon-visual.material-cream-shell.accent-cool {
+  --cream-shell-fill-bottom: #faf3e7;
+  --cream-shell-ink: #59605e;
+}
+
+.app-icon-visual.material-cream-shell.accent-light {
+  --cream-shell-fill-bottom: #fff8ea;
+  --cream-shell-ink: #60615e;
+}
+
+.app-icon-visual.material-cream-shell.accent-dark {
+  --cream-shell-fill-bottom: #f5ead8;
+  --cream-shell-ink: #535552;
+}
+
+.app-icon-visual.material-cream-shell > i,
+.app-icon-visual.material-cream-shell > .liquid-prism-glyph {
+  position: relative;
+  z-index: 2;
+  color: var(--cream-shell-ink);
+  filter: none;
+}
+
+:global(:root[data-color-mode='night'] .app-icon-visual.material-cream-shell),
+:global(.app-shell[data-color-mode='night'] .app-icon-visual.material-cream-shell) {
+  --cream-shell-fill-top: #f6ead9;
+  --cream-shell-fill-bottom: #efdfc9;
+  --cream-shell-ink: #535551;
+  --cream-shell-edge: rgba(93, 79, 64, 0.07);
+  border-color: var(--cream-shell-edge);
+  box-shadow: none;
+}
+
 :global(:root[data-color-mode='night'] .app-icon-visual.material-sticker-pop),
 :global(.app-shell[data-color-mode='night'] .app-icon-visual.material-sticker-pop) {
   --sticker-ink: #f8efe3;

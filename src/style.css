@@ -1065,6 +1065,292 @@
   --home-icon-dark-fg: #29292c;
 }
 
+:root[data-system-theme='cream-shell'][data-color-mode='day'],
+.app-shell[data-system-theme='cream-shell'][data-color-mode='day'] {
+  --app-bg: #fcead9;
+  --system-bg: #fcead9;
+  --system-wallpaper-fallback:
+    radial-gradient(circle at 16% 9%, rgba(255, 255, 255, 0.98), transparent 37%),
+    radial-gradient(circle at 86% 82%, rgba(239, 199, 184, 0.15), transparent 42%),
+    linear-gradient(180deg, #fff4ec 0%, #fcead9 58%, #f2d6bd 100%);
+  --system-surface: rgba(252, 234, 217, 0.86);
+  --system-surface-strong: rgba(255, 241, 230, 0.96);
+  --system-surface-muted: rgba(247, 228, 211, 0.84);
+  --system-surface-dark: rgba(82, 83, 80, 0.3);
+  --system-page-bg: linear-gradient(180deg, #fff4ec 0%, #fcead9 54%, #f3d8c1 100%);
+  --system-chrome-bg: rgba(252, 234, 217, 0.92);
+  --system-panel-bg: rgba(255, 241, 230, 0.92);
+  --system-panel-bg-solid: #fcebdd;
+  --system-elevated-bg: rgba(255, 242, 232, 0.98);
+  --system-control-bg: rgba(253, 239, 227, 0.9);
+  --system-control-bg-strong: rgba(255, 242, 232, 0.98);
+  --system-border: rgba(82, 83, 80, 0.1);
+  --system-border-light: rgba(255, 255, 255, 0.82);
+  --system-card-border: rgba(255, 255, 255, 0.92);
+  --system-control-border: rgba(88, 89, 86, 0.12);
+  --system-subtle-border: rgba(88, 89, 86, 0.07);
+  --system-text: #555653;
+  --system-text-inverse: #fffefd;
+  --system-text-muted: rgba(85, 86, 83, 0.64);
+  --system-text-soft: rgba(85, 86, 83, 0.43);
+  --system-accent: #9a7d6c;
+  --system-accent-strong: #7b6255;
+  --system-accent-soft: rgba(154, 125, 108, 0.14);
+  --system-on-accent: #fffefd;
+  --system-success: #7f9279;
+  --system-success-soft: rgba(127, 146, 121, 0.15);
+  --system-warning: #b68f50;
+  --system-warning-soft: rgba(182, 143, 80, 0.16);
+  --system-danger: #b88078;
+  --system-danger-soft: rgba(184, 128, 120, 0.14);
+  --system-info: #7d8e8c;
+  --system-info-soft: rgba(125, 142, 140, 0.14);
+  --system-radius-sm: 16px;
+  --system-radius-md: 22px;
+  --system-radius-lg: 29px;
+  --system-radius-xl: 38px;
+  --system-blur-sm: 10px;
+  --system-blur-md: 16px;
+  --system-blur-lg: 24px;
+  --system-hover-bg: rgba(154, 125, 108, 0.08);
+  --system-pressed-bg: rgba(154, 125, 108, 0.13);
+  --system-focus-ring: rgba(123, 98, 85, 0.2);
+  --system-edge-highlight: rgba(255, 255, 255, 0.94);
+  --system-shadow-chrome: none;
+  --system-shadow-card: none;
+  --system-shadow-control: none;
+  --system-shadow-soft: none;
+  --indicator-bg: rgba(85, 86, 83, 0.24);
+  --status-fg: #555653;
+  --glass-bg: rgba(252, 234, 217, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.86);
+  --home-bg: linear-gradient(180deg, rgba(255, 247, 240, 0.05), rgba(139, 103, 82, 0.035));
+  --home-overlay-a: radial-gradient(circle at 82% 10%, rgba(255, 255, 255, 0.28), transparent 46%);
+  --home-overlay-b: linear-gradient(180deg, rgba(255, 247, 240, 0.01), rgba(91, 68, 55, 0.045));
+  --home-text-main: #565754;
+  --home-text-sub: rgba(86, 87, 84, 0.7);
+  --home-accent: #7b6255;
+  --home-widget-bg: rgba(252, 234, 217, 0.84);
+  --home-widget-border: rgba(255, 255, 255, 0.88);
+  --home-widget-shadow: none;
+  --home-search-bg: rgba(252, 234, 217, 0.86);
+  --home-search-text: rgba(86, 87, 84, 0.86);
+  --home-progress-track: rgba(86, 87, 84, 0.14);
+  --home-progress-fill: rgba(123, 98, 85, 0.7);
+  --home-dock-bg: rgba(249, 235, 216, 0.92);
+  --home-dock-border: rgba(255, 255, 255, 0.94);
+  --home-dot-bg: rgba(85, 86, 83, 0.19);
+  --home-dot-active-bg: rgba(85, 86, 83, 0.7);
+  --home-icon-default-bg: #f7e7d1;
+  --home-icon-default-fg: #5f605c;
+  --home-icon-warm-bg: #f5e3ca;
+  --home-icon-warm-fg: #645f59;
+  --home-icon-rose-bg: #f5e6d6;
+  --home-icon-rose-fg: #625d5d;
+  --home-icon-cool-bg: #f3eadc;
+  --home-icon-cool-fg: #59605e;
+  --home-icon-light-bg: #fff4e7;
+  --home-icon-light-fg: #60615e;
+  --home-icon-dark-bg: #eadbc6;
+  --home-icon-dark-fg: #535552;
+}
+
+:root[data-system-theme='cream-shell'][data-color-mode='night'],
+.app-shell[data-system-theme='cream-shell'][data-color-mode='night'] {
+  --app-bg: #efd9c6;
+  --system-bg: #efd9c6;
+  --system-wallpaper-fallback:
+    radial-gradient(circle at 16% 9%, rgba(255, 248, 242, 0.76), transparent 38%),
+    radial-gradient(circle at 85% 83%, rgba(213, 177, 158, 0.14), transparent 42%),
+    linear-gradient(180deg, #f9e9dc 0%, #efd9c6 58%, #dfc3ac 100%);
+  --system-surface: rgba(247, 230, 216, 0.86);
+  --system-surface-strong: rgba(251, 239, 230, 0.95);
+  --system-surface-muted: rgba(230, 206, 187, 0.86);
+  --system-surface-dark: rgba(72, 74, 71, 0.36);
+  --system-page-bg: linear-gradient(180deg, #f7e7da 0%, #efd9c6 55%, #e2c7b0 100%);
+  --system-chrome-bg: rgba(243, 224, 210, 0.93);
+  --system-panel-bg: rgba(248, 232, 220, 0.92);
+  --system-panel-bg-solid: #ead3c0;
+  --system-elevated-bg: rgba(251, 239, 230, 0.96);
+  --system-control-bg: rgba(238, 217, 201, 0.9);
+  --system-control-bg-strong: rgba(249, 235, 225, 0.96);
+  --system-border: rgba(72, 74, 71, 0.13);
+  --system-border-light: rgba(255, 255, 253, 0.7);
+  --system-card-border: rgba(255, 255, 253, 0.8);
+  --system-control-border: rgba(77, 80, 77, 0.15);
+  --system-subtle-border: rgba(77, 80, 77, 0.09);
+  --system-text: #4d504e;
+  --system-text-inverse: #fffefd;
+  --system-text-muted: rgba(77, 80, 78, 0.68);
+  --system-text-soft: rgba(77, 80, 78, 0.47);
+  --system-accent: #8c7061;
+  --system-accent-strong: #70584c;
+  --system-accent-soft: rgba(140, 112, 97, 0.16);
+  --system-on-accent: #fffefd;
+  --system-success: #74866e;
+  --system-success-soft: rgba(116, 134, 110, 0.17);
+  --system-on-success: #fffaf0;
+  --system-warning: #a98245;
+  --system-warning-soft: rgba(169, 130, 69, 0.18);
+  --system-on-warning: #fffaf0;
+  --system-danger: #a87069;
+  --system-danger-soft: rgba(168, 112, 105, 0.17);
+  --system-on-danger: #fffaf0;
+  --system-info: #71827f;
+  --system-info-soft: rgba(113, 130, 127, 0.17);
+  --system-on-info: #fffaf0;
+  --system-radius-sm: 16px;
+  --system-radius-md: 22px;
+  --system-radius-lg: 29px;
+  --system-radius-xl: 38px;
+  --system-blur-sm: 10px;
+  --system-blur-md: 16px;
+  --system-blur-lg: 24px;
+  --system-hover-bg: rgba(140, 112, 97, 0.09);
+  --system-pressed-bg: rgba(140, 112, 97, 0.14);
+  --system-focus-ring: rgba(112, 88, 76, 0.22);
+  --system-edge-highlight: rgba(255, 255, 253, 0.78);
+  --system-shadow-chrome: none;
+  --system-shadow-card: none;
+  --system-shadow-control: none;
+  --system-shadow-soft: none;
+  --indicator-bg: rgba(77, 80, 78, 0.27);
+  --status-fg: #4d504e;
+  --glass-bg: rgba(245, 226, 211, 0.82);
+  --glass-border: rgba(255, 255, 253, 0.74);
+  --home-bg: linear-gradient(180deg, rgba(248, 232, 220, 0.04), rgba(77, 55, 44, 0.08));
+  --home-overlay-a: radial-gradient(circle at 82% 10%, rgba(255, 255, 253, 0.14), transparent 46%);
+  --home-overlay-b: linear-gradient(180deg, rgba(65, 47, 39, 0.02), rgba(65, 47, 39, 0.12));
+  --home-text-main: #4d504e;
+  --home-text-sub: rgba(77, 80, 78, 0.7);
+  --home-accent: #70584c;
+  --home-widget-bg: rgba(246, 227, 213, 0.86);
+  --home-widget-border: rgba(255, 255, 253, 0.78);
+  --home-widget-shadow: none;
+  --home-search-bg: rgba(246, 227, 213, 0.88);
+  --home-search-text: rgba(77, 80, 78, 0.86);
+  --home-progress-track: rgba(77, 80, 78, 0.17);
+  --home-progress-fill: rgba(112, 88, 76, 0.72);
+  --home-dock-bg: rgba(240, 222, 199, 0.92);
+  --home-dock-border: rgba(255, 255, 253, 0.82);
+  --home-dot-bg: rgba(77, 80, 78, 0.21);
+  --home-dot-active-bg: rgba(77, 80, 78, 0.76);
+  --home-icon-default-bg: #e8d7c0;
+  --home-icon-default-fg: #565957;
+  --home-icon-warm-bg: #e6d2b7;
+  --home-icon-warm-fg: #5f5b56;
+  --home-icon-rose-bg: #e7d6c2;
+  --home-icon-rose-fg: #5d5859;
+  --home-icon-cool-bg: #e5dac8;
+  --home-icon-cool-fg: #525a57;
+  --home-icon-light-bg: #f2e5d2;
+  --home-icon-light-fg: #595c59;
+  --home-icon-dark-bg: #ddcbb2;
+  --home-icon-dark-fg: #4e514f;
+}
+
+.app-shell[data-system-theme='cream-shell'] .glass,
+.app-shell[data-system-theme='cream-shell'] .appearance-shell [class*='bg-white'] {
+  background: linear-gradient(180deg, rgba(255, 244, 234, 0.82), rgba(252, 234, 217, 0.78)),
+    var(--glass-bg) !important;
+  border-color: var(--glass-border) !important;
+  box-shadow: none;
+}
+
+.app-shell[data-system-theme='cream-shell'] .home-dock {
+  background: linear-gradient(180deg, rgba(255, 250, 238, 0.94), rgba(250, 239, 219, 0.92)),
+    var(--home-dock-bg);
+  border-color: var(--home-dock-border);
+  box-shadow: none;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.app-shell[data-system-theme='cream-shell'] .home-widget,
+.app-shell[data-system-theme='cream-shell'] .home-search {
+  border-color: var(--home-widget-border);
+  box-shadow: var(--home-widget-shadow);
+}
+
+.app-shell[data-system-theme='cream-shell'] .lock-shell {
+  color: var(--system-text) !important;
+}
+
+.app-shell[data-system-theme='cream-shell'] .lock-overlay {
+  background:
+    radial-gradient(circle at 50% 10%, rgba(255, 252, 245, 0.28), transparent 38%),
+    linear-gradient(180deg, rgba(250, 236, 224, 0.16), rgba(229, 199, 181, 0.22));
+  backdrop-filter: blur(3px) saturate(0.98);
+  -webkit-backdrop-filter: blur(3px) saturate(0.98);
+}
+
+.app-shell[data-system-theme='cream-shell'] .lock-time,
+.app-shell[data-system-theme='cream-shell'] .lock-date {
+  text-shadow: none;
+}
+
+.app-shell[data-system-theme='cream-shell'] .lock-time.is-outline {
+  -webkit-text-stroke-color: rgba(85, 86, 83, 0.88);
+}
+
+.app-shell[data-system-theme='cream-shell'] .lock-banner,
+.app-shell[data-system-theme='cream-shell'] .lock-notification-card,
+.app-shell[data-system-theme='cream-shell'] .lock-notification-empty,
+.app-shell[data-system-theme='cream-shell'] .lock-internal-share-card {
+  border-color: rgba(121, 104, 84, 0.07) !important;
+  background: rgba(255, 248, 236, 0.9) !important;
+  color: var(--system-text) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.app-shell[data-system-theme='cream-shell'] .lock-notification-clear-all,
+.app-shell[data-system-theme='cream-shell'] .lock-focus-chip,
+.app-shell[data-system-theme='cream-shell'] .lock-unlock-button {
+  border-color: rgba(121, 104, 84, 0.08);
+  background: rgba(255, 248, 236, 0.82);
+  color: var(--system-text) !important;
+  box-shadow: none;
+}
+
+.app-shell[data-system-theme='cream-shell'] .lock-notification-clear-all:active,
+.app-shell[data-system-theme='cream-shell'] .lock-unlock-button:active {
+  background: rgba(247, 231, 212, 0.9);
+}
+
+.app-shell[data-system-theme='cream-shell'] .lock-focus-hidden,
+.app-shell[data-system-theme='cream-shell'] .lock-unlock-hint {
+  color: var(--system-text-muted);
+}
+
+.app-shell[data-system-theme='cream-shell'] .lock-notification-dismiss {
+  border-color: rgba(121, 104, 84, 0.08);
+  background: rgba(247, 231, 212, 0.72);
+  color: var(--system-text-muted);
+}
+
+.app-shell[data-system-theme='cream-shell'] .lock-notification-dismiss:active {
+  background: rgba(240, 219, 198, 0.9);
+}
+
+.app-shell[data-system-theme='cream-shell'] .lock-notification-card:focus-visible {
+  box-shadow: 0 0 0 3px var(--system-focus-ring) !important;
+}
+
+.app-shell[data-system-theme='cream-shell'] .lock-notification-stack {
+  scrollbar-color: rgba(98, 93, 89, 0.3) transparent;
+}
+
+.app-shell[data-system-theme='cream-shell'] .lock-notification-stack::-webkit-scrollbar {
+  width: 5px;
+}
+
+.app-shell[data-system-theme='cream-shell'] .lock-notification-stack::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(98, 93, 89, 0.26);
+}
+
 .app-shell[data-system-theme='sticker-pop'] .appearance-shell .appearance-section,
 .app-shell[data-system-theme='sticker-pop'] .appearance-shell .appearance-overview-card,
 .app-shell[data-system-theme='sticker-pop'] .appearance-shell .appearance-system-theme-option,

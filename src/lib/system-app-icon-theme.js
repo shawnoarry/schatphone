@@ -51,6 +51,14 @@ export const SYSTEM_APP_ICON_THEME_OPTIONS = Object.freeze([
     descriptionEn:
       'System apps use creamy color blocks, bold rounded outlines, and recognizable glyphs without changing branded app logos.',
   },
+  {
+    id: 'cream-shell',
+    labelZh: '奶油细线',
+    labelEn: 'Cream Line',
+    descriptionZh: '系统 App 共用近乎无阴影的奶油白圆角底，并以克制的细线功能图形保持清晰识别。',
+    descriptionEn:
+      'System apps share near-flat cream-white rounded tiles with restrained fine-line functional glyphs.',
+  },
 ])
 
 export const SYSTEM_APP_ICON_THEME_TARGET_IDS = Object.freeze([
@@ -219,12 +227,52 @@ const STICKER_POP_APP_ICONS = Object.freeze(
   ),
 )
 
+const CREAM_SHELL_APP_ICONS = Object.freeze(
+  Object.fromEntries(
+    Object.entries(SOFT_ROUNDED_APP_ICONS).map(([appId, meta]) => [
+      appId,
+      Object.freeze({
+        ...meta,
+        accent:
+          {
+            app_network: 'cool',
+            app_wallet: 'warm',
+            app_gallery: 'light',
+            app_music: 'default',
+            app_camera: 'dark',
+            app_themes: 'warm',
+            app_widgets: 'light',
+            app_phone: 'default',
+            app_map: 'cool',
+            app_weather: 'light',
+            app_calendar: 'warm',
+            app_reminders: 'default',
+            app_stock: 'cool',
+            app_contacts: 'light',
+            app_settings: 'dark',
+            app_files: 'cool',
+            app_assets: 'warm',
+            app_control_center: 'dark',
+            app_book: 'light',
+            app_store: 'default',
+          }[appId] || meta.accent,
+        material: 'cream-shell',
+        liquidGlyph:
+          appId === 'app_contacts'
+            ? LIQUID_PRISM_CONTACTS_GLYPH
+            : LIQUID_PRISM_ICON_GLYPHS[appId] || null,
+      }),
+    ]),
+  ),
+)
+
 const SYSTEM_APP_ICON_PACKS = Object.freeze({
   classic: Object.freeze({}),
   'soft-rounded': SOFT_ROUNDED_APP_ICONS,
   'cloud-pastel-animals': CLOUD_PASTEL_ANIMAL_APP_ICONS,
   'chromatic-glass': LIQUID_PRISM_APP_ICONS,
   'sticker-pop': STICKER_POP_APP_ICONS,
+  'cream-shell': CREAM_SHELL_APP_ICONS,
 })
 
 export const normalizeSystemAppIconThemeId = (
