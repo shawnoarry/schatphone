@@ -1,6 +1,6 @@
 # Map Place Media Inventory
 
-Updated: 2026-08-24
+Updated: 2026-08-27
 
 ## Purpose
 
@@ -22,14 +22,14 @@ hero completion; they do not freeze aspect ratio, crop, focal point, or derivati
 
 | Scope | Place count | Place-specific media now | Remaining place-specific decisions | Acquisition rule |
 | --- | ---: | ---: | ---: | --- |
-| Seoul built-in catalog | 106 | 81 places with reviewed real-photo media | 25 | source-traced real-photo search first |
+| Seoul built-in catalog | 106 | 92 places with reviewed real-photo media | 14 | source-traced real-photo search first |
 | Fictional built-in catalog | 7 | 0 generated reconstructions | 7 | project-authored generation |
 | User-created places | unbounded | depends on user import/generation | one per created place when desired | user media first, optional generation |
-| **Fixed built-in target** | **113** | **81** | **32** | search real places; generate fictional places |
+| **Fixed built-in target** | **113** | **92** | **21** | search real places; generate fictional places |
 
 The existing shared Seoul and fictional/category fallbacks fill the image slot but are not counted as place-specific completion.
 
-Seventy of the 81 Seoul places with reviewed media currently have an approved exact-photo hero. The other eleven have reviewed detail media but still require a card-hero decision, so 36 Seoul hero decisions remain. Ten of those eleven use grade-B area context; CGV Wangsimni instead has a grade-A interior detail photo whose composition is not sufficiently branch-identifying for the card.
+Eighty of the 92 Seoul places with reviewed media currently have an approved exact-photo hero. The other twelve have reviewed detail media but still require a card-hero decision, so 26 Seoul hero decisions remain. Detail-only coverage may be grade-B area context or a grade-A exact-place/context image whose selected composition is useful in the gallery but not suitable as the card identity image.
 
 ## Seoul Search Plan
 
@@ -56,7 +56,7 @@ These places have a named building, venue, campus, park, transport facility, or 
 | Banks | 4 | Bank of Korea Main Building; KB Kookmin Bank New Headquarters; Shinhan Bank Head Office; Woori Bank Head Office |
 | Public-safety institutions | 4 | Korean National Police Agency; Seoul Metropolitan Police Agency; Seoul Fire and Disaster Headquarters; Gangnam Fire Station |
 
-Current media coverage inside this group is 73 places. Seventy grade-A heroes now also include Starship Entertainment HQ, Hyundai Department Store Apgujeong Main, Lotte Mart ZETTAPLEX Seoul Station, and ID Hospital. Three additional places remain detail-only: SM Entertainment HQ through its Seongsu district, Lotte Avenuel World Tower through its wider mall complex, and CGV Wangsimni through a source-confirmed interior view that is not sufficiently branch-identifying for the card. These three cards remain on category fallback until an exact/generated hero is separately approved. This leaves nine hero acquisition decisions in this group.
+Current media coverage inside this group is 78 places. Seventy-five grade-A heroes now also include Cube Entertainment HQ, FNC Entertainment HQ, Lotte Avenuel World Tower, Homeplus World Cup, and CGV Wangsimni. Three additional places remain detail-only: SM Entertainment HQ has exact tower context plus its earlier Seongsu area view, E-Mart Wangsimni has exact parking-entry context, and THE PLUS Plastic Surgery has an exact interior reception view. These three cards remain on category fallback until a card-suitable exact/generated hero is separately approved. This leaves four hero acquisition decisions in this group.
 
 ### Detail area-atmosphere candidates: 27 places
 
@@ -72,7 +72,7 @@ These records describe a district, residential area, street cluster, privacy-sen
 | Pharmacy districts | 3 | Jongno 5-ga Pharmacy Street; Namdaemun Pharmacy District; Gangnam Station Pharmacy District |
 | Restaurant branches | 5 | Myeongdong Kyoja Main Store; London Bagel Museum Anguk; Knotted Cheongdam; Kyochon Chicken Yeoksam No. 1; EGGDROP Gangnam Woosung |
 
-Current usable coverage inside this group is eight reviewed grade-B detail images: the Myeongdong street view for Myeongdong Kyoja, the Sillim residential-area view, the Hongdae night street, the Sanggye cityscape, the Banpo riverside view for Acro River Park, the Hannam/Itaewon cityscape, the Namdaemun Market alley for the pharmacy district, and the Bukchon/Anguk street for London Bagel Museum Anguk. All eight cards remain on category fallback until an exact/generated hero is separately approved. This leaves 19 area-detail acquisition decisions and all 27 card-hero decisions in this group.
+Current usable coverage inside this group is fourteen places. The earlier eight grade-B detail-only records remain: Myeongdong Kyoja, the Sillim residential area, Hongdae, Sanggye Jugong, Acro River Park, Hannam The Hill, Namdaemun Pharmacy District, and London Bagel Museum Anguk. Batch 09 adds exact heroes for Jenny House Cheongdam Hill, A by BOM Cheongdam, Cakeshop Seoul, Raemian One Bailey, and PH129 Cheongdam, plus exact detail-only coverage for Club FF. This leaves thirteen first-media acquisition decisions and 22 card-hero decisions in this group.
 
 An exact source-traced photo may satisfy the card hero when the source page proves the branch, facade, or documented interior and the image passes identity and crop review. A truthful grade B remains valuable detail context, but it cannot be promoted into the card merely because an exact photo is unavailable.
 
