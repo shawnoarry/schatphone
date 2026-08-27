@@ -2,9 +2,9 @@
 
 Updated: 2026-08-27
 
-Integrated baseline: `c47faa4`
+Integrated baseline: `52c637e`
 
-Working tree: preserved but excluded from integrated capability and measurement claims.
+Working tree: untracked local QA artifacts are preserved and excluded from integrated capability and measurement claims.
 
 This is the only live execution board for implementation order.
 
@@ -992,7 +992,7 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 
 ## 6. Current Execution Queue
 
-1. `P0 CONTACTS_V3_IDENTITY_AND_ROLE_CORE / CONTACTS-V3-0 DONE 2026-08-27 / CONTACTS-V3-1 DONE 2026-08-27 / CONTACTS-V3-2A ACTIVE / CARD-1 DONE 2026-08-27 / ROLE-0 DECISION_DONE 2026-08-27 / ROLE-1 DONE 2026-08-27 / CARD-2 DONE 2026-08-27 / CARD-3 DONE 2026-08-27 / CARD-4 DONE 2026-08-27 / CARD-5 DONE 2026-08-27 / CARD-6 DONE 2026-08-27 / PERSONA-1 NEXT`: execute the small-slice checklist in `CONTACTS_V3_2A_EXECUTION_PLAN.md`. The category carrier, four-person-type baseline, field-purpose/input rules, manual WorldBook category/field editor, read-first dynamic Contacts person-page form, person-specific extension path, and reviewable current-world proposal flow are complete locally without changing old NPC classifications, visible list grouping, old-field permissions, existing values, or consumer behavior. Reviewable free-text classification is next; Event identity projection and Work Hub event work remain queued after Persona Confirmation. `EVENT-PREP-1` remains available as a parallel documentation-only identity-field comparison and may not create events.
+1. `P0 CONTACTS_V3_IDENTITY_AND_ROLE_CORE / CONTACTS-V3-0 DONE 2026-08-27 / CONTACTS-V3-1 DONE 2026-08-27 / CONTACTS-V3-2A ACTIVE / CARD-1 DONE 2026-08-27 / ROLE-0 DECISION_DONE 2026-08-27 / ROLE-1 DONE 2026-08-27 / CARD-2 DONE 2026-08-27 / CARD-3 DONE 2026-08-27 / CARD-4 DONE 2026-08-27 / CARD-5 DONE 2026-08-27 / CARD-6 DONE 2026-08-27 / PERSONA-1 NEXT`: execute the small-slice checklist in `CONTACTS_V3_2A_EXECUTION_PLAN.md`. The category carrier, four-person-type baseline, field-purpose/input rules, manual WorldBook category/field editor, read-first dynamic Contacts person-page form, person-specific extension path, and reviewable current-world proposal flow are integrated at `52c637e` without changing old NPC classifications, visible list grouping, old-field permissions, existing values, or consumer behavior. Reviewable free-text classification is next; Event identity projection and Work Hub event work remain queued after Persona Confirmation. `EVENT-PREP-1` remains available as a parallel documentation-only identity-field comparison and may not create events.
 2. `P0 IN_PROGRESS / CMG-00, CMG-01, CMG-02, CMG-03, AND DCF-05 DONE 2026-08-20 / DCF-01, DCF-03, CMG-04, CMG-05, CMG-06, CMG-07, AND DCF-02 DONE 2026-08-21 / DCF-04 AND DCF-06 DONE 2026-08-22`: the first production gift shared-experience vertical is complete at `d8662cb`; `CMG-06` is complete at `f9f14f9`, `CMG-07` is complete at `d8b46fc`, `DCF-04` is complete at `26534bd` on the incoming-call focus boundary, and `DCF-06` is complete at `ec31855` on the image-bed tooling-test boundary. `CMG-08` remains the next separately assignable persistence item and requires its own non-overlapping reservation.
 3. `P0 DONE 2026-07-22`: 4.9 first successful Chat activation loop.
 4. `P0 DONE 2026-08-09`: 4.9 current-save write/conflict safety and the release-local complete backup/recovery boundary; broader Repository migration, capacity reporting, and personal R2 remain separately reviewable architecture slices.

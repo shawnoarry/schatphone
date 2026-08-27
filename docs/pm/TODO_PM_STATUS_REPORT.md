@@ -2,9 +2,9 @@
 
 Updated: 2026-08-27
 
-Integrated baseline: `c47faa4`
+Integrated baseline: `52c637e`
 
-Working tree: excluded from integrated capability claims; current user-owned visual work remains preserved in place.
+Working tree: untracked local QA artifacts are preserved and excluded from integrated capability claims.
 
 Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 
@@ -36,7 +36,7 @@ This table summarizes package status. It does not replace any package's named mi
 | Event Runtime / World Hub | `PARTIAL_DONE` | EVE-4C owner-native commerce chain, Event Notebook, Player Context V1, CJA-5 midpoint family, Event Instance 240-cap removal, bilingual reason feedback | Contacts V3 precedes new identity-conditioned event families and Work Hub role/affiliation promotion; `CMG-08`, production Mini Scene trigger, and EVE-5 remain separately gated | `docs/pm/event-runtime-and-world-hub/STATUS_AND_HANDOFF.md` |
 | Map / Calendar / Reminders | `INTEGRATED_LOCAL / scoped milestones` | Calendar V3 plus storage V4 handoffs, Agenda Journey/Activity Session, Mail and Work Hub schedule proposals, Map journeys/Footprints, 81 Seoul places with reviewed media and 70 exact card heroes | source-conflict actions, remaining place-media decisions, PWA/true-device proof, later MJE stages | `docs/pm/map-calendar-reminders/STATUS_AND_HANDOFF.md` |
 | Commerce / Finance / Assets | `PARTIAL_DONE` | eleven Shopping storefronts, paid checkout and support flows, fifteen Food Delivery entries with scoped carts/orders, Wallet cards/activity/statements/payees/receipt sharing, ordinary consequence proof | refund/cancellation settlement, tracking shares, Assets/Stock depth, named physical-device proof | `docs/pm/commerce-finance-and-assets/STATUS_AND_HANDOFF.md` |
-| Visual / IA | `PARTIAL_DONE` | Home/App Store systems, thirteen S1 App previews plus Notification Center, day/night and authored theme/icon foundations, visual workflow and Playwright quality gate | current unintegrated visual work, cross-module consistency, real-device polish, later approved focused slices | `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md` |
+| Visual / IA | `PARTIAL_DONE` | Home/App Store systems, thirteen S1 App previews plus Notification Center, day/night and authored theme/icon foundations, visual workflow and Playwright quality gate | cross-module consistency, real-device polish, and later approved focused slices | `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md` |
 | Module Architecture | `IN_PROGRESS` | release-local backup/recovery, same-container writer safety, Book Repository cutover, shared Image/TTS/Music contracts, CMG-00 through CMG-07 and DCF repairs | `CMG-08` next; CMG-09/10 dependent; later hotspot/adapter/type work remains gated | `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` |
 
 ## 4. What Users Can Do Now
@@ -55,7 +55,7 @@ This table summarizes package status. It does not replace any package's named mi
 - no production-grade authenticated push backend or closed-page autonomous simulation;
 - no automatic personal R2 backup implementation despite the accepted architecture direction;
 - no general multi-world W2/W3 persistence and switching;
-- no Persona Confirmation flow or downstream formal Chat/Event Runtime/Work Hub projection yet; the Contacts V3 owner, extensible template baseline, manual form editor, dynamic person-page card, and isolated person-specific extensions exist in the current working tree but are not part of the named integrated baseline above;
+- no reviewable free-text persona classification, Persona Confirmation flow, or downstream formal Chat/Event Runtime/Work Hub projection yet; the Contacts V3 owner, extensible template baseline, manual form editor, dynamic person-page card, isolated person-specific extensions, and current-world proposal flow are integrated at `52c637e`;
 - no production Mini Scene trigger/HTML/media expansion, and retained-scene governance remains open under `CMG-08`;
 - no claim that every S1 shell has an S2 owner Store or S3 Event Runtime chain;
 - no broad hotspot rewrite, full TypeScript migration, or universal coverage threshold;

@@ -2,6 +2,8 @@
 
 Updated: 2026-08-27
 
+Integrated baseline: `52c637e`
+
 This file is the handoff page for anyone continuing Contacts, role, relationship, or memory-management work.
 
 ## 1. Current Status
