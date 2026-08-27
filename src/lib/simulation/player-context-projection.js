@@ -1,5 +1,6 @@
 import {
   CONTACTS_ENTITY_TYPES,
+  PROFILE_TEMPLATE_FIELD_PURPOSES,
   PROFILE_VALUE_SOURCE_KINDS,
   PROFILE_VISIBILITY_LEVELS,
 } from '../profile-template-schema'
@@ -100,7 +101,11 @@ const listTemplateFieldIdsForSelfProfile = (profileTemplate = {}) =>
     (Array.isArray(profileTemplate.fields) ? profileTemplate.fields : [])
       .filter((field) => {
         const entityTypes = Array.isArray(field?.entityTypes) ? field.entityTypes : []
-        return entityTypes.length === 0 || entityTypes.includes(CONTACTS_ENTITY_TYPES.SELF_PROFILE)
+        const purposes = Array.isArray(field?.purposes) ? field.purposes : []
+        return (
+          (entityTypes.length === 0 || entityTypes.includes(CONTACTS_ENTITY_TYPES.SELF_PROFILE)) &&
+          purposes.includes(PROFILE_TEMPLATE_FIELD_PURPOSES.EVENT_ELIGIBILITY)
+        )
       })
       .map((field) => normalizeId(field?.id))
       .filter(Boolean),
@@ -242,6 +247,14 @@ export const buildPlayerContextSnapshotV1 = ({
   const normalizedPurpose = normalizeId(purpose)
   const normalizedAllowlist = normalizeFieldAllowlist(fieldAllowlist)
   if (!normalizedPurpose || !normalizedAllowlist) return fail('invalid_projection_policy')
+  const eventEligibleFieldIds = listTemplateFieldIdsForSelfProfile(profileTemplate)
+  if (
+    Object.values(normalizedAllowlist).some(
+      (config) => !eventEligibleFieldIds.has(config.fieldId),
+    )
+  ) {
+    return fail('event_field_purpose_missing')
+  }
 
   const visibilityLevelList = Array.isArray(allowedVisibilityLevels)
     ? allowedVisibilityLevels

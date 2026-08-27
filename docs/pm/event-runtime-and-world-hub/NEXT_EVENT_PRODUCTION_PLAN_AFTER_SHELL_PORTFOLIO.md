@@ -1,6 +1,6 @@
 # Work Hub First Event Production Plan After The Shell Portfolio / 壳子基座完成后的 Work Hub 优先事件生产规划
 
-Updated: 2026-08-26
+Updated: 2026-08-27
 
 Status: `PLANNING_ONLY / NEXT_SLICE_REQUIRES_SEPARATE_ACCEPTANCE`
 
@@ -29,8 +29,8 @@ This order does not declare any implementation complete or authorize a new produ
 
 Live dependency queue:
 
-1. `EVENT-PREP-1`: after Contacts `CARD-2`, align `occupation`, `affiliation`, and `public_identity` with the new field-purpose rules; documentation/tests only, no event creation.
-2. `EVENT-PROJECTION-1`: after Contacts `PERSONA-2`, implement the bounded confirmed-identity projection while preserving stale/missing/cross-world fail-closed behavior.
+1. `EVENT-PREP-1 DONE 2026-08-27 / DOC_ONLY`: the field-purpose, bounded-output, authority-separation, and fail-closed comparison is frozen; it creates no event.
+2. `EVENT-PROJECTION-1 READ_ONLY_DONE 2026-08-27`: the bounded confirmed-identity projection preserves stale/missing/cross-world/template/revision/visibility/purpose fail-closed behavior and creates no event or owner mutation.
 3. `EVT-WORK-1` through `EVT-WORK-4`: begin only after the Work Hub identity projection is accepted.
 4. `EVT-CHRONICLE-1`: begin only after the owner-confirmed Work Hub/Calendar/Agenda/Map chain exists.
 

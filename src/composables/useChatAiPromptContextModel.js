@@ -10,6 +10,11 @@ import {
 } from '../lib/chat-context-budget'
 import { buildMemoryRecallQuery } from '../lib/memory-recall'
 import { buildRoleIdentityProjection } from '../lib/role-identity-projection'
+import { buildContactsProfileProjection } from '../lib/contacts-profile-projection'
+import {
+  CONTACTS_ENTITY_TYPES,
+  PROFILE_TEMPLATE_FIELD_PURPOSES,
+} from '../lib/profile-template-schema'
 import { buildWeatherWorldProjection } from '../lib/weather-world-projection'
 import { CHAT_AI_DISCLOSURE_POLICY_MODES } from '../lib/chat-ai-disclosure-proposals'
 import {
@@ -260,13 +265,38 @@ export const useChatAiPromptContextModel = ({
         }
       : null
 
-  const visibleSelfProfileValuesForRole = (visibilityLimit = 'familiar') => {
+  const visibleSelfProfileValuesForRole = (worldContext, visibilityLimit = 'familiar') => {
     const profiles = Array.isArray(chatStore?.roleProfiles) ? chatStore.roleProfiles : []
-    const selfProfile = profiles.find((profile) => profile.entityType === 'self_profile')
-    if (!selfProfile || !Array.isArray(selfProfile.profileValues)) return []
+    const worldId = worldContext?.identity?.worldId || ''
+    const matchesWorld = (profileWorldId) =>
+      profileWorldId === worldId ||
+      (['legacy_single_world', 'default_world'].includes(profileWorldId) &&
+        ['legacy_single_world', 'default_world'].includes(worldId))
+    const selfProfiles = profiles.filter(
+      (profile) =>
+        profile.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE &&
+        matchesWorld(profile.templateLink?.primaryWorldId),
+    )
+    if (selfProfiles.length !== 1) return []
+    const selfProfile = selfProfiles[0]
+    const templates = Array.isArray(worldContext?.profiles?.enabledTemplates)
+      ? worldContext.profiles.enabledTemplates
+      : []
+    const template = templates.find(
+      (item) => item?.id === selfProfile.templateLink?.profileTemplateId,
+    )
     const allowed = new Set(['public', 'familiar'])
     if (visibilityLimit === 'intimate') allowed.add('intimate')
-    return selfProfile.profileValues.filter((value) => allowed.has(value.visibilityLevel))
+    const result = buildContactsProfileProjection({
+      purpose: PROFILE_TEMPLATE_FIELD_PURPOSES.CHAT_CONTEXT,
+      profile: selfProfile,
+      template,
+      expectedWorldId: worldId,
+      expectedProfileRevision: selfProfile.revision,
+      allowedEntityTypes: [CONTACTS_ENTITY_TYPES.SELF_PROFILE],
+      allowedVisibilityLevels: allowed,
+    })
+    return result.projection?.fields || []
   }
 
   const buildChatActivityPromptBlock = (contact) => {
@@ -331,6 +361,7 @@ export const useChatAiPromptContextModel = ({
       contact,
       profile,
       profileTemplates: options.profileTemplates,
+      expectedWorldId: options.expectedWorldId,
       recalledMemories: options.recalledMemories,
     })
   }
@@ -348,7 +379,7 @@ export const useChatAiPromptContextModel = ({
     })
     const visibleSelfValues = options.includeSelfProfile === false
       ? []
-      : visibleSelfProfileValuesForRole('familiar')
+      : visibleSelfProfileValuesForRole(worldContext, 'familiar')
 
     return {
       promptText: [
@@ -360,6 +391,7 @@ export const useChatAiPromptContextModel = ({
       profileTemplates: Array.isArray(worldContext?.profiles?.enabledTemplates)
         ? worldContext.profiles.enabledTemplates
         : [],
+      worldId: worldContext?.identity?.worldId || '',
     }
   }
 
@@ -466,6 +498,7 @@ export const useChatAiPromptContextModel = ({
     const weatherInstruction = buildWeatherPromptBlock()
     const roleIdentity = buildRoleIdentityPromptBlocks(contact, {
       profileTemplates: worldKernel.profileTemplates,
+      expectedWorldId: worldKernel.worldId,
       recalledMemories: relationshipRuntime.recalledMemories,
     })
     const imagePolicy = resolveAssistantImageBlockPolicy(aiPrefs, options.imageReferences)

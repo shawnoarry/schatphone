@@ -7,7 +7,13 @@ const createProfile = (overrides = {}) => ({
   role: 'idol',
   bio: 'Warm and precise',
   entityType: 'main_role',
-  profileValues: [{ fieldId: 'favorite_drink', value: 'Jasmine tea' }],
+  revision: 3,
+  templateLink: {
+    primaryWorldId: 'default_world',
+    profileTemplateId: 'idol_profile',
+    profileTemplateVersion: 2,
+  },
+  profileValues: [{ fieldId: 'favorite_drink', value: 'Jasmine tea', visibilityLevel: 'familiar', sourceKind: 'manual' }],
   detailItems: [],
   ...overrides,
 })
@@ -23,7 +29,8 @@ describe('role identity projection Module', () => {
       profileTemplates: [
         {
           id: 'idol_profile',
-          fields: [{ id: 'favorite_drink', label: 'Favorite drink' }],
+          version: 2,
+          fields: [{ id: 'favorite_drink', label: 'Favorite drink', purposes: ['chat_context'] }],
         },
       ],
     })
@@ -89,8 +96,8 @@ describe('role identity projection Module', () => {
   test('does not mutate source records and reports bounded omissions', () => {
     const profile = createProfile({
       profileValues: [
-        { fieldId: 'first', value: 'one' },
-        { fieldId: 'second', value: 'two' },
+        { fieldId: 'first', value: 'one', visibilityLevel: 'familiar', sourceKind: 'manual' },
+        { fieldId: 'second', value: 'two', visibilityLevel: 'familiar', sourceKind: 'manual' },
       ],
     })
     const original = structuredClone(profile)
@@ -98,10 +105,33 @@ describe('role identity projection Module', () => {
       contact: { id: 1, kind: 'role' },
       profile,
       profileValueLimit: 1,
+      profileTemplates: [{
+        id: 'idol_profile',
+        version: 2,
+        fields: [
+          { id: 'first', label: 'First', purposes: ['chat_context'] },
+          { id: 'second', label: 'Second', purposes: ['chat_context'] },
+        ],
+      }],
     })
 
     expect(projection.omittedCounts.profileValues).toBe(1)
     expect(profile).toEqual(original)
     expect(Object.isFrozen(projection)).toBe(true)
+  })
+
+  test('does not project old profile fields without Chat purpose', () => {
+    const projection = buildRoleIdentityProjection({
+      contact: { id: 1, kind: 'role' },
+      profile: createProfile(),
+      profileTemplates: [{
+        id: 'idol_profile',
+        version: 2,
+        fields: [{ id: 'favorite_drink', label: 'Favorite drink', purposes: [] }],
+      }],
+    })
+
+    expect(projection.stableText).not.toContain('Jasmine tea')
+    expect(projection.profileProjectionReason).toBe('projected')
   })
 })

@@ -2,7 +2,7 @@
 
 Updated: 2026-08-27
 
-Status: `ACTIVE / CARD-1_DONE 2026-08-27 / ROLE-0_DECISION_DONE 2026-08-27 / ROLE-1_DONE 2026-08-27 / CARD-2_DONE 2026-08-27 / CARD-3_DONE 2026-08-27 / CARD-4_DONE 2026-08-27 / CARD-5_DONE 2026-08-27 / CARD-6_DONE 2026-08-27 / PERSONA-1_NEXT`
+Status: `COMPLETE / CARD-1_DONE 2026-08-27 / ROLE-0_DECISION_DONE 2026-08-27 / ROLE-1_DONE 2026-08-27 / CARD-2_DONE 2026-08-27 / CARD-3_DONE 2026-08-27 / CARD-4_DONE 2026-08-27 / CARD-5_DONE 2026-08-27 / CARD-6_DONE 2026-08-27 / PERSONA-1_DONE 2026-08-27 / PERSONA-2_DONE 2026-08-27 / CONTACTS-V3-3_DONE 2026-08-27`
 
 Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 
@@ -27,7 +27,7 @@ Product design: `CONTACTS_V3_2A_EXTENSIBLE_PROFILE_CARD_DESIGN.md`
 - WorldBook 已经能保存带版本的世界人物模板；
 - Contacts 已经能套用模板、填写具体值、设置可见范围和复核模板变化；
 - AI 已经只能生成待确认字段草稿，不能自动保存；
-- 当前世界模板、世界观生成草稿、动态个人页和人物专属扩展已经使用同一套类目/字段结构；下一步是在这个基础上把整段人物描述归类成可复核字段草稿。
+- 当前世界模板、世界观生成草稿、动态个人页、人物专属扩展和文字归类保存已经使用同一套类目/字段结构；正式 Chat、Event Runtime 和 Work Hub 只读取各自获准的精简投影。
 
 ## 3. 可以边做边调整的内容
 
@@ -231,7 +231,7 @@ Product design: `CONTACTS_V3_2A_EXTENSIBLE_PROFILE_CARD_DESIGN.md`
 - AI 失败只显示提示，不关闭或破坏已打开的规则/手动草稿，也不阻塞手动新建；
 - 本步骤不填写任何人物值，不创建人物资料修订、组织权限、事件、动态数值、好感、余额、疲劳或进度。
 
-### PERSONA-1 — 整段文字归类草稿 — `NEXT`
+### PERSONA-1 — 整段文字归类草稿 — `DONE 2026-08-27`
 
 要做：
 
@@ -242,7 +242,15 @@ Product design: `CONTACTS_V3_2A_EXTENSIBLE_PROFILE_CARD_DESIGN.md`
 
 完成标准：未识别内容不丢失，取消和解析失败不改变人物资料。
 
-### PERSONA-2 — 复核并保存人物资料 — `QUEUED_AFTER_PERSONA-1`
+落地结果：
+
+- 在 Contacts 现有“世界资料卡”页加入整段人物描述入口，与资料卡编辑流程互斥，不增加第二个页面或第二种人物数据格式；
+- 分类契约保留精确原文段，并生成不可变、绑定人物/世界/模板/资料版本的复核草稿；
+- 结果固定呈现匹配字段、新字段建议、冲突和未归类原文四组，已确认值与候选值并排显示，不静默选择或覆盖；
+- 关闭、解析失败、人物切换、资料版本变化和过期异步响应都清理草稿或安全失效；
+- 成功归类、关闭和解析失败均不会改变 `profileValues`、`templateLink` 或 `revision`，本步骤没有接受或保存按钮。
+
+### PERSONA-2 — 复核并保存人物资料 — `DONE 2026-08-27`
 
 要做：
 
@@ -253,7 +261,16 @@ Product design: `CONTACTS_V3_2A_EXTENSIBLE_PROFILE_CARD_DESIGN.md`
 
 完成标准：手动填写和文字归类得到相同的联系人资料结构，下游功能不需要区分资料来源。
 
-### CONTACTS-V3-3 — 给其他功能提供精简资料 — `QUEUED_AFTER_PERSONA-2`
+落地结果：
+
+- 每一行必须明确接受或忽略；接受项可以在保存前修改值，新字段建议还可修改名称和可见范围，未处理行不能提交；
+- 接受的新字段进入同一人物的 `profileExtensions`，接受值进入现有 `profileValues`，并与手动填写一样保存为 `sourceKind: manual`，没有第二套人设记录；
+- 保存前重新核对人物 ID、人物类型、资料版本、世界、模板 ID 和模板版本；旧单世界存档只接受既有 `default_world` / `legacy_single_world` 兼容别名，其他失配全部安全失败；
+- `confirmPersonaProfileRevision()` 只调用一次 Contacts Profile Owner 正式写入，一次确认只产生一个新资料修订；
+- 持久化失败会恢复完整旧人物快照并尝试重新持久化回滚，失败前的资料值、扩展、模板链接、修订和 Chat 绑定均保留；
+- 取消、校验失败和 AI/解析失败不写人物资料，复核草稿可在可修正失败后继续处理。
+
+### CONTACTS-V3-3 — 给其他功能提供精简资料 — `DONE 2026-08-27`
 
 顺序：
 
@@ -264,22 +281,35 @@ Product design: `CONTACTS_V3_2A_EXTENSIBLE_PROFILE_CARD_DESIGN.md`
 
 完成标准：每个功能只拿到自己需要的字段、世界和资料版本，不读取整张人物资料卡。
 
+落地结果：
+
+- 新增统一 Contacts Profile Projection，只输出限定字段、人物类型和 profile/world/template/revision 引用；用途、可见范围、手动确认来源、人物类型、世界、模板或资料版本任一不符都 fail closed；
+- 正式 Chat 只读取 `chat_context` 字段；Self Profile 必须在当前世界恰好匹配一份，旧字段空用途不会进入提示词；
+- Event Player Context 只读取带 `event_eligibility` 的稳定 `occupation`、`affiliation` 和 `public_identity`，缺失用途、未确认草稿、AI 建议、跨世界、模板不符、修订过期或不可见都不可用；获得摘要不会创建 Event Instance、事件、触发或 owner mutation；
+- Work Hub 只读取带 `work_hub_matching` 的职业、所属和角色模板线索，并明确返回零组织权威：不授予成员资格、凭证、签发、发布或其他组织权限；
+- Self Profile 的组织信息只作为匹配线索；Main Role、Supporting Role 和 World NPC 的确认所属可表达人物设定，但未来正式组织行为仍须组织 owner 校验来源与签发资格；
+- 未推进公开页面投影、正式 Work Hub Store、普通工作链、Work Hub 事件、Chronicle、Community/Media 或其他事件家族。
+
 ## 6. 事件端排队顺序
 
 联系人资料卡施工期间，事件端保留现有已完成能力，不抢先建立新的身份判断格式。
 
-### EVENT-PREP-1 — 身份字段需求对照 — `READY_PARALLEL_DOC_ONLY`
+### EVENT-PREP-1 — 身份字段需求对照 — `DONE 2026-08-27 / DOC_ONLY`
 
 - 把现有 `occupation`、`affiliation`、`public_identity` 身份判断与新字段用途对齐；
 - 只形成字段和失败条件对照，不创建事件；
 - 未确认、自定义但未授权、跨世界或版本过期的资料继续判定为不可用。
 
-### EVENT-PROJECTION-1 — 联系人事件身份摘要 — `WAIT_FOR_PERSONA-2`
+完成结果：事件包已对齐三项稳定字段的 `event_eligibility` 用途、Self Profile 与其他人物类型的使用差异、精简输出、可见范围、世界/模板/资料版本校验和完整安全失败条件；并明确 Self Profile 所属组织只提供身份/匹配线索，不能授予用户 Work Hub 组织权限。没有修改 Contacts、Event Runtime 或现有 Player Context V1 行为，也没有创建事件。
+
+### EVENT-PROJECTION-1 — 联系人事件身份摘要 — `DONE 2026-08-27 / READ_ONLY`
 
 - 属于 `CONTACTS-V3-3` 的事件读取部分；
 - Event Runtime 只读取确认过且允许事件使用的字段；
 - 保留当前 K-pop Player Context V1 的安全失败规则；
 - 不因为得到身份摘要就自动产生事件。
+
+完成结果：Player Context 继续保持只读 K-pop V1 allowlist，并新增 Contacts V3 用途、可见范围、来源和版本校验；三项稳定字段均必须显式包含 `event_eligibility`，旧字段空用途不再隐式通过。没有新增事件配方、触发、Event Instance、owner 写入或事件页面。
 
 ### EVT-WORK-1 — Work Hub 正式数据归属 — `WAIT_FOR_CONTACTS-V3-3`
 
@@ -322,11 +352,11 @@ Product design: `CONTACTS_V3_2A_EXTENSIBLE_PROFILE_CARD_DESIGN.md`
 - Mini Scene 正式事件接入；
 - Messages/SMS，仅在出现真实号码或短码需求后考虑。
 
-## 7. 当前开工点
+## 7. 当前停止线
 
-当前下一代码任务是 `PERSONA-1 整段文字归类草稿`。
+本施工单已完成。联系人当前下一候选是 `CONTACTS-V3-4 Role Lifecycle`，但开工前必须先冻结归档/恢复、永久 profile ID 不复用、墓碑和收款账户撤销语义。
 
-这一项会把用户粘贴的一段人物描述匹配到当前资料卡已有字段，并把无法安全匹配的内容保留为新字段建议、冲突或未归类原文。它只形成复核草稿，不接受或保存任何人物值；逐项确认和 Contacts 写入留给 `PERSONA-2`。`EVENT-PREP-1` 仍可作为不改运行行为的并行文档任务，对照现有身份字段与用途标记，但不能抢先创建事件或迁移 Event Runtime。
+`PERSONA-1`、`PERSONA-2` 与获准的 `CONTACTS-V3-3` 精简投影已经落地。此结果不授权 `EVT-WORK-1`、正式组织 Store、普通工作链、Work Hub 事件、Chronicle、Community/Media、SMS、EVE-5、Mini Scene 或其他事件家族；这些仍保持各自停止线。
 
 每完成一项，都要同步：
 
@@ -398,3 +428,24 @@ Product design: `CONTACTS_V3_2A_EXTENSIBLE_PROFILE_CARD_DESIGN.md`
 - Chromium 桌面与模拟 Pixel 5 浏览器流程：6 项通过，覆盖原 WorldBook -> Contacts 资料值链、手动模板编辑，以及当前世界建议的生成、取消不落库、重新生成、保存 v1 和无横向溢出；
 - 未限制目录的默认测试命令仍会误扫 `.codex/tmp` 的 4 个外部 Jest 文件；本机图床工具和两个 5 秒并发超时仍保持既有环境/并发失败指纹，与 Contacts 资料卡改动无关；
 - lint 通过；production build 通过，只有项目已有的大分块提示；governance 为 2 个文件、19 项通过；`git diff --check` 通过。
+
+## 15. PERSONA-1 验证记录
+
+- 分类契约与 Contacts 组件重点回归：2 个文件、25 项通过，覆盖不可变草稿、四类结果、精确原文、冲突并排、解析失败、关闭和人物对象零写入；
+- Chromium 桌面与模拟 Pixel 5 浏览器流程：2 项通过，覆盖真实 OpenAI 兼容调用链、四组复核、完整原文、无接受按钮和无横向溢出；
+- lint 通过；production build 通过（702 modules），只有项目已有的大分块提示；governance 为 2 个文件、19 项通过；`git diff --check` 通过；
+- 全量 Vitest 为 336 个文件、2533 项全部通过；并行 `miniScene` 改动此前触发的持久化清单失败已在当前工作区消除。
+
+## 16. PERSONA-2 验证记录
+
+- Persona 确认契约、Contacts Profile Owner 单次写入和持久化回滚重点回归：3 个文件、相关测试全部通过；
+- 覆盖逐项接受/修改/忽略、未决项阻止提交、新字段进入人物专属扩展、手动来源结构一致、世界/模板/资料版本失配、一次修订写入和写失败完整恢复；
+- Contacts 桌面 Chromium 与模拟 Pixel 5 流程合并覆盖保存、取消、失败、重开、中英文、日夜模式、无障碍和零横向溢出；不声称真机证据。
+
+## 17. CONTACTS-V3-3 验证记录
+
+- Contacts 通用投影、Chat 上下文、Player Context 与 Work Hub 投影重点回归均通过；综合 Contacts/投影 focused 集为 10 个文件、76 项通过；
+- Chat prompt context 单独回归 13/13 通过；投影与 Work Hub 集 5 个文件、28/28 通过；
+- 覆盖用途、人物类型、可见范围、手动来源、世界/模板/资料版本安全失败，以及精简输出不包含整张人物资料卡；
+- Persona 用户流程在桌面 Chromium 与模拟 Pixel 5 为 2/2 通过，包含 scoped Axe 零违规和零横向溢出；不声称真机证据。
+- 当前共享树全量 lint 通过；全量 Vitest 为 338 个文件、2543 项全部通过；production build 为 705 modules；governance 为 2 个文件、19 项通过；`git diff --check` 通过。

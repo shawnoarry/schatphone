@@ -2,7 +2,7 @@
 
 Updated: 2026-08-27
 
-Status: `PLANNING_ACCEPTED / CONTACTS-V3-0_DONE 2026-08-27 / CONTACTS-V3-1_DONE 2026-08-27 / CONTACTS-V3-2A_ACTIVE / CARD-4_DONE 2026-08-27 / CARD-5_DONE 2026-08-27 / CARD-6_DONE 2026-08-27 / PERSONA-1_NEXT`
+Status: `PLANNING_ACCEPTED / CONTACTS-V3-0_DONE 2026-08-27 / CONTACTS-V3-1_DONE 2026-08-27 / CONTACTS-V3-2A_DONE 2026-08-27 / CONTACTS-V3-2B_PERSONA-2_DONE 2026-08-27 / CONTACTS-V3-3_DONE 2026-08-27 / CONTACTS-V3-4_NEXT`
 
 Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 
@@ -309,15 +309,15 @@ Contacts V3 identity foundation is not complete until:
 1. `DONE 2026-08-27`: the first V3-2A additions are date, boolean, and organization/team reference; numeric, formula, and cycle-calculation fields remain deferred.
 2. `DONE 2026-08-27`: the additive purpose markers are `chat_context`, `event_eligibility`, `work_hub_matching`, and `public_content`; old fields gain none automatically and consumers must still enforce visibility/world/version rules.
 3. Decide which identity fields every world must provide and which remain template-defined.
-4. Decide the exact Persona Confirmation candidate lifetime and review presentation; fully structured manual input remains allowed to save directly.
+4. `DONE 2026-08-27`: Persona Confirmation remains bound to the exact person/world/template/profile revisions, requires an explicit decision for every row, and writes one Contacts-owned revision; fully structured manual input remains allowed to save directly.
 5. Define how a major Self Profile revision affects active Work Hub membership, formal Chat context, pending events, and already confirmed history.
 6. Decide the minimum profile completeness required for formal Chat while preserving a quick-start path.
 7. Freeze archive/restore, permanent profile-ID non-reuse, tombstone, and receiving-account revocation semantics before V3-4.
 
 ## 11. Next Implementation Slice
 
-The current task remains `CONTACTS-V3-2A World Persona Template Proposal And Review` only.
+`CONTACTS-V3-2A`, Persona Confirmation, and the approved `CONTACTS-V3-3` purpose-specific projections are complete. The next candidate is `CONTACTS-V3-4 Role Lifecycle`, subject to the unresolved lifecycle decisions below.
 
 `CARD-3` added manual category/field editing to the existing WorldBook profile-template management flow. `CARD-4` renders the confirmed structure inside the existing Contacts person page, and `CARD-5` now lets the same page add person-specific categories or fields through Contacts-owned `profileExtensions`. Draft cancellation changes neither the person nor the template; person-only structure remains isolated; only explicit promotion writes one current-world template version; other people keep their previous template/version and receive no automatic values. These slices reuse the existing template IDs/versions, Contacts values, visibility rules, adaptation review, AI draft helpers, system-managed IDs, storage, and backup path; they do not create a parallel template format, silently save AI output, rewrite confirmed Self Profile values, infer old NPC importance, migrate consumers, promote Work Hub, or create a new event family.
 
-Execute the accepted direction in small slices from `CONTACTS_V3_2A_EXECUTION_PLAN.md`. `CARD-1` completed the category carrier, `ROLE-1` completed the four-type compatibility foundation, `CARD-2` completed field purposes and the first added input types, `CARD-3` completed manual WorldBook form editing, `CARD-4` completed the dynamic Contacts person-page read/edit form, `CARD-5` completed isolated person-specific extensions, and `CARD-6` completed deterministic plus optional-AI current-world template proposals on 2026-08-27. `PERSONA-1` is next: classify pasted persona text into existing-field candidates, new-field suggestions, conflicts, and retained unclassified text without saving. The later Contacts home-list four-section visual regrouping remains outside this data slice.
+The small-slice checklist in `CONTACTS_V3_2A_EXECUTION_PLAN.md` is complete through `PERSONA-1`, `PERSONA-2`, formal Chat context, read-only Event identity, and Work Hub matching projections. User-confirmed persona values now use the same Contacts profile structure as manual values, while every consumer receives only purpose-authorized, revision-bound fields. Before `CONTACTS-V3-4`, freeze archive/restore, permanent profile-ID non-reuse, tombstone, and receiving-account revocation semantics; do not begin lifecycle implementation from this planning document alone. The later Contacts home-list four-section visual regrouping remains outside this data slice.

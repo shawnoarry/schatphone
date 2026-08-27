@@ -3,10 +3,13 @@ import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
+import { useChatStore } from '../stores/chat'
 import { useCalendarStore } from '../stores/calendar'
 import { useI18n } from '../composables/useI18n'
 import { useWorkplaceShellState } from '../composables/useWorkplaceShellState'
 import { resolveAppIconMeta } from '../lib/app-icon-presentation'
+import { buildContactsWorkHubProjection } from '../lib/contacts-work-hub-projection'
+import { resolveCurrentWorldContext } from '../lib/world-interface'
 import {
   WORKPLACE_BRAND,
   WORKPLACE_CALL_SHEET,
@@ -22,6 +25,7 @@ import { pushReturnTarget } from '../lib/navigation-return'
 const router = useRouter()
 const route = useRoute()
 const systemStore = useSystemStore()
+const chatStore = useChatStore()
 const calendarStore = useCalendarStore()
 const { settings } = storeToRefs(systemStore)
 const { languageBase, t } = useI18n()
@@ -61,6 +65,31 @@ const workplaceDisplayName = computed(
 const organizationDisplayName = computed(
   () => workplaceState.organizationDisplayName.value || (isZh.value ? WORKPLACE_BRAND.companyZh : WORKPLACE_BRAND.companyEn),
 )
+const contactsWorkIdentity = computed(() => {
+  const worldContext = resolveCurrentWorldContext({
+    systemStore,
+    chatStore,
+    consumer: 'contacts',
+  })
+  const worldId = worldContext?.identity?.worldId || ''
+  const matchesWorld = (profileWorldId) =>
+    profileWorldId === worldId ||
+    (['legacy_single_world', 'default_world'].includes(profileWorldId) &&
+      ['legacy_single_world', 'default_world'].includes(worldId))
+  const selfProfiles = chatStore.roleProfiles.filter(
+    (profile) => profile.entityType === 'self_profile' && matchesWorld(profile.templateLink?.primaryWorldId),
+  )
+  if (selfProfiles.length !== 1) return null
+  const profile = selfProfiles[0]
+  const template = systemStore.getProfileTemplateById(profile.templateLink?.profileTemplateId)
+  const result = buildContactsWorkHubProjection({
+    profile,
+    template,
+    expectedWorldId: worldId,
+    expectedProfileRevision: profile.revision,
+  })
+  return result.ok ? result.projection : null
+})
 const calendarEventForProposal = (proposalId) =>
   calendarStore.findEventByScheduleHandoffSource('workplace', proposalId)
 
@@ -399,6 +428,32 @@ const closeApp = () => pushReturnTarget(router, route, '/home')
           <button type="button" data-testid="workplace-reset-names" @click="resetIdentityDisplay">{{ t('恢复默认', 'Restore defaults') }}</button>
           <button type="button" class="is-primary" data-testid="workplace-save-names" :disabled="!appNameDraft.trim() || !organizationNameDraft.trim()" @click="saveIdentityDisplay">{{ t('保存名称', 'Save names') }}</button>
         </div>
+      </section>
+      <section
+        v-if="contactsWorkIdentity"
+        class="workplace-panel workplace-contacts-clue"
+        data-testid="workplace-contacts-matching-clue"
+      >
+        <div class="workplace-panel-heading">
+          <div>
+            <p>{{ t('联系人匹配线索', 'Contacts matching clue') }}</p>
+            <h2>
+              {{ contactsWorkIdentity.occupation || t('未设置职业', 'Occupation not set') }}
+              <template v-if="contactsWorkIdentity.affiliation">
+                · {{ contactsWorkIdentity.affiliation }}
+              </template>
+            </h2>
+          </div>
+          <i class="fas fa-address-card" aria-hidden="true"></i>
+        </div>
+        <p>
+          {{
+            t(
+              '这只用于选择工作台角色和组织匹配候选，不代表成员资格、凭证、签发或发布权限。正式组织行为仍需组织所有者校验。',
+              'This only suggests a Work Hub role and organization match. It does not grant membership, credentials, signing, or publishing authority. Formal organization actions still require owner validation.',
+            )
+          }}
+        </p>
       </section>
       <div class="workplace-organization-grid">
         <article class="workplace-credential" data-testid="workplace-credential">

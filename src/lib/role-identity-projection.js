@@ -1,4 +1,8 @@
-import { CONTACTS_ENTITY_TYPES } from './profile-template-schema'
+import {
+  CONTACTS_ENTITY_TYPES,
+  PROFILE_TEMPLATE_FIELD_PURPOSES,
+} from './profile-template-schema'
+import { buildContactsProfileProjection } from './contacts-profile-projection'
 import { buildRoleContinuityProjection } from './role-continuity-projection'
 
 export const ROLE_IDENTITY_PROJECTION_LIMITS = Object.freeze({
@@ -16,20 +20,7 @@ const formatValue = (value) => {
   return normalizeText(value)
 }
 
-const collectFieldLabels = (templates = []) => {
-  const labels = new Map()
-  ;(Array.isArray(templates) ? templates : []).forEach((template) => {
-    ;(Array.isArray(template?.fields) ? template.fields : []).forEach((field) => {
-      const id = normalizeText(field?.id, 80)
-      const label = normalizeText(field?.label || field?.title, 120)
-      if (id && label && !labels.has(id)) labels.set(id, label)
-    })
-  })
-  return labels
-}
-
-const formatProfileFacts = (values = [], templates = [], options = {}) => {
-  const labels = collectFieldLabels(templates)
+const formatProfileFacts = (values = [], options = {}) => {
   const itemLimit = Math.min(
     80,
     Math.max(0, Math.floor(Number(options.profileValueLimit) || ROLE_IDENTITY_PROJECTION_LIMITS.profileValues)),
@@ -50,7 +41,7 @@ const formatProfileFacts = (values = [], templates = [], options = {}) => {
     const fieldId = normalizeText(value?.fieldId || value?.id, 80)
     const renderedValue = formatValue(value?.value)
     if (!fieldId || !renderedValue) continue
-    const line = `${labels.get(fieldId) || fieldId}: ${renderedValue}`
+    const line = `${normalizeText(value?.label, 120) || fieldId}: ${renderedValue}`
     const candidate = selected.length > 0 ? `${selected.join('; ')}; ${line}` : line
     if (candidate.length > characterBudget) continue
     selected.push(line)
@@ -90,11 +81,22 @@ export const buildRoleIdentityProjection = (input = {}) => {
   const bio = normalizeText(profile.bio || contact.bio, 1200) || 'none'
   const relationshipLabel = normalizeText(profile.relationshipLabelText, 160)
   const relationshipNote = normalizeText(profile.relationshipLabelNote, 600)
-  const profileFacts = formatProfileFacts(
-    profile.profileValues,
-    source.profileTemplates,
-    source,
-  )
+  const linkedTemplate = (Array.isArray(source.profileTemplates) ? source.profileTemplates : [])
+    .find((template) => template?.id === profile.templateLink?.profileTemplateId)
+  const profileProjection = buildContactsProfileProjection({
+    purpose: PROFILE_TEMPLATE_FIELD_PURPOSES.CHAT_CONTEXT,
+    profile,
+    template: linkedTemplate,
+    expectedWorldId: source.expectedWorldId || profile.templateLink?.primaryWorldId,
+    expectedProfileRevision: source.expectedProfileRevision || profile.revision,
+    allowedEntityTypes: [
+      CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+      CONTACTS_ENTITY_TYPES.SUPPORTING_ROLE,
+      CONTACTS_ENTITY_TYPES.NPC,
+    ],
+    allowedVisibilityLevels: new Set(['public', 'familiar', ...(source.allowIntimateProfileValues ? ['intimate'] : [])]),
+  })
+  const profileFacts = formatProfileFacts(profileProjection.projection?.fields || [], source)
   const continuity = buildRoleContinuityProjection({
     roleDetailItems: profile.detailItems,
     recalledMemories: source.recalledMemories,
@@ -128,9 +130,14 @@ export const buildRoleIdentityProjection = (input = {}) => {
       memoryKeys: Object.freeze([...continuity.selectedRefs.memoryKeys]),
     }),
     omittedCounts: Object.freeze({
-      profileValues: profileFacts.omittedCount,
+      profileValues: profileFacts.omittedCount + Math.max(
+        0,
+        (Array.isArray(profile.profileValues) ? profile.profileValues.length : 0) -
+          (profileProjection.projection?.fields?.length || 0),
+      ),
       manual: continuity.omittedCounts.manual,
       eventAttached: continuity.omittedCounts.eventAttached,
     }),
+    profileProjectionReason: profileProjection.reason,
   })
 }

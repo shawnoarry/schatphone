@@ -2370,6 +2370,61 @@ export const useChatStore = defineStore('chat', () => {
   const updateRoleProfile = (profileId, updates = {}) =>
     profileOwner.reviseProfile(profileId, updates).ok
 
+  const confirmPersonaProfileRevision = ({
+    profileId,
+    expectedRevision,
+    expectedWorldId,
+    expectedTemplateId,
+    expectedTemplateVersion,
+    updates = {},
+  } = {}) => {
+    const current = getRoleProfileById(profileId)
+    if (!current) return { ok: false, reason: 'profile_missing' }
+    if (Number(current.revision) !== Number(expectedRevision)) {
+      return { ok: false, reason: 'stale_profile_revision' }
+    }
+    if (current.templateLink?.primaryWorldId !== expectedWorldId) {
+      return { ok: false, reason: 'world_mismatch' }
+    }
+    if (current.templateLink?.profileTemplateId !== expectedTemplateId) {
+      return { ok: false, reason: 'template_mismatch' }
+    }
+    if (Number(current.templateLink?.profileTemplateVersion) !== Number(expectedTemplateVersion)) {
+      return { ok: false, reason: 'stale_template_version' }
+    }
+
+    const beforeProfiles = profileOwner.createPersistenceSnapshot()
+    const ownerReceipt = profileOwner.reviseProfile(profileId, updates, { expectedRevision })
+    if (!ownerReceipt.ok) {
+      return { ok: false, reason: ownerReceipt.code, owner: ownerReceipt }
+    }
+
+    const persistence = persistToStorage()
+    if (persistence?.ok === true) {
+      return {
+        ok: true,
+        reason: 'profile_revised',
+        profile: getRoleProfileById(profileId),
+        owner: ownerReceipt,
+        persistence,
+      }
+    }
+
+    const restored = profileOwner.replaceAllProfiles(beforeProfiles)
+    const rollbackPersistence = restored.ok ? persistToStorage() : null
+    return {
+      ok: false,
+      reason: 'persistence_failed',
+      profile: getRoleProfileById(profileId),
+      owner: ownerReceipt,
+      persistence: persistence || null,
+      rollback: {
+        restored: restored.ok,
+        persistence: rollbackPersistence,
+      },
+    }
+  }
+
   const updateRoleRelationshipPremise = (profileId, updates = {}) => {
     return profileOwner.updateRelationshipPremise(profileId, updates).ok
   }
@@ -2865,7 +2920,7 @@ export const useChatStore = defineStore('chat', () => {
       ]),
     )
 
-    writePersistedState(
+    return writePersistedState(
       CHAT_STORAGE_KEY,
       {
         moduleAvatarOverrides: normalizeModuleAvatarOverrides(moduleAvatarOverrides),
@@ -2880,7 +2935,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   const saveNow = () => {
-    persistToStorage()
+    return persistToStorage()
   }
 
   const restoreFromBackup = (snapshot = {}) => {
@@ -3022,6 +3077,7 @@ export const useChatStore = defineStore('chat', () => {
     clearRoleEventAttachedDetailItems,
     addRoleProfile,
     updateRoleProfile,
+    confirmPersonaProfileRevision,
     updateRoleRelationshipPremise,
     saveRoleRelationshipClassification,
     upgradeNpcToMainRole,

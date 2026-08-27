@@ -789,6 +789,243 @@ describe('Contacts profile template entity UI', () => {
     wrapper.unmount()
   })
 
+  test('classifies persona prose into four review buckets without changing the profile', async () => {
+    vi.mocked(callAI).mockResolvedValueOnce(
+      JSON.stringify({
+        matches: [
+          {
+            fieldId: 'agency',
+            value: 'Galaxy Entertainment',
+            sourceText: 'Agency: Galaxy Entertainment',
+          },
+          {
+            fieldId: 'occupation',
+            value: 'Actor',
+            sourceText: 'Occupation: Actor',
+          },
+        ],
+        newFields: [
+          {
+            label: 'Stage name',
+            value: 'Livia',
+            sourceText: 'Stage name: Livia',
+          },
+        ],
+      }),
+    )
+    const systemStore = useSystemStore()
+    const template = systemStore.upsertProfileTemplate({
+      id: 'world_template_persona_review',
+      title: 'Persona review profile',
+      scope: PROFILE_TEMPLATE_SCOPES.WORLD,
+      worldId: 'default_world',
+      version: 3,
+      categories: [{ id: 'identity', label: 'Identity' }],
+      fields: [
+        {
+          id: 'occupation',
+          categoryId: 'identity',
+          label: 'Occupation',
+          type: PROFILE_TEMPLATE_FIELD_TYPES.SHORT_TEXT,
+        },
+        {
+          id: 'agency',
+          categoryId: 'identity',
+          label: 'Agency',
+          type: PROFILE_TEMPLATE_FIELD_TYPES.ORGANIZATION_REFERENCE,
+        },
+      ],
+    })
+    const chatStore = useChatStore()
+    const profile = chatStore.addRoleProfile({
+      roleId: '1257',
+      name: 'Persona review role',
+      role: 'Singer',
+      entityType: CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+      templateLink: {
+        primaryWorldId: 'default_world',
+        profileTemplateId: template.id,
+        profileTemplateVersion: template.version,
+      },
+      profileValues: [{ fieldId: 'occupation', value: 'Singer', visibilityLevel: 'familiar' }],
+    })
+    const beforeProfile = JSON.stringify(chatStore.getRoleProfileById(profile.id))
+
+    const wrapper = await mountContactsView()
+    await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
+    await flushUi()
+    await openDetailSheet(wrapper, 'world-fields')
+    await wrapper.get('[data-testid="contacts-open-persona-classification"]').trigger('click')
+    await wrapper
+      .get('[data-testid="contacts-persona-source"]')
+      .setValue(
+        'Agency: Galaxy Entertainment\nOccupation: Actor\nStage name: Livia\nAvoids using a full name in private.',
+      )
+    await wrapper.get('[data-testid="contacts-classify-persona"]').trigger('click')
+    await flushUi()
+
+    expect(callAI).toHaveBeenCalledTimes(1)
+    expect(wrapper.get('[data-testid="contacts-persona-classification-summary"]').text()).toContain(
+      'Matched 1',
+    )
+    expect(wrapper.get('[data-testid="contacts-persona-matched-values"]').text()).toContain(
+      'Galaxy Entertainment',
+    )
+    expect(wrapper.get('[data-testid="contacts-persona-suggested-fields"]').text()).toContain(
+      'Stage name',
+    )
+    expect(wrapper.get('[data-testid="contacts-persona-conflicts"]').text()).toContain('Singer')
+    expect(wrapper.get('[data-testid="contacts-persona-conflicts"]').text()).toContain('Actor')
+    expect(wrapper.get('[data-testid="contacts-persona-unclassified"]').text()).toContain(
+      'Avoids using a full name in private.',
+    )
+    expect(wrapper.get('[data-testid="contacts-persona-source-retained"]').text()).toContain(
+      'Agency: Galaxy Entertainment',
+    )
+    expect(
+      wrapper.get('[data-testid="contacts-persona-classification-panel"]').text(),
+    ).toContain('Accept')
+    expect(wrapper.get('[data-testid="contacts-save-persona-confirmation"]').attributes('disabled')).toBeDefined()
+    expect(JSON.stringify(chatStore.getRoleProfileById(profile.id))).toBe(beforeProfile)
+
+    await wrapper.get('[data-testid="contacts-close-persona-classification"]').trigger('click')
+    await flushUi()
+
+    expect(wrapper.find('[data-testid="contacts-persona-classification-panel"]').exists()).toBe(
+      false,
+    )
+    expect(JSON.stringify(chatStore.getRoleProfileById(profile.id))).toBe(beforeProfile)
+
+    wrapper.unmount()
+  })
+
+  test('accepts, edits, ignores, and saves one reviewed persona revision', async () => {
+    vi.mocked(callAI).mockResolvedValueOnce(
+      JSON.stringify({
+        matches: [
+          {
+            sourceText: 'Occupation: Producer',
+            fieldId: 'occupation',
+            value: 'Producer',
+            confidence: 'high',
+          },
+        ],
+        newFields: [],
+      }),
+    )
+    const chatStore = useChatStore()
+    const systemStore = useSystemStore()
+    const template = systemStore.upsertProfileTemplate({
+      id: 'world_template_persona_confirmation',
+      title: 'Persona confirmation profile',
+      scope: PROFILE_TEMPLATE_SCOPES.WORLD,
+      worldId: 'default_world',
+      categories: [{ id: 'identity', label: 'Identity' }],
+      fields: [
+        {
+          id: 'occupation',
+          categoryId: 'identity',
+          label: 'Occupation',
+          type: PROFILE_TEMPLATE_FIELD_TYPES.SHORT_TEXT,
+          entityTypes: [CONTACTS_ENTITY_TYPES.SELF_PROFILE],
+        },
+      ],
+    })
+    const profile = chatStore.addRoleProfile({
+      roleId: '1259',
+      name: 'Persona save profile',
+      entityType: CONTACTS_ENTITY_TYPES.SELF_PROFILE,
+      templateLink: {
+        primaryWorldId: 'default_world',
+        profileTemplateId: template.id,
+        profileTemplateVersion: template.version,
+      },
+      profileValues: [],
+    })
+    const initialRevision = profile.revision
+
+    const wrapper = await mountContactsView()
+    await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
+    await flushUi()
+    await openDetailSheet(wrapper, 'world-fields')
+    await wrapper.get('[data-testid="contacts-open-persona-classification"]').trigger('click')
+    await wrapper
+      .get('[data-testid="contacts-persona-source"]')
+      .setValue('Occupation: Producer\nKeeps a private handwritten motto.')
+    await wrapper.get('[data-testid="contacts-classify-persona"]').trigger('click')
+    await flushUi()
+
+    await wrapper
+      .get('[data-testid="contacts-persona-value-persona-item-field-occupation"]')
+      .setValue('Creative producer')
+    await wrapper
+      .get('[data-testid="contacts-persona-accept-persona-item-field-occupation"]')
+      .trigger('click')
+    await wrapper
+      .get('[data-testid="contacts-persona-ignore-persona-item-unclassified-1"]')
+      .trigger('click')
+    expect(wrapper.get('[data-testid="contacts-save-persona-confirmation"]').attributes('disabled')).toBeUndefined()
+
+    void wrapper.get('[data-testid="contacts-save-persona-confirmation"]').trigger('click')
+    await flushUi()
+    expect(useDialog().dialogState.visible).toBe(true)
+    useDialog().submitDialog()
+    await flushUi()
+
+    const saved = chatStore.getRoleProfileById(profile.id)
+    expect(saved.revision).toBe(initialRevision + 1)
+    expect(saved.profileValues).toEqual([
+      expect.objectContaining({
+        fieldId: 'occupation',
+        value: 'Creative producer',
+        sourceKind: 'manual',
+      }),
+    ])
+    expect(wrapper.find('[data-testid="contacts-persona-classification-panel"]').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  test('keeps persona source and profile unchanged when classification cannot be parsed', async () => {
+    vi.mocked(callAI).mockResolvedValueOnce('not json')
+    const chatStore = useChatStore()
+    const profile = chatStore.addRoleProfile({
+      roleId: '1258',
+      name: 'Persona parse failure role',
+      entityType: CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+      templateLink: {
+        primaryWorldId: '',
+        profileTemplateId: 'preset_basic_modern',
+        profileTemplateVersion: 1,
+      },
+      profileValues: [
+        { fieldId: 'identity', value: 'Confirmed identity', visibilityLevel: 'public' },
+      ],
+    })
+    const sourceText = 'Keep this exact source available after the provider returns invalid JSON.'
+    const beforeProfile = JSON.stringify(chatStore.getRoleProfileById(profile.id))
+
+    const wrapper = await mountContactsView()
+    await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
+    await flushUi()
+    await openDetailSheet(wrapper, 'world-fields')
+    await wrapper.get('[data-testid="contacts-open-persona-classification"]').trigger('click')
+    await wrapper.get('[data-testid="contacts-persona-source"]').setValue(sourceText)
+    await wrapper.get('[data-testid="contacts-classify-persona"]').trigger('click')
+    await flushUi()
+
+    expect(wrapper.get('[data-testid="contacts-persona-classification-error"]').text()).toContain(
+      'profile remains unchanged',
+    )
+    expect(wrapper.get('[data-testid="contacts-persona-source"]').element.value).toBe(sourceText)
+    expect(wrapper.find('[data-testid="contacts-persona-classification-review"]').exists()).toBe(
+      false,
+    )
+    expect(JSON.stringify(chatStore.getRoleProfileById(profile.id))).toBe(beforeProfile)
+
+    wrapper.unmount()
+  })
+
   test('drafts a current-world template adaptation without saving until the user confirms', async () => {
     vi.mocked(callAI).mockResolvedValueOnce(
       JSON.stringify({

@@ -8,7 +8,7 @@ This file is the handoff page for anyone continuing Contacts, role, relationship
 
 ## 1. Current Status
 
-Status: `CONTACTS_V2_DONE / CONTACTS-V3-0_DONE 2026-08-27 / CONTACTS-V3-1_DONE 2026-08-27 / CONTACTS-V3-2A_ACTIVE / CARD-1_DONE 2026-08-27 / ROLE-0_DECISION_DONE 2026-08-27 / ROLE-1_DONE 2026-08-27 / CARD-2_DONE 2026-08-27 / CARD-3_DONE 2026-08-27 / CARD-4_DONE 2026-08-27 / CARD-5_DONE 2026-08-27 / CARD-6_DONE 2026-08-27 / PERSONA-1_NEXT`
+Status: `CONTACTS_V2_DONE / CONTACTS-V3-0_DONE 2026-08-27 / CONTACTS-V3-1_DONE 2026-08-27 / CONTACTS-V3-2A_DONE 2026-08-27 / CARD-1_DONE / ROLE-0_DECISION_DONE / ROLE-1_DONE / CARD-2_DONE / CARD-3_DONE / CARD-4_DONE / CARD-5_DONE / CARD-6_DONE / PERSONA-1_DONE / PERSONA-2_DONE 2026-08-27 / CONTACTS-V3-3_DONE 2026-08-27 / CONTACTS-V3-4_NEXT`
 
 Accepted next-lane direction:
 
@@ -27,6 +27,9 @@ Accepted next-lane direction:
 - `CARD-4 DONE 2026-08-27` renders the confirmed category structure as a read-first dynamic card in the existing Contacts person page, with the full form behind explicit editing and no completion-score UI.
 - `CARD-5 DONE 2026-08-27` adds person-specific categories and fields through the same card. `profileExtensions` remains Contacts-owned and backup-compatible; additions are draft-only until the outer save, person-only data stays isolated, and only an explicit current-world-template choice creates one new template version without auto-filling other people.
 - `CARD-6 DONE 2026-08-27` adds deterministic WorldBook/World Pack profile-card proposals and optional AI proposals through the existing WorldBook editor. Modern, fandom, school, corporate, mystery, survival, and xianxia signals can produce different editable structures; stable identity field IDs are preserved, adaptable-only pack traits do not leak unrelated fields, Cancel writes nothing, only explicit Save creates a v1 world template, and AI failure leaves rule-based/manual creation usable.
+- `PERSONA-1 DONE 2026-08-27` adds a review-only whole-description classifier inside the existing Contacts world-profile sheet. Exact source segments become matched values, new-field suggestions, conflicts, or retained unclassified text; the immutable draft is bound to person, world, template, and revision references. Closing, parse failure, stale async responses, and successful classification do not write profile values, template links, or profile revisions.
+- `PERSONA-2 DONE 2026-08-27` requires an accept or ignore decision for every row, allows accepted values and new-field metadata to be edited, rechecks person/world/template/profile revisions, and writes exactly once through Contacts Profile Owner. Accepted new fields use the existing person-extension shape and accepted values use the same manual profile-value structure as direct entry. Validation or persistence failure changes no canonical profile; persistence failure restores and re-persists the complete old snapshot.
+- `CONTACTS-V3-3 DONE 2026-08-27` adds one Contacts-owned projection gate plus bounded formal Chat, Event Player Context, and Work Hub consumers. Purpose, person type, visibility, manual confirmation source, world, template, and profile revision all fail closed. Chat reads only `chat_context`; Player Context requires `event_eligibility` on all three stable identity fields; Work Hub reads only `work_hub_matching` clues and receives no membership, credential, signing, publishing, or organization authority.
 
 Confirmed persistence dependency for future work:
 
@@ -116,11 +119,11 @@ What is already landed:
 Still incomplete:
 
 1. legacy Chat-side relationship compatibility fields still need semantic containment until a separate migration removes them;
-2. WorldBook now has a manual form editor plus rule-based/optional-AI current-world proposal flow, and Contacts renders the resulting structure dynamically with person-specific extensions; onboarding guidance and later reviewable free-text classification remain incomplete;
+2. WorldBook, Contacts profile-card authoring, Persona Confirmation, and the approved Chat/Event/Work Hub projections are complete; public-content projection and broader consumer adoption remain separately gated;
 3. Contacts template adaptation is functional but the before/after preservation review can become a clearer visual diff;
 4. high-impact relationship automation remains deferred;
 5. the proposed K-pop role-template expansion is still part of roadmap 4.7 `DECISION`, not approved Contacts work.
-6. Player Context remains limited to the landed K-pop V1 read-only identity projection; no dynamic Player State owner, identity-conditioned event recipe, automatic incident, or social/news surface is implemented. Public world knowledge and event-to-role memory candidates remain separate future projections.
+6. Player Context remains limited to the landed K-pop V1 read-only identity projection with explicit Contacts V3 `event_eligibility`; no dynamic Player State owner, identity-conditioned event recipe, automatic incident, or social/news surface is implemented. Public world knowledge and event-to-role memory candidates remain separate future projections.
 7. Chat now exposes only a disabled-by-default, role-bound AI disclosure candidate normalization seam. It accepts an exact user-message source and bounded model summary/reason, but does not choose a memory key, relationship effect, or persistence result; no candidate enters Relationship Runtime until a future review surface explicitly decides it. Automatic extraction, periodic role-memory consolidation, and the dedicated review surface remain future work; the current explicit Chat action is still the only active supporting-fact intake path.
 
 ## 2. Recommended Next Slice
@@ -129,21 +132,19 @@ Contacts V2 and memory 4.2 are complete at current acceptance. Do not restart th
 
 `CONTACTS-V3-0 Architecture And Decision Freeze` and `CONTACTS-V3-1 Contacts Profile Owner Foundation` are complete.
 
-The next safe slice is `PERSONA-1 Reviewable Free-Text Classification Draft`.
+The next safe slice is the `CONTACTS-V3-4 Role Lifecycle` decision/contract freeze. Do not begin lifecycle writes until archive/restore, permanent profile-ID non-reuse, tombstone, and receiving-account revocation semantics are explicit.
 
-Live execution checklist: `CONTACTS_V3_2A_EXECUTION_PLAN.md`. `CARD-1 类目兼容底座`, the `ROLE-0` product decision, `ROLE-1 四类人物兼容底座`, `CARD-2 字段用途与填写方式`, `CARD-3 WorldBook 手动资料卡编辑`, `CARD-4 个人页动态资料卡`, `CARD-5 人物专属扩展`, and `CARD-6 世界观生成资料卡草稿` are complete. The next code slice is `PERSONA-1 整段文字归类草稿`.
+Live execution record: `CONTACTS_V3_2A_EXECUTION_PLAN.md`. Its card, persona review/save, formal Chat context, read-only Event identity, and Work Hub matching slices are complete.
 
 Current safe sequence:
 
-1. execute `PERSONA-1` from `CONTACTS_V3_2A_EXECUTION_PLAN.md`; classify one pasted persona description against the currently selected profile-card fields;
-2. keep matched values, suggested new fields, conflicts, and unclassified source text in one review-only draft;
-3. preserve existing confirmed values and show old/candidate values together instead of silently choosing or overwriting;
-4. preserve the completed owner, four-person-type baseline, template editor, current-world proposal flow, dynamic person page, person-specific extensions, stable IDs, template versions, and existing Contacts values;
-5. make cancellation and parse failure leave the person, template, and profile revision unchanged;
-6. leave actual per-item acceptance and Contacts save behavior for `PERSONA-2`;
-7. stop before automatically changing a person's confirmed Self Profile, Work Hub membership, Chat identity, event eligibility, or organization affiliation.
+1. freeze V3-4 archive, restore, permanent-ID non-reuse, tombstone, and receiving-account revocation semantics against current cleanup and impact-preview behavior;
+2. inventory current create/update/archive/restore/NPC-upgrade/delete orchestration before moving any call behind a lifecycle Interface;
+3. preserve stable IDs, Chat bindings/history, profile values/extensions, relationship truth, receiving accounts, migration, backup/restore, and write-failure rollback;
+4. keep the completed purpose-specific projections read-only and revision-bound while lifecycle work is reviewed;
+5. stop before Work Hub organization ownership, ordinary work chains, Work Hub events, Chronicle, Community/Media, SMS, EVE-5, Mini Scene, or another event family.
 
-Work Hub organization ownership, the first Work Hub-native event, and broader identity-conditioned Event Runtime work now depend on this Contacts V3 identity foundation. `CMG-08` remains separately assignable persistence work and is not absorbed into Contacts V3.
+Work Hub organization ownership, the first Work Hub-native event, and broader identity-conditioned Event Runtime work remain separately gated after this Contacts identity foundation. `CMG-08` remains separate Mini Scene persistence work and is not absorbed into Contacts V3.
 
 The older cross-device plans remain implementation history. They are not current task sources unless the live roadmap promotes an exact remaining slice.
 

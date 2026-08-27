@@ -15,9 +15,9 @@ const createTemplate = (overrides = {}) => ({
   enabled: true,
   version: 3,
   fields: [
-    { id: 'occupation', entityTypes: ['self_profile'] },
-    { id: 'affiliation', entityTypes: ['self_profile'] },
-    { id: 'public_identity', entityTypes: ['self_profile'] },
+    { id: 'occupation', entityTypes: ['self_profile'], purposes: ['event_eligibility'] },
+    { id: 'affiliation', entityTypes: ['self_profile'], purposes: ['event_eligibility'] },
+    { id: 'public_identity', entityTypes: ['self_profile'], purposes: ['event_eligibility'] },
   ],
   ...overrides,
 })
@@ -295,6 +295,18 @@ describe('Player Context projection V1', () => {
         ],
       }),
     ).toMatchObject({ ok: false, reason: 'conflicting_owner_ref' })
+  })
+
+  test('fails closed when a stable identity field lacks event eligibility purpose', () => {
+    expect(buildSnapshot({
+      profileTemplate: createTemplate({
+        fields: [
+          { id: 'occupation', entityTypes: ['self_profile'] },
+          { id: 'affiliation', entityTypes: ['self_profile'], purposes: ['event_eligibility'] },
+          { id: 'public_identity', entityTypes: ['self_profile'], purposes: ['event_eligibility'] },
+        ],
+      }),
+    })).toMatchObject({ ok: false, reason: 'event_field_purpose_missing' })
   })
 
   test('rejects stale snapshots during later eligibility checks', () => {

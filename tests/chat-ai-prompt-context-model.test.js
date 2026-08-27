@@ -36,6 +36,23 @@ const createSystemStore = () => ({
     worldBookSourceLinks: [],
     activeWorldPackId: 'default',
     worldPacks: [],
+    profileTemplates: [
+      {
+        id: 'idol_profile',
+        version: 2,
+        scope: 'world',
+        fields: [{ id: 'favorite', label: 'favorite', purposes: ['chat_context'] }],
+      },
+      {
+        id: 'self_profile_template',
+        version: 1,
+        scope: 'world',
+        fields: [
+          { id: 'publicName', label: 'publicName', purposes: ['chat_context'], entityTypes: ['self_profile'] },
+          { id: 'secret', label: 'secret', purposes: ['chat_context'], entityTypes: ['self_profile'] },
+        ],
+      },
+    ],
   },
   getChatTruthSnapshot: () => ({
     relationship: {
@@ -272,14 +289,29 @@ describe('Chat AI prompt context model interface', () => {
       {
         id: 10,
         name: 'Mina',
-        profileValues: [{ fieldId: 'favorite', value: 'tea' }],
+        entityType: 'main_role',
+        revision: 3,
+        templateLink: {
+          primaryWorldId: 'default_world',
+          profileTemplateId: 'idol_profile',
+          profileTemplateVersion: 2,
+        },
+        profileValues: [
+          { fieldId: 'favorite', value: 'tea', visibilityLevel: 'familiar', sourceKind: 'manual' },
+        ],
       },
       {
         id: 999,
         entityType: 'self_profile',
+        revision: 1,
+        templateLink: {
+          primaryWorldId: 'default_world',
+          profileTemplateId: 'self_profile_template',
+          profileTemplateVersion: 1,
+        },
         profileValues: [
-          { fieldId: 'publicName', value: 'You', visibilityLevel: 'public' },
-          { fieldId: 'secret', value: 'hidden', visibilityLevel: 'intimate' },
+          { fieldId: 'publicName', value: 'You', visibilityLevel: 'public', sourceKind: 'manual' },
+          { fieldId: 'secret', value: 'hidden', visibilityLevel: 'intimate', sourceKind: 'manual' },
         ],
       },
     ]

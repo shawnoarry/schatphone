@@ -23,6 +23,16 @@ import {
 } from '../lib/relationship-classification-schema'
 import { classifyRelationshipLabel } from '../lib/relationship-label-classifier'
 import { adaptProfileTemplateValues } from '../lib/profile-template-adaptation-assistant'
+import {
+  MAX_PERSONA_SOURCE_TEXT,
+  PERSONA_CLASSIFICATION_ITEM_KINDS,
+  classifyPersonaTextWithAI,
+  createPersonaReviewRows,
+} from '../lib/persona-profile-classifier'
+import {
+  PERSONA_REVIEW_DECISIONS,
+  buildPersonaProfileConfirmation,
+} from '../lib/persona-profile-confirmation'
 import { suggestProfileTemplateValues } from '../lib/profile-template-value-assistant'
 import { summarizeRoleAssetFolderBindings } from '../lib/role-asset-folder-resolver'
 import {
@@ -151,6 +161,14 @@ const profileTemplateAiDraftBusy = ref(false)
 const profileTemplateAiDraftStatus = ref('')
 const profileTemplateAdaptationBusy = ref(false)
 const profileTemplateAdaptationStatus = ref('')
+const isPersonaClassificationOpen = ref(false)
+const personaClassificationSource = ref('')
+const personaClassificationBusy = ref(false)
+const personaClassificationError = ref('')
+const personaClassificationDraft = ref(null)
+const personaReviewRows = ref([])
+const personaConfirmationBusy = ref(false)
+let personaClassificationRequestId = 0
 const CONTACTS_ASSET_PREVIEW_SCOPE_ID = 'contacts-view'
 const CONTACTS_FALLBACK_WORLD_ID = 'default_world'
 
@@ -740,6 +758,8 @@ const {
   selectedProfileTemplate,
   selectedProfileTemplateAdaptationDisplay,
   selectedProfileTemplateAdaptationReview,
+  selectedProfileTemplateCategories,
+  selectedProfileFields,
   selectedProfileValueMap,
   selectedProfileWorldFieldGroups,
   selectedProfileWorldFieldRows,
@@ -1062,6 +1082,7 @@ const openDetailSheet = (sheet = CONTACTS_DETAIL_SHEETS.OVERVIEW) => {
 const closeDetailSheet = () => {
   if (activeDetailSheet.value === CONTACTS_DETAIL_SHEETS.WORLD_FIELDS) {
     cancelProfileTemplateEditor()
+    resetPersonaClassification()
   }
   activeDetailSheet.value = CONTACTS_DETAIL_SHEETS.OVERVIEW
   void nextTick(() => {
@@ -1071,6 +1092,7 @@ const closeDetailSheet = () => {
 
 const openWorldFieldsSheet = () => {
   cancelProfileTemplateEditor()
+  resetPersonaClassification()
   openDetailSheet(CONTACTS_DETAIL_SHEETS.WORLD_FIELDS)
 }
 
@@ -1180,6 +1202,7 @@ const setProfileTemplateDraftTemplate = (templateId = '') => {
 
 const openProfileTemplateEditor = () => {
   if (!selectedProfile.value?.id) return
+  resetPersonaClassification()
   const currentTemplateId = selectedProfile.value.templateLink?.profileTemplateId || ''
   const fallbackTemplateId = contactsProfileTemplateOptions.value[0]?.id || ''
   setProfileTemplateDraftTemplate(currentTemplateId || fallbackTemplateId)
@@ -1226,6 +1249,232 @@ const formatProfileTemplateSuggestionForDraft = (field = {}, value = '') => {
     return Array.isArray(value) ? value.join(', ') : String(value || '')
   }
   return Array.isArray(value) ? value.join(', ') : String(value || '')
+}
+
+const formatPersonaClassificationValue = (value) => {
+  if (Array.isArray(value)) return value.join(', ')
+  if (value === 'true') return t('\u662f', 'Yes')
+  if (value === 'false') return t('\u5426', 'No')
+  return String(value || '').trim() || t('\u672a\u586b\u5199', 'Not filled')
+}
+
+const personaClassificationGroups = computed(() => {
+  const items = Array.isArray(personaClassificationDraft.value?.items)
+    ? personaClassificationDraft.value.items
+    : []
+  const categoryLabels = new Map(
+    selectedProfileTemplateCategories.value.map((category) => [category.id, category.label]),
+  )
+  const decorate = (item = {}) => ({
+    ...item,
+    categoryLabel: categoryLabels.get(item.categoryId) || '',
+  })
+  return {
+    matchedValues: items
+      .filter((item) => item.kind === PERSONA_CLASSIFICATION_ITEM_KINDS.MATCHED)
+      .map((item) => ({
+        ...decorate(item),
+        fieldLabel: item.label || item.fieldId,
+        value: item.candidateValue,
+        currentValue: item.existingValue,
+        matchesExisting: Boolean(item.existingValue),
+      })),
+    suggestedFields: items
+      .filter((item) => item.kind === PERSONA_CLASSIFICATION_ITEM_KINDS.NEW_FIELD)
+      .map((item) => ({
+        ...decorate(item),
+        type: item.fieldType,
+        value: item.candidateValue,
+      })),
+    conflicts: items
+      .filter((item) => item.kind === PERSONA_CLASSIFICATION_ITEM_KINDS.CONFLICT)
+      .map((item) => ({
+        ...decorate(item),
+        fieldLabel: item.label || item.fieldId,
+        currentValue: item.existingValue,
+        candidates: item.candidateValues.map((value) => ({ value, sourceText: item.sourceText })),
+      })),
+    unclassified: items
+      .filter((item) => item.kind === PERSONA_CLASSIFICATION_ITEM_KINDS.UNCLASSIFIED)
+      .map((item) => ({
+        ...item,
+        text: item.sourceText,
+      })),
+  }
+})
+
+const personaClassificationSummary = computed(() => {
+  const groups = personaClassificationGroups.value
+  return {
+    matched: groups.matchedValues.length,
+    suggested: groups.suggestedFields.length,
+    conflicts: groups.conflicts.length,
+    unclassified: groups.unclassified.length,
+  }
+})
+
+const personaPendingReviewCount = computed(
+  () => personaReviewRows.value.filter((row) => row.decision === PERSONA_REVIEW_DECISIONS.PENDING).length,
+)
+
+const setPersonaReviewDecision = (itemId, decision) => {
+  const row = personaReviewRows.value.find((item) => item.itemId === itemId)
+  if (!row || !Object.values(PERSONA_REVIEW_DECISIONS).includes(decision)) return
+  row.decision = decision
+}
+
+const resetPersonaClassification = () => {
+  personaClassificationRequestId += 1
+  isPersonaClassificationOpen.value = false
+  personaClassificationSource.value = ''
+  personaClassificationBusy.value = false
+  personaClassificationError.value = ''
+  personaClassificationDraft.value = null
+  personaReviewRows.value = []
+  personaConfirmationBusy.value = false
+}
+
+const openPersonaClassification = () => {
+  if (!selectedProfile.value?.id) return
+  cancelProfileTemplateEditor()
+  personaClassificationRequestId += 1
+  isPersonaClassificationOpen.value = true
+  personaClassificationSource.value = ''
+  personaClassificationBusy.value = false
+  personaClassificationError.value = ''
+  personaClassificationDraft.value = null
+  personaReviewRows.value = []
+  personaConfirmationBusy.value = false
+}
+
+const classifyPersonaDescription = async () => {
+  const profile = selectedProfile.value
+  const sourceText = personaClassificationSource.value.trim()
+  if (!profile?.id || !sourceText) {
+    personaClassificationError.value = t(
+      '\u8bf7\u5148\u7c98\u8d34\u4e00\u6bb5\u4eba\u7269\u63cf\u8ff0\u3002',
+      'Paste a persona description first.',
+    )
+    return
+  }
+
+  const requestId = ++personaClassificationRequestId
+  const expectedProfileId = Number(profile.id)
+  const expectedRevision = Number(profile.revision) || 1
+  personaClassificationBusy.value = true
+  personaClassificationError.value = ''
+  personaClassificationDraft.value = null
+  try {
+    const result = await classifyPersonaTextWithAI({
+      text: sourceText,
+      profile,
+      template: selectedProfileTemplate.value || {},
+      worldId: currentContactsWorldId.value,
+      fields: selectedProfileFields.value,
+      categories: selectedProfileTemplateCategories.value,
+      settings: settings.value,
+      callAi: callAI,
+    })
+    const currentProfile = selectedProfile.value
+    if (
+      requestId !== personaClassificationRequestId ||
+      !isPersonaClassificationOpen.value ||
+      Number(currentProfile?.id) !== expectedProfileId ||
+      (Number(currentProfile?.revision) || 1) !== expectedRevision
+    ) {
+      return
+    }
+    if (!result.ok) {
+      personaClassificationError.value = t(
+        '\u6ca1\u6709\u89e3\u6790\u51fa\u53ef\u590d\u6838\u7684\u5f52\u7c7b\u8349\u7a3f\uff0c\u4eba\u7269\u8d44\u6599\u4fdd\u6301\u4e0d\u53d8\u3002',
+        'No reviewable classification draft was produced. The profile remains unchanged.',
+      )
+      return
+    }
+    personaClassificationDraft.value = result.draft
+    personaReviewRows.value = createPersonaReviewRows(result.draft)
+  } catch (error) {
+    if (requestId !== personaClassificationRequestId) return
+    personaClassificationError.value = t(
+      '\u5f52\u7c7b\u5931\u8d25\uff0c\u8bf7\u68c0\u67e5\u6a21\u578b\u8bbe\u7f6e\u540e\u91cd\u8bd5\u3002\u4eba\u7269\u8d44\u6599\u6ca1\u6709\u53d8\u5316\u3002',
+      'Classification failed. Check model settings and try again. The profile was not changed.',
+    )
+    if (error?.message) {
+      personaClassificationError.value = `${personaClassificationError.value} ${error.message}`
+    }
+  } finally {
+    if (requestId === personaClassificationRequestId) {
+      personaClassificationBusy.value = false
+    }
+  }
+}
+
+const savePersonaProfileConfirmation = async () => {
+  const profile = selectedProfile.value
+  const template = selectedProfileTemplate.value
+  if (!profile?.id || !template?.id || !personaClassificationDraft.value) return
+
+  const confirmation = buildPersonaProfileConfirmation({
+    draft: personaClassificationDraft.value,
+    reviewRows: personaReviewRows.value,
+    profile,
+    template,
+    worldId: currentContactsWorldId.value,
+  })
+  if (!confirmation.ok) {
+    personaClassificationError.value = confirmation.reason === 'review_incomplete'
+      ? t('请先逐项接受或忽略全部内容。', 'Accept or ignore every review item first.')
+      : t(
+          '世界、资料卡模板或人物资料版本已经变化，请关闭草稿后重新归类。',
+          'The world, profile template, or profile revision changed. Close and classify again.',
+        )
+    return
+  }
+
+  const accepted = await confirmDialog({
+    title: t('保存人物资料', 'Save profile revision'),
+    message: t(
+      `将接受 ${confirmation.acceptedCount} 项并写入一个新的人物资料版本。`,
+      `Accept ${confirmation.acceptedCount} items and write one new profile revision.`,
+    ),
+    confirmText: t('保存资料', 'Save profile'),
+    cancelText: t('继续复核', 'Keep reviewing'),
+  })
+  if (!accepted) return
+
+  personaConfirmationBusy.value = true
+  personaClassificationError.value = ''
+  const result = chatStore.confirmPersonaProfileRevision({
+    profileId: profile.id,
+    expectedRevision: confirmation.expectedRevision,
+    expectedWorldId: confirmation.expectedWorldId,
+    expectedTemplateId: confirmation.expectedTemplateId,
+    expectedTemplateVersion: confirmation.expectedTemplateVersion,
+    updates: confirmation.updates,
+  })
+  personaConfirmationBusy.value = false
+
+  if (!result.ok) {
+    personaClassificationError.value = result.reason === 'persistence_failed'
+      ? t(
+          '人物资料写入失败，旧资料已完整恢复。请检查存储空间后重试。',
+          'The profile write failed and the previous profile was fully restored. Check storage and retry.',
+        )
+      : t(
+          '人物资料版本已经变化，请关闭草稿后重新归类。',
+          'The profile revision changed. Close and classify again.',
+        )
+    return
+  }
+
+  resetPersonaClassification()
+  setUiNotice(
+    'success',
+    t(
+      `人物资料已保存为新版本，共接受 ${confirmation.acceptedCount} 项。`,
+      `Profile saved as a new revision with ${confirmation.acceptedCount} accepted items.`,
+    ),
+  )
 }
 
 const saveProfileExtensionField = () => {
@@ -2425,6 +2674,7 @@ watch(
   () => {
     resetRelationshipPremiseDraft()
     cancelProfileTemplateEditor()
+    resetPersonaClassification()
   },
   { immediate: true },
 )
@@ -2447,6 +2697,7 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  personaClassificationRequestId += 1
   if (uiNoticeTimerId) clearTimeout(uiNoticeTimerId)
   clearDraftPreviewMap()
   galleryStore.releaseAssetPreviewScope(CONTACTS_ASSET_PREVIEW_SCOPE_ID)
@@ -3802,16 +4053,468 @@ onBeforeUnmount(() => {
                   {{ selectedWorldFieldIntroText }}
                 </p>
               </div>
-              <button
-                v-if="!isProfileTemplateEditorOpen"
-                type="button"
-                class="contacts-small-action"
-                data-testid="contacts-edit-world-profile-fields"
-                @click="openProfileTemplateEditor"
-              >
-                {{ t('编辑资料卡', 'Edit profile card') }}
-              </button>
+              <div v-if="!isProfileTemplateEditorOpen" class="contacts-world-profile-actions">
+                <button
+                  v-if="!isPersonaClassificationOpen"
+                  type="button"
+                  class="contacts-small-action contacts-ai-draft-action"
+                  data-testid="contacts-open-persona-classification"
+                  @click="openPersonaClassification"
+                >
+                  <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
+                  {{ t('归类人物描述', 'Classify persona') }}
+                </button>
+                <button
+                  type="button"
+                  class="contacts-small-action"
+                  data-testid="contacts-edit-world-profile-fields"
+                  @click="openProfileTemplateEditor"
+                >
+                  {{ t('编辑资料卡', 'Edit profile card') }}
+                </button>
+              </div>
             </div>
+
+            <section
+              v-if="isPersonaClassificationOpen"
+              class="contacts-persona-classification"
+              data-testid="contacts-persona-classification-panel"
+            >
+              <header class="contacts-persona-classification__head">
+                <div class="contacts-persona-classification__title">
+                  <i class="fas fa-align-left" aria-hidden="true"></i>
+                  <div>
+                    <h4>{{ t('整段描述归类草稿', 'Persona classification draft') }}</h4>
+                    <p>
+                      {{
+                        t(
+                          'AI 只整理复核草稿，不会修改资料卡、模板或人物修订。',
+                          'AI creates a review draft only. It does not change the profile card, template, or profile revision.',
+                        )
+                      }}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  class="contacts-persona-classification__close"
+                  data-testid="contacts-close-persona-classification"
+                  :aria-label="t('关闭人物描述归类', 'Close persona classification')"
+                  @click="resetPersonaClassification"
+                >
+                  <i class="fas fa-xmark" aria-hidden="true"></i>
+                </button>
+              </header>
+
+              <label class="contacts-persona-source" for="contacts-persona-source">
+                <span>{{ t('人物原始描述', 'Original persona description') }}</span>
+                <textarea
+                  id="contacts-persona-source"
+                  v-model="personaClassificationSource"
+                  data-testid="contacts-persona-source"
+                  :maxlength="MAX_PERSONA_SOURCE_TEXT"
+                  :placeholder="
+                    t(
+                      '粘贴一整段人物设定、身份、习惯或关系描述...',
+                      'Paste a complete persona, identity, habit, or relationship description...',
+                    )
+                  "
+                  :disabled="personaClassificationBusy"
+                ></textarea>
+                <small>
+                  {{ personaClassificationSource.length }} / {{ MAX_PERSONA_SOURCE_TEXT }}
+                </small>
+              </label>
+
+              <p
+                v-if="personaClassificationError"
+                class="contacts-persona-classification__error"
+                data-testid="contacts-persona-classification-error"
+                role="alert"
+              >
+                <i class="fas fa-circle-exclamation" aria-hidden="true"></i>
+                <span>{{ personaClassificationError }}</span>
+              </p>
+
+              <div class="contacts-persona-classification__actions">
+                <button
+                  type="button"
+                  class="contacts-primary-action"
+                  data-testid="contacts-classify-persona"
+                  :disabled="personaClassificationBusy || !personaClassificationSource.trim()"
+                  @click="classifyPersonaDescription"
+                >
+                  <i
+                    :class="
+                      personaClassificationBusy
+                        ? 'fas fa-spinner fa-spin'
+                        : 'fas fa-wand-magic-sparkles'
+                    "
+                    aria-hidden="true"
+                  ></i>
+                  {{
+                    personaClassificationBusy
+                      ? t('正在归类...', 'Classifying...')
+                      : personaClassificationDraft
+                        ? t('重新归类', 'Classify again')
+                        : t('生成复核草稿', 'Create review draft')
+                  }}
+                </button>
+              </div>
+
+              <div
+                v-if="personaClassificationDraft"
+                class="contacts-persona-review"
+                data-testid="contacts-persona-classification-review"
+              >
+                <div
+                  class="contacts-persona-review__summary"
+                  data-testid="contacts-persona-classification-summary"
+                >
+                  <span>{{ t('匹配', 'Matched') }} {{ personaClassificationSummary.matched }}</span>
+                  <span
+                    >{{ t('建议', 'Suggested') }} {{ personaClassificationSummary.suggested }}</span
+                  >
+                  <span
+                    >{{ t('冲突', 'Conflicts') }} {{ personaClassificationSummary.conflicts }}</span
+                  >
+                  <span
+                    >{{ t('未归类', 'Unclassified') }}
+                    {{ personaClassificationSummary.unclassified }}</span
+                  >
+                </div>
+
+                <section
+                  class="contacts-persona-review-group contacts-persona-review-group--matched"
+                  data-testid="contacts-persona-matched-values"
+                >
+                  <header>
+                    <div>
+                      <h5>{{ t('匹配现有字段', 'Matched fields') }}</h5>
+                      <p>
+                        {{
+                          t(
+                            '候选值已经找到现有资料卡位置。',
+                            'Candidates with an existing profile-card destination.',
+                          )
+                        }}
+                      </p>
+                    </div>
+                    <strong>{{ personaClassificationSummary.matched }}</strong>
+                  </header>
+                  <div
+                    v-if="personaClassificationGroups.matchedValues.length"
+                    class="contacts-persona-review-list"
+                  >
+                    <article
+                      v-for="item in personaClassificationGroups.matchedValues"
+                      :key="`persona-match-${item.fieldId}`"
+                      class="contacts-persona-review-item"
+                      :data-testid="`contacts-persona-matched-${item.fieldId}`"
+                    >
+                      <div class="contacts-persona-review-item__head">
+                        <div>
+                          <span>{{
+                            item.categoryLabel || t('未分类字段', 'Uncategorized field')
+                          }}</span>
+                          <h6>{{ item.fieldLabel }}</h6>
+                        </div>
+                        <em v-if="item.matchesExisting">{{
+                          t('与现值一致', 'Matches current')
+                        }}</em>
+                      </div>
+                      <p class="contacts-persona-review-item__value">
+                        {{ formatPersonaClassificationValue(item.value) }}
+                      </p>
+                      <p v-if="item.sourceText" class="contacts-persona-review-item__source">
+                        {{ t('依据', 'Source') }}: {{ item.sourceText }}
+                      </p>
+                      <p v-if="item.reason" class="contacts-persona-review-item__reason">
+                        {{ item.reason }}
+                      </p>
+                    </article>
+                  </div>
+                  <p v-else class="contacts-persona-review-group__empty">
+                    {{
+                      t(
+                        '没有安全匹配到现有字段的内容。',
+                        'No content safely matched an existing field.',
+                      )
+                    }}
+                  </p>
+                </section>
+
+                <section
+                  class="contacts-persona-review-group contacts-persona-review-group--suggested"
+                  data-testid="contacts-persona-suggested-fields"
+                >
+                  <header>
+                    <div>
+                      <h5>{{ t('新字段建议', 'Suggested new fields') }}</h5>
+                      <p>
+                        {{
+                          t(
+                            '有价值，但当前资料卡没有合适字段。',
+                            'Useful details without a safe existing field.',
+                          )
+                        }}
+                      </p>
+                    </div>
+                    <strong>{{ personaClassificationSummary.suggested }}</strong>
+                  </header>
+                  <div
+                    v-if="personaClassificationGroups.suggestedFields.length"
+                    class="contacts-persona-review-list"
+                  >
+                    <article
+                      v-for="item in personaClassificationGroups.suggestedFields"
+                      :key="item.id"
+                      class="contacts-persona-review-item"
+                      :data-testid="`contacts-persona-suggested-${item.id}`"
+                    >
+                      <div class="contacts-persona-review-item__head">
+                        <div>
+                          <span>{{ item.categoryLabel || t('待选类目', 'Category pending') }}</span>
+                          <h6>{{ item.label }}</h6>
+                        </div>
+                        <em>{{ item.type }}</em>
+                      </div>
+                      <p class="contacts-persona-review-item__value">
+                        {{ formatPersonaClassificationValue(item.value) }}
+                      </p>
+                      <p v-if="item.sourceText" class="contacts-persona-review-item__source">
+                        {{ t('依据', 'Source') }}: {{ item.sourceText }}
+                      </p>
+                      <p v-if="item.reason" class="contacts-persona-review-item__reason">
+                        {{ item.reason }}
+                      </p>
+                    </article>
+                  </div>
+                  <p v-else class="contacts-persona-review-group__empty">
+                    {{ t('没有需要新增字段的建议。', 'No new fields are suggested.') }}
+                  </p>
+                </section>
+
+                <section
+                  class="contacts-persona-review-group contacts-persona-review-group--conflict"
+                  data-testid="contacts-persona-conflicts"
+                >
+                  <header>
+                    <div>
+                      <h5>{{ t('需要人工判断的冲突', 'Conflicts for review') }}</h5>
+                      <p>
+                        {{
+                          t(
+                            '已确认值不会被候选内容覆盖。',
+                            'Confirmed values are never overwritten by candidates.',
+                          )
+                        }}
+                      </p>
+                    </div>
+                    <strong>{{ personaClassificationSummary.conflicts }}</strong>
+                  </header>
+                  <div
+                    v-if="personaClassificationGroups.conflicts.length"
+                    class="contacts-persona-review-list"
+                  >
+                    <article
+                      v-for="item in personaClassificationGroups.conflicts"
+                      :key="`persona-conflict-${item.fieldId}`"
+                      class="contacts-persona-review-item"
+                      :data-testid="`contacts-persona-conflict-${item.fieldId}`"
+                    >
+                      <div class="contacts-persona-review-item__head">
+                        <div>
+                          <span>{{
+                            item.categoryLabel || t('未分类字段', 'Uncategorized field')
+                          }}</span>
+                          <h6>{{ item.fieldLabel }}</h6>
+                        </div>
+                      </div>
+                      <p v-if="item.currentValue" class="contacts-persona-review-item__current">
+                        {{ t('当前确认值', 'Confirmed value') }}:
+                        <strong>{{ formatPersonaClassificationValue(item.currentValue) }}</strong>
+                      </p>
+                      <div class="contacts-persona-candidates">
+                        <div
+                          v-for="(candidate, index) in item.candidates"
+                          :key="`${item.fieldId}-${index}`"
+                        >
+                          <span>{{ t('候选', 'Candidate') }} {{ index + 1 }}</span>
+                          <strong>{{ formatPersonaClassificationValue(candidate.value) }}</strong>
+                          <small v-if="candidate.sourceText">{{ candidate.sourceText }}</small>
+                        </div>
+                      </div>
+                    </article>
+                  </div>
+                  <p v-else class="contacts-persona-review-group__empty">
+                    {{ t('没有检测到冲突。', 'No conflicts were detected.') }}
+                  </p>
+                </section>
+
+                <section
+                  class="contacts-persona-review-group contacts-persona-review-group--unclassified"
+                  data-testid="contacts-persona-unclassified"
+                >
+                  <header>
+                    <div>
+                      <h5>{{ t('未归类原文', 'Unclassified source') }}</h5>
+                      <p>
+                        {{
+                          t(
+                            '无法安全放置的内容原样保留。',
+                            'Text without a safe destination is retained.',
+                          )
+                        }}
+                      </p>
+                    </div>
+                    <strong>{{ personaClassificationSummary.unclassified }}</strong>
+                  </header>
+                  <div
+                    v-if="personaClassificationGroups.unclassified.length"
+                    class="contacts-persona-review-list"
+                  >
+                    <article
+                      v-for="item in personaClassificationGroups.unclassified"
+                      :key="item.id"
+                      class="contacts-persona-review-item"
+                      :data-testid="`contacts-persona-unclassified-${item.id}`"
+                    >
+                      <p class="contacts-persona-review-item__value">{{ item.text }}</p>
+                      <p v-if="item.reason" class="contacts-persona-review-item__reason">
+                        {{ item.reason }}
+                      </p>
+                    </article>
+                  </div>
+                  <p v-else class="contacts-persona-review-group__empty">
+                    {{ t('所有内容都已有复核位置。', 'All content has a review destination.') }}
+                  </p>
+                </section>
+
+                <section
+                  class="contacts-persona-confirmation"
+                  data-testid="contacts-persona-confirmation"
+                >
+                  <header>
+                    <div>
+                      <h5>{{ t('逐项复核并保存', 'Review and save each item') }}</h5>
+                      <p>
+                        {{
+                          t(
+                            '每项都必须接受或忽略；接受前可以修改字段名、内容和可见范围。',
+                            'Every item must be accepted or ignored. You can edit its label, value, and visibility first.',
+                          )
+                        }}
+                      </p>
+                    </div>
+                    <strong>{{ personaPendingReviewCount }}</strong>
+                  </header>
+
+                  <div class="contacts-persona-confirmation__list">
+                    <article
+                      v-for="row in personaReviewRows"
+                      :key="row.itemId"
+                      class="contacts-persona-confirmation__item"
+                      :data-testid="`contacts-persona-review-${row.itemId}`"
+                    >
+                      <div class="contacts-persona-confirmation__item-head">
+                        <span>{{ row.kind }}</span>
+                        <strong v-if="row.existingValue">
+                          {{ t('当前值', 'Current') }}: {{ formatPersonaClassificationValue(row.existingValue) }}
+                        </strong>
+                      </div>
+                      <label v-if="!row.fieldId">
+                        <span>{{ t('字段名', 'Field label') }}</span>
+                        <input
+                          v-model="row.label"
+                          :data-testid="`contacts-persona-label-${row.itemId}`"
+                          :disabled="personaConfirmationBusy"
+                        />
+                      </label>
+                      <label>
+                        <span>{{ t('确认内容', 'Confirmed value') }}</span>
+                        <textarea
+                          v-model="row.value"
+                          :data-testid="`contacts-persona-value-${row.itemId}`"
+                          :disabled="personaConfirmationBusy"
+                        ></textarea>
+                      </label>
+                      <label>
+                        <span>{{ t('可见范围', 'Visibility') }}</span>
+                        <select
+                          v-model="row.visibilityLevel"
+                          :data-testid="`contacts-persona-visibility-${row.itemId}`"
+                          :disabled="personaConfirmationBusy"
+                        >
+                          <option
+                            v-for="option in profileTemplateVisibilityOptions"
+                            :key="option.value"
+                            :value="option.value"
+                          >
+                            {{ option.label }}
+                          </option>
+                        </select>
+                      </label>
+                      <p v-if="row.sourceText">{{ t('原文', 'Source') }}: {{ row.sourceText }}</p>
+                      <div class="contacts-persona-confirmation__decisions">
+                        <button
+                          type="button"
+                          :class="{ active: row.decision === PERSONA_REVIEW_DECISIONS.ACCEPT }"
+                          :data-testid="`contacts-persona-accept-${row.itemId}`"
+                          :disabled="personaConfirmationBusy"
+                          @click="setPersonaReviewDecision(row.itemId, PERSONA_REVIEW_DECISIONS.ACCEPT)"
+                        >
+                          {{ t('接受', 'Accept') }}
+                        </button>
+                        <button
+                          type="button"
+                          :class="{ active: row.decision === PERSONA_REVIEW_DECISIONS.IGNORE }"
+                          :data-testid="`contacts-persona-ignore-${row.itemId}`"
+                          :disabled="personaConfirmationBusy"
+                          @click="setPersonaReviewDecision(row.itemId, PERSONA_REVIEW_DECISIONS.IGNORE)"
+                        >
+                          {{ t('忽略', 'Ignore') }}
+                        </button>
+                      </div>
+                    </article>
+                  </div>
+
+                  <div class="contacts-persona-confirmation__save">
+                    <span>
+                      {{
+                        personaPendingReviewCount > 0
+                          ? t(
+                              `还有 ${personaPendingReviewCount} 项待处理`,
+                              `${personaPendingReviewCount} items still need a decision`,
+                            )
+                          : t('全部项目已复核', 'All items reviewed')
+                      }}
+                    </span>
+                    <button
+                      type="button"
+                      class="contacts-primary-action"
+                      data-testid="contacts-save-persona-confirmation"
+                      :disabled="personaPendingReviewCount > 0 || personaConfirmationBusy"
+                      @click="savePersonaProfileConfirmation"
+                    >
+                      {{
+                        personaConfirmationBusy
+                          ? t('正在保存…', 'Saving...')
+                          : t('保存一个资料版本', 'Save one profile revision')
+                      }}
+                    </button>
+                  </div>
+                </section>
+
+                <section
+                  class="contacts-persona-source-retained"
+                  data-testid="contacts-persona-source-retained"
+                >
+                  <h5>{{ t('保留的完整原文', 'Retained original source') }}</h5>
+                  <p>{{ personaClassificationDraft.sourceText }}</p>
+                </section>
+              </div>
+            </section>
 
             <div
               v-if="selectedProfileTemplateAdaptationDisplay.needsAttention"
@@ -5841,6 +6544,461 @@ onBeforeUnmount(() => {
   background: rgba(255, 255, 255, 0.74);
 }
 
+.contacts-world-profile-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.contacts-persona-classification {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(66, 111, 143, 0.2);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(232, 242, 245, 0.74)),
+    var(--contacts-accent-soft);
+  padding: 12px;
+}
+
+.contacts-persona-classification__head,
+.contacts-persona-classification__title,
+.contacts-persona-review-group > header,
+.contacts-persona-review-item__head {
+  display: flex;
+  align-items: flex-start;
+}
+
+.contacts-persona-classification__head,
+.contacts-persona-review-group > header,
+.contacts-persona-review-item__head {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.contacts-persona-classification__title {
+  min-width: 0;
+  gap: 9px;
+}
+
+.contacts-persona-classification__title > i {
+  display: inline-grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(66, 111, 143, 0.13);
+  color: var(--contacts-accent-strong);
+  font-size: 12px;
+}
+
+.contacts-persona-classification h4,
+.contacts-persona-classification h5,
+.contacts-persona-classification h6,
+.contacts-persona-classification p {
+  margin: 0;
+}
+
+.contacts-persona-classification__title h4 {
+  color: var(--contacts-text);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.contacts-persona-classification__title p {
+  margin-top: 3px;
+  color: var(--contacts-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.contacts-persona-classification__close {
+  display: inline-grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--contacts-muted);
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.contacts-persona-source {
+  display: grid;
+  gap: 6px;
+}
+
+.contacts-persona-source > span {
+  color: var(--contacts-text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.contacts-persona-source textarea {
+  width: 100%;
+  min-height: 132px;
+  resize: vertical;
+  border: 1px solid var(--contacts-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--contacts-text);
+  padding: 10px 11px;
+  font-size: 12px;
+  line-height: 1.55;
+  outline: none;
+}
+
+.contacts-persona-source textarea:focus-visible {
+  border-color: var(--contacts-accent-strong);
+  box-shadow: 0 0 0 3px rgba(66, 111, 143, 0.14);
+}
+
+.contacts-persona-source small {
+  justify-self: end;
+  color: var(--contacts-muted);
+  font-size: 10px;
+}
+
+.contacts-persona-classification__error {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  border: 1px solid rgba(166, 71, 61, 0.18);
+  border-radius: 8px;
+  background: rgba(166, 71, 61, 0.08);
+  color: #8d3d36;
+  padding: 9px 10px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.contacts-persona-classification__error i {
+  margin-top: 2px;
+}
+
+.contacts-persona-classification__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.contacts-persona-classification__actions .contacts-primary-action {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.contacts-persona-classification__actions .contacts-primary-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.contacts-persona-review {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.contacts-persona-review__summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.contacts-persona-review__summary span {
+  min-width: 0;
+  border-radius: 8px;
+  background: rgba(49, 64, 86, 0.07);
+  color: var(--contacts-text);
+  padding: 7px 6px;
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.contacts-persona-review-group,
+.contacts-persona-source-retained {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid rgba(49, 64, 86, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 10px;
+}
+
+.contacts-persona-review-group--suggested {
+  border-color: rgba(191, 115, 84, 0.2);
+}
+
+.contacts-persona-review-group--conflict {
+  border-color: rgba(166, 71, 61, 0.2);
+}
+
+.contacts-persona-review-group > header h5,
+.contacts-persona-source-retained h5 {
+  color: var(--contacts-text);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.contacts-persona-review-group > header p {
+  margin-top: 2px;
+  color: var(--contacts-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.contacts-persona-review-group > header strong {
+  display: inline-grid;
+  min-width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(66, 111, 143, 0.1);
+  color: var(--contacts-accent-strong);
+  font-size: 11px;
+}
+
+.contacts-persona-review-list {
+  display: grid;
+  gap: 7px;
+}
+
+.contacts-persona-review-item {
+  min-width: 0;
+  border-top: 1px solid rgba(49, 64, 86, 0.08);
+  padding-top: 8px;
+}
+
+.contacts-persona-review-item__head > div {
+  min-width: 0;
+}
+
+.contacts-persona-review-item__head span,
+.contacts-persona-review-item__head em {
+  color: var(--contacts-muted);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.contacts-persona-review-item__head h6 {
+  margin-top: 1px;
+  color: var(--contacts-text);
+  font-size: 11px;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.contacts-persona-review-item__head em {
+  flex: 0 0 auto;
+  border-radius: 8px;
+  background: rgba(66, 111, 143, 0.08);
+  padding: 3px 6px;
+}
+
+.contacts-persona-review-item__value {
+  margin-top: 6px !important;
+  color: var(--contacts-text);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.contacts-persona-review-item__source,
+.contacts-persona-review-item__reason,
+.contacts-persona-review-item__current {
+  margin-top: 4px !important;
+  color: var(--contacts-muted);
+  font-size: 10px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.contacts-persona-review-item__current strong {
+  color: var(--contacts-text);
+}
+
+.contacts-persona-candidates {
+  display: grid;
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.contacts-persona-candidates > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 7px;
+  border-radius: 8px;
+  background: rgba(166, 71, 61, 0.07);
+  padding: 7px 8px;
+  color: var(--contacts-text);
+  font-size: 10px;
+}
+
+.contacts-persona-candidates span {
+  color: #8d3d36;
+  font-weight: 850;
+}
+
+.contacts-persona-candidates strong,
+.contacts-persona-candidates small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.contacts-persona-candidates small {
+  grid-column: 1 / -1;
+  color: var(--contacts-muted);
+  line-height: 1.4;
+}
+
+.contacts-persona-review-group__empty {
+  border-top: 1px solid rgba(49, 64, 86, 0.08);
+  padding-top: 8px;
+  color: var(--contacts-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.contacts-persona-source-retained p {
+  color: var(--contacts-muted);
+  font-size: 10px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.contacts-persona-confirmation {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid rgba(49, 64, 86, 0.12);
+  padding-top: 10px;
+}
+
+.contacts-persona-confirmation > header,
+.contacts-persona-confirmation__item-head,
+.contacts-persona-confirmation__save,
+.contacts-persona-confirmation__decisions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.contacts-persona-confirmation > header h5,
+.contacts-persona-confirmation > header p,
+.contacts-persona-confirmation__item p {
+  margin: 0;
+}
+
+.contacts-persona-confirmation > header h5 {
+  color: var(--contacts-text);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.contacts-persona-confirmation > header p,
+.contacts-persona-confirmation__item p,
+.contacts-persona-confirmation__save > span {
+  margin-top: 2px;
+  color: var(--contacts-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.contacts-persona-confirmation > header > strong {
+  display: inline-grid;
+  min-width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(66, 111, 143, 0.1);
+  color: var(--contacts-accent-strong);
+  font-size: 11px;
+}
+
+.contacts-persona-confirmation__list {
+  display: grid;
+  gap: 8px;
+}
+
+.contacts-persona-confirmation__item {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  border: 1px solid rgba(49, 64, 86, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 9px;
+}
+
+.contacts-persona-confirmation__item-head span,
+.contacts-persona-confirmation__item-head strong,
+.contacts-persona-confirmation__item label > span {
+  color: var(--contacts-muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.contacts-persona-confirmation__item label {
+  display: grid;
+  gap: 4px;
+}
+
+.contacts-persona-confirmation__item input,
+.contacts-persona-confirmation__item textarea,
+.contacts-persona-confirmation__item select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--contacts-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--contacts-text);
+  padding: 8px 9px;
+  font-size: 12px;
+}
+
+.contacts-persona-confirmation__item textarea {
+  min-height: 70px;
+  resize: vertical;
+}
+
+.contacts-persona-confirmation__decisions {
+  justify-content: flex-end;
+}
+
+.contacts-persona-confirmation__decisions button {
+  min-height: 34px;
+  border: 1px solid rgba(66, 111, 143, 0.16);
+  border-radius: 8px;
+  color: var(--contacts-muted);
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.contacts-persona-confirmation__decisions button.active {
+  border-color: var(--contacts-accent-strong);
+  background: var(--contacts-accent-soft);
+  color: var(--contacts-accent-strong);
+}
+
+.contacts-persona-confirmation__save {
+  align-items: flex-end;
+}
+
+.contacts-persona-confirmation__save .contacts-primary-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .contacts-template-change-review,
 .contacts-template-adaptation-review {
   display: grid;
@@ -6699,6 +7857,20 @@ onBeforeUnmount(() => {
   .contacts-world-field-editor__head .contacts-small-action,
   .contacts-world-field-editor__actions .contacts-primary-action {
     width: 100%;
+  }
+
+  .contacts-world-profile-actions {
+    width: 100%;
+  }
+
+  .contacts-world-profile-actions .contacts-small-action,
+  .contacts-persona-classification__actions .contacts-primary-action {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .contacts-persona-review__summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .contacts-runtime-audit-grid {
