@@ -2,7 +2,7 @@
 
 Updated: 2026-08-27
 
-Status: `ACTIVE / CARD-1_DONE 2026-08-27 / ROLE-0_DECISION_DONE 2026-08-27 / ROLE-1_DONE 2026-08-27 / CARD-2_DONE 2026-08-27 / CARD-3_DONE 2026-08-27 / CARD-4_DONE 2026-08-27 / CARD-5_DONE 2026-08-27 / CARD-6_DONE 2026-08-27 / PERSONA-1_NEXT`
+Status: `ACTIVE / CARD-1_DONE 2026-08-27 / ROLE-0_DECISION_DONE 2026-08-27 / ROLE-1_DONE 2026-08-27 / CARD-2_DONE 2026-08-27 / CARD-3_DONE 2026-08-27 / CARD-4_DONE 2026-08-27 / CARD-5_DONE 2026-08-27 / CARD-6_DONE 2026-08-27 / PERSONA-1_DONE 2026-08-27 / PERSONA-2_NEXT`
 
 Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 
@@ -231,7 +231,7 @@ Product design: `CONTACTS_V3_2A_EXTENSIBLE_PROFILE_CARD_DESIGN.md`
 - AI 失败只显示提示，不关闭或破坏已打开的规则/手动草稿，也不阻塞手动新建；
 - 本步骤不填写任何人物值，不创建人物资料修订、组织权限、事件、动态数值、好感、余额、疲劳或进度。
 
-### PERSONA-1 — 整段文字归类草稿 — `NEXT`
+### PERSONA-1 — 整段文字归类草稿 — `DONE 2026-08-27`
 
 要做：
 
@@ -242,7 +242,15 @@ Product design: `CONTACTS_V3_2A_EXTENSIBLE_PROFILE_CARD_DESIGN.md`
 
 完成标准：未识别内容不丢失，取消和解析失败不改变人物资料。
 
-### PERSONA-2 — 复核并保存人物资料 — `QUEUED_AFTER_PERSONA-1`
+落地结果：
+
+- 在 Contacts 现有“世界资料卡”页加入整段人物描述入口，与资料卡编辑流程互斥，不增加第二个页面或第二种人物数据格式；
+- 分类契约保留精确原文段，并生成不可变、绑定人物/世界/模板/资料版本的复核草稿；
+- 结果固定呈现匹配字段、新字段建议、冲突和未归类原文四组，已确认值与候选值并排显示，不静默选择或覆盖；
+- 关闭、解析失败、人物切换、资料版本变化和过期异步响应都清理草稿或安全失效；
+- 成功归类、关闭和解析失败均不会改变 `profileValues`、`templateLink` 或 `revision`，本步骤没有接受或保存按钮。
+
+### PERSONA-2 — 复核并保存人物资料 — `NEXT`
 
 要做：
 
@@ -324,9 +332,9 @@ Product design: `CONTACTS_V3_2A_EXTENSIBLE_PROFILE_CARD_DESIGN.md`
 
 ## 7. 当前开工点
 
-当前下一代码任务是 `PERSONA-1 整段文字归类草稿`。
+当前下一代码任务是 `PERSONA-2 复核并保存人物资料`。
 
-这一项会把用户粘贴的一段人物描述匹配到当前资料卡已有字段，并把无法安全匹配的内容保留为新字段建议、冲突或未归类原文。它只形成复核草稿，不接受或保存任何人物值；逐项确认和 Contacts 写入留给 `PERSONA-2`。`EVENT-PREP-1` 仍可作为不改运行行为的并行文档任务，对照现有身份字段与用途标记，但不能抢先创建事件或迁移 Event Runtime。
+`PERSONA-1` 已把粘贴描述整理成绑定当前人物、世界、模板和资料版本的不可变复核草稿，并证明成功、取消和解析失败都不写人物资料。`PERSONA-2` 只在这份草稿上增加逐项接受、修改、忽略和一次性 Contacts Profile Owner 保存；保存前必须重新核对全部版本引用，失败时完整恢复旧资料。`EVENT-PROJECTION-1` 仍必须等待 `PERSONA-2`，不能抢先创建事件或迁移 Event Runtime。
 
 每完成一项，都要同步：
 
@@ -398,3 +406,10 @@ Product design: `CONTACTS_V3_2A_EXTENSIBLE_PROFILE_CARD_DESIGN.md`
 - Chromium 桌面与模拟 Pixel 5 浏览器流程：6 项通过，覆盖原 WorldBook -> Contacts 资料值链、手动模板编辑，以及当前世界建议的生成、取消不落库、重新生成、保存 v1 和无横向溢出；
 - 未限制目录的默认测试命令仍会误扫 `.codex/tmp` 的 4 个外部 Jest 文件；本机图床工具和两个 5 秒并发超时仍保持既有环境/并发失败指纹，与 Contacts 资料卡改动无关；
 - lint 通过；production build 通过，只有项目已有的大分块提示；governance 为 2 个文件、19 项通过；`git diff --check` 通过。
+
+## 15. PERSONA-1 验证记录
+
+- 分类契约与 Contacts 组件重点回归：2 个文件、25 项通过，覆盖不可变草稿、四类结果、精确原文、冲突并排、解析失败、关闭和人物对象零写入；
+- Chromium 桌面与模拟 Pixel 5 浏览器流程：2 项通过，覆盖真实 OpenAI 兼容调用链、四组复核、完整原文、无接受/保存控件、可访问性和无横向溢出；
+- 全量 Vitest 为 333 个文件、2513 项全部通过；
+- lint 通过；production build 通过（701 modules），只有项目已有的大分块提示；governance 为 2 个文件、19 项通过；`git diff --check` 通过。

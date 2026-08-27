@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import AxeBuilder from '@axe-core/playwright'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
 
 const systemSnapshot = {
@@ -34,6 +35,81 @@ const chatSnapshot = {
   messagesByConversation: {},
 }
 
+const personaProviderUrl = 'https://persona-classification.provider.test/v1/chat/completions'
+const personaProviderModel = 'persona-classification-model'
+const personaProfileId = 91
+const personaSourceText =
+  'Agency: Galaxy Entertainment\nOccupation: Actor\nStage name: Livia\nAvoids using a full name in private.'
+
+const personaSystemSnapshot = {
+  ...systemSnapshot,
+  settings: {
+    ...systemSnapshot.settings,
+    api: {
+      url: personaProviderUrl,
+      key: 'persona-classification-e2e-key',
+      model: personaProviderModel,
+      resolvedKind: 'openai_compatible',
+      transportMode: 'direct',
+      proxyUrl: '',
+      proxyToken: '',
+      presets: [],
+      activePresetId: '',
+    },
+  },
+  user: {
+    ...systemSnapshot.user,
+    profileTemplates: [
+      {
+        id: 'world_template_persona_e2e',
+        title: 'Persona E2E profile',
+        scope: 'world',
+        worldId: 'default_world',
+        version: 4,
+        categories: [{ id: 'identity', label: 'Identity', order: 0 }],
+        fields: [
+          {
+            id: 'occupation',
+            categoryId: 'identity',
+            label: 'Occupation',
+            type: 'short_text',
+            order: 0,
+          },
+          {
+            id: 'agency',
+            categoryId: 'identity',
+            label: 'Agency',
+            type: 'organization_reference',
+            order: 1,
+          },
+        ],
+      },
+    ],
+  },
+}
+
+const personaChatSnapshot = {
+  ...chatSnapshot,
+  roleProfiles: [
+    {
+      id: personaProfileId,
+      roleId: '9091',
+      name: 'Persona E2E role',
+      role: 'Singer',
+      entityType: 'main_role',
+      isMain: true,
+      revision: 7,
+      bio: 'A profile used to prove review-only persona classification.',
+      templateLink: {
+        primaryWorldId: 'default_world',
+        profileTemplateId: 'world_template_persona_e2e',
+        profileTemplateVersion: 4,
+      },
+      profileValues: [{ fieldId: 'occupation', value: 'Singer', visibilityLevel: 'familiar' }],
+    },
+  ],
+}
+
 const seedEmptyWorldAndContacts = async (page) => {
   await page.addInitScript(
     ({ system, chat }) => {
@@ -64,6 +140,42 @@ const expectNoHorizontalOverflow = async (page) => {
   )
   expect(hasOverflow).toBe(false)
 }
+
+const seedPersonaClassificationFixture = async (page, { language = 'en-US', night = false } = {}) => {
+  const system = structuredClone(personaSystemSnapshot)
+  system.settings.system.language = language
+  system.settings.appearance = {
+    ...(system.settings.appearance || {}),
+    colorMode: night ? 'night' : 'day',
+    currentTheme: night ? 'zen' : 'default',
+  }
+  await page.addInitScript(
+    ({ system, chat }) => {
+      window.localStorage.setItem(
+        'schatphone:store:system',
+        JSON.stringify({ version: 1, savedAt: Date.now(), data: system }),
+      )
+      window.localStorage.setItem(
+        'schatphone:store:chat',
+        JSON.stringify({ version: 2, savedAt: Date.now(), data: chat }),
+      )
+    },
+    { system, chat: personaChatSnapshot },
+  )
+}
+
+const readPersistedPersonaProfile = (page) =>
+  page.evaluate((profileId) => {
+    const persisted = JSON.parse(window.localStorage.getItem('schatphone:store:chat') || '{}')
+    const profiles = Array.isArray(persisted?.data?.roleProfiles) ? persisted.data.roleProfiles : []
+    const profile = profiles.find((item) => Number(item?.id) === Number(profileId))
+    if (!profile) return ''
+    return JSON.stringify({
+      profileValues: profile.profileValues,
+      templateLink: profile.templateLink,
+      revision: profile.revision,
+    })
+  }, personaProfileId)
 
 test.beforeEach(async ({ page }, testInfo) => {
   await page.setViewportSize(
@@ -265,5 +377,106 @@ test('WorldBook world suggestions stay draft-only until explicitly saved', async
   await expect(generatedTemplate).toContainText('v1')
   await expectNoHorizontalOverflow(page)
 
+  expect(pageErrors).toEqual([])
+})
+
+test('Contacts persona classification stays review-only on desktop and mobile', async ({
+  page,
+}, testInfo) => {
+  const pageErrors = []
+  let classificationRequestCount = 0
+  const isMobile = testInfo.project.name === 'mobile-chrome'
+  page.on('pageerror', (error) => {
+    pageErrors.push(error.message)
+  })
+  await seedPersonaClassificationFixture(page, {
+    language: isMobile ? 'zh-CN' : 'en-US',
+    night: isMobile,
+  })
+  await page.route('https://persona-classification.provider.test/**', async (route) => {
+    classificationRequestCount += 1
+    const payload = route.request().postDataJSON()
+    const prompt = String(payload?.messages?.at(-1)?.content || '')
+    expect(prompt).toContain('review-only')
+    expect(prompt).toContain('Occupation')
+    expect(prompt).toContain('Agency: Galaxy Entertainment')
+    expect(prompt).toContain('Occupation: Actor')
+    expect(prompt).toContain('Stage name: Livia')
+    expect(prompt).toContain('Avoids using a full name in private.')
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*' },
+      body: JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                matches: [
+                  {
+                    fieldId: 'agency',
+                    value: 'Galaxy Entertainment',
+                    sourceText: 'Agency: Galaxy Entertainment',
+                  },
+                  {
+                    fieldId: 'occupation',
+                    value: 'Actor',
+                    sourceText: 'Occupation: Actor',
+                  },
+                ],
+                newFields: [
+                  {
+                    label: 'Stage name',
+                    value: 'Livia',
+                    sourceText: 'Stage name: Livia',
+                  },
+                ],
+              }),
+            },
+          },
+        ],
+      }),
+    })
+  })
+
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/contacts')
+  await page.getByTestId(`contacts-row-${personaProfileId}`).click()
+  await page.getByTestId('contacts-open-world-fields-sheet').click()
+  const beforeProfile = await readPersistedPersonaProfile(page)
+
+  await page.getByTestId('contacts-open-persona-classification').click()
+  await expect(page.getByTestId('contacts-persona-classification-panel')).toContainText(
+    isMobile ? '只整理复核草稿' : 'review draft only',
+  )
+  await page.getByTestId('contacts-persona-source').fill(personaSourceText)
+  await page.getByTestId('contacts-classify-persona').click()
+
+  await expect(page.getByTestId('contacts-persona-classification-summary')).toContainText('1')
+  await expect(page.getByTestId('contacts-persona-matched-values')).toContainText(
+    'Galaxy Entertainment',
+  )
+  await expect(page.getByTestId('contacts-persona-suggested-fields')).toContainText('Stage name')
+  await expect(page.getByTestId('contacts-persona-conflicts')).toContainText('Singer')
+  await expect(page.getByTestId('contacts-persona-conflicts')).toContainText('Actor')
+  await expect(page.getByTestId('contacts-persona-unclassified')).toContainText(
+    'Avoids using a full name in private.',
+  )
+  await expect(page.getByTestId('contacts-persona-source-retained')).toContainText(
+    'Agency: Galaxy Entertainment',
+  )
+  await expect(page.getByTestId('contacts-save-persona-confirmation')).toHaveCount(0)
+  await expect(page.locator('[data-testid^="contacts-persona-accept-"]')).toHaveCount(0)
+  const accessibility = await new AxeBuilder({ page })
+    .include('[data-testid="contacts-persona-classification-panel"]')
+    .analyze()
+  expect(accessibility.violations).toEqual([])
+  await expectNoHorizontalOverflow(page)
+  expect(await readPersistedPersonaProfile(page)).toBe(beforeProfile)
+
+  await page.getByTestId('contacts-close-persona-classification').click()
+  await expect(page.getByTestId('contacts-persona-classification-panel')).toHaveCount(0)
+  expect(await readPersistedPersonaProfile(page)).toBe(beforeProfile)
+  expect(classificationRequestCount).toBe(1)
   expect(pageErrors).toEqual([])
 })
