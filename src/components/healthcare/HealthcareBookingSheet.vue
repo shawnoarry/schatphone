@@ -13,6 +13,7 @@
       :aria-labelledby="titleId"
     >
       <header class="care-sheet__header">
+        <HealthcareMascot size="brand" pose="standing" />
         <div>
           <span class="care-sheet__eyebrow">{{ copy.eyebrow }}</span>
           <h2 :id="titleId">{{ isReschedule ? copy.rescheduleTitle : copy.title }}</h2>
@@ -114,6 +115,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import HealthcareMascot from './HealthcareMascot.vue'
 
 const props = defineProps({
   titleId: { type: String, default: 'healthcare-booking-title' },

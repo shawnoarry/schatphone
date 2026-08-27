@@ -18,7 +18,7 @@
 
       <div class="care-brand">
         <span class="care-brand__mark" aria-hidden="true">
-          <i class="fas fa-heart-pulse"></i>
+          <HealthcareMascot size="brand" pose="standing" />
         </span>
         <span class="care-brand__words">
           <strong>{{ isZh ? brand.nameZh : brand.nameEn }}</strong>
@@ -49,7 +49,9 @@
                 {{ t('浏览门诊、体检与日常照护服务。这里不会收集你的真实健康资料。', 'Browse clinics, checkups, and everyday care. Your real health information is never requested here.') }}
               </p>
             </div>
-            <span class="care-hero__folio" aria-hidden="true">OC<br />01</span>
+            <span class="care-hero__mascot" aria-hidden="true">
+              <HealthcareMascot size="hero" pose="standing" />
+            </span>
           </div>
 
           <form class="care-search" role="search" @submit.prevent>
@@ -142,7 +144,7 @@
           </div>
 
           <div v-else class="care-empty-state" data-testid="healthcare-empty-state">
-            <i class="fas fa-magnifying-glass-minus" aria-hidden="true"></i>
+            <HealthcareMascot size="empty" pose="thinking" />
             <h2>{{ t('没有找到合适的服务', 'No matching care found') }}</h2>
             <p>{{ t('换一个类别或缩短关键词试试。我们不会用模型补写医疗机构。', 'Try another category or a shorter phrase. We never invent medical providers with a model.') }}</p>
             <button type="button" class="care-secondary-button" @click="resetDiscovery">{{ t('查看全部', 'View all') }}</button>
@@ -387,6 +389,7 @@ import {
 } from '../lib/healthcare-shell-data'
 import { useHealthcareShellState } from '../composables/useHealthcareShellState'
 import HealthcareBookingSheet from '../components/healthcare/HealthcareBookingSheet.vue'
+import HealthcareMascot from '../components/healthcare/HealthcareMascot.vue'
 import HealthcareReportDetail from '../components/healthcare/HealthcareReportDetail.vue'
 
 const route = useRoute()
@@ -593,20 +596,20 @@ const acknowledgeActiveReport = () => {
 
 <style>
 .ondam-care-app {
-  --care-bg: #f2eee4;
-  --care-panel: #fffdf8;
-  --care-panel-soft: #e8eee8;
-  --care-ink: #17332f;
-  --care-muted: #63736e;
-  --care-line: rgba(32, 68, 61, 0.16);
-  --care-accent: #1f6b5b;
-  --care-accent-strong: #155044;
+  --care-bg: #e8eef5;
+  --care-panel: #fdf9ef;
+  --care-panel-soft: #e2eaf3;
+  --care-ink: #33465c;
+  --care-muted: #6d7d92;
+  --care-line: rgba(61, 84, 112, 0.16);
+  --care-accent: #5b7396;
+  --care-accent-strong: #3f5878;
   --care-action-text: #ffffff;
   --care-apricot: #df8d5b;
-  --care-blue: #517a8b;
+  --care-blue: #5f7ea3;
   --care-lilac: #8b789c;
   --care-danger: #9a453f;
-  --care-shadow: 0 18px 52px rgba(39, 55, 48, 0.13);
+  --care-shadow: 0 18px 52px rgba(51, 70, 92, 0.13);
   min-height: 100%;
   height: 100%;
   display: flex;
@@ -614,29 +617,29 @@ const acknowledgeActiveReport = () => {
   overflow: hidden;
   color: var(--care-ink);
   background:
-    radial-gradient(circle at 9% 3%, rgba(232, 186, 133, 0.26), transparent 31%),
-    linear-gradient(145deg, #f7f3ea 0%, var(--care-bg) 60%, #e7ece5 100%);
+    radial-gradient(circle at 9% 3%, rgba(253, 241, 217, 0.6), transparent 31%),
+    linear-gradient(145deg, #eef3f9 0%, var(--care-bg) 60%, #dde6f0 100%);
   font-family: "Aptos", "Segoe UI Variable", "Noto Sans SC", "Microsoft YaHei", sans-serif;
 }
 
 .ondam-care-app.is-night {
-  --care-bg: #101a18;
-  --care-panel: #172421;
-  --care-panel-soft: #21312d;
-  --care-ink: #edf4ee;
-  --care-muted: #adbbb4;
-  --care-line: rgba(218, 235, 226, 0.15);
-  --care-accent: #72c5ad;
-  --care-accent-strong: #d9f5e9;
-  --care-action-text: #10241e;
+  --care-bg: #141c28;
+  --care-panel: #1c2533;
+  --care-panel-soft: #26334a;
+  --care-ink: #eef3fa;
+  --care-muted: #9aa9bd;
+  --care-line: rgba(226, 236, 248, 0.14);
+  --care-accent: #a8bedd;
+  --care-accent-strong: #e2ecf8;
+  --care-action-text: #1a2433;
   --care-apricot: #efad7f;
-  --care-blue: #8db9ca;
+  --care-blue: #a8bedd;
   --care-lilac: #c0a8d0;
   --care-danger: #ef9c94;
   --care-shadow: 0 20px 55px rgba(0, 0, 0, 0.34);
   background:
-    radial-gradient(circle at 12% 0%, rgba(95, 139, 116, 0.18), transparent 32%),
-    linear-gradient(145deg, #121d1b 0%, #0d1715 63%, #17211d 100%);
+    radial-gradient(circle at 12% 0%, rgba(168, 190, 221, 0.12), transparent 32%),
+    linear-gradient(145deg, #182130 0%, #101725 63%, #1c2434 100%);
 }
 
 .ondam-care-app *,
@@ -697,14 +700,15 @@ const acknowledgeActiveReport = () => {
   border-radius: 15px 15px 15px 5px;
   display: grid;
   place-items: center;
+  overflow: hidden;
   color: #fff;
-  background: var(--care-accent-strong);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22), var(--care-shadow);
 }
 
 .is-night .care-brand__mark {
-  color: #10241e;
-  background: #93d6c2;
+  color: #1a2433;
+  background: transparent;
 }
 
 .care-brand__words {
@@ -756,9 +760,9 @@ const acknowledgeActiveReport = () => {
   align-items: flex-end;
   overflow: hidden;
   border-radius: 10px 44px 10px 44px;
-  color: #f6f8f3;
+  color: #f6f8fb;
   background:
-    linear-gradient(112deg, rgba(16, 58, 50, 0.97), rgba(37, 94, 78, 0.86)),
+    linear-gradient(112deg, rgba(43, 60, 84, 0.97), rgba(91, 115, 150, 0.86)),
     repeating-linear-gradient(90deg, transparent 0 40px, rgba(255,255,255,.05) 40px 41px);
   box-shadow: var(--care-shadow);
 }
@@ -775,7 +779,7 @@ const acknowledgeActiveReport = () => {
   box-shadow: 0 0 0 42px rgba(255,255,255,.04), 0 0 0 90px rgba(255,255,255,.025);
 }
 
-.care-hero__copy { position: relative; z-index: 1; max-width: 670px; }
+.care-hero__copy { position: relative; z-index: 1; max-width: 670px; padding-right: clamp(96px, 24vw, 150px); }
 .care-kicker,
 .care-sheet__eyebrow {
   display: block;
@@ -800,7 +804,7 @@ const acknowledgeActiveReport = () => {
 
 .care-hero h1 { font-size: clamp(30px, 5vw, 54px); }
 .care-hero p { max-width: 620px; margin: 18px 0 0; color: rgba(248,252,248,.79); line-height: 1.65; }
-.care-hero__folio { position: absolute; right: 32px; bottom: 21px; color: rgba(255,255,255,.26); font-family: Georgia, serif; font-size: 21px; line-height: .92; letter-spacing: .08em; text-align: right; }
+.care-hero__mascot { position: absolute; right: clamp(20px, 4vw, 40px); top: clamp(18px, 3vw, 30px); z-index: 1; filter: drop-shadow(0 10px 22px rgba(30, 44, 62, 0.28)); }
 
 .care-search {
   width: min(680px, calc(100% - 32px));
@@ -968,9 +972,9 @@ const acknowledgeActiveReport = () => {
 .care-report-row__chips .is-unavailable { color: var(--care-danger); }
 
 .care-detail-back { min-height: 42px; margin-bottom: 20px; padding: 0 12px 0 4px; display: inline-flex; align-items: center; gap: 9px; border: 0; color: var(--care-accent-strong); background: transparent; cursor: pointer; }
-.care-institution-detail__hero { position: relative; overflow: hidden; padding: clamp(28px, 5vw, 60px); border-radius: 10px 46px 10px 46px; color: #f7fbf8; background: linear-gradient(135deg, #174e43, #276a59); box-shadow: var(--care-shadow); }
+.care-institution-detail__hero { position: relative; overflow: hidden; padding: clamp(28px, 5vw, 60px); border-radius: 10px 46px 10px 46px; color: #f7fbfb; background: linear-gradient(135deg, #3f5878, #66809f); box-shadow: var(--care-shadow); }
 .care-institution-detail__hero.is-apricot { background: linear-gradient(135deg, #6e3d28, #a35d36); }
-.care-institution-detail__hero.is-blue { background: linear-gradient(135deg, #234a58, #47798a); }
+.care-institution-detail__hero.is-blue { background: linear-gradient(135deg, #3a5470, #5f7ea3); }
 .care-institution-detail__hero.is-lilac { background: linear-gradient(135deg, #4d3d59, #766187); }
 .care-institution-detail__hero h1 { max-width: 760px; font-size: clamp(34px, 5vw, 56px); }
 .care-institution-detail__hero > p { max-width: 700px; margin: 16px 0 0; color: rgba(255,255,255,.8); line-height: 1.65; }
@@ -1094,7 +1098,7 @@ const acknowledgeActiveReport = () => {
   .care-hero { min-height:190px; padding:25px 22px 50px; border-radius:8px 30px 8px 30px; }
   .care-hero h1 { font-size:31px; }
   .care-hero p { font-size:13px; }
-  .care-hero__folio { right:20px; bottom:15px; }
+  .care-hero__mascot { right: 16px; bottom: 14px; }
   .care-search { width:calc(100% - 20px); min-height:54px; margin-top:-25px; }
   .care-overview { grid-template-columns:1fr; }
   .care-institution-grid { grid-template-columns:1fr; }
