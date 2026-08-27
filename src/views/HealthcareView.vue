@@ -42,6 +42,14 @@
       <template v-if="focusedPage === 'root'">
         <section v-if="activeTab === 'discover'" class="care-discover" data-testid="healthcare-discover">
           <div class="care-hero">
+            <img
+              class="care-hero__art"
+              :src="healthcareArt.welcome"
+              alt=""
+              aria-hidden="true"
+              fetchpriority="high"
+              data-required-asset="healthcare/ip/ondam-care-welcome-hero-v1.webp"
+            />
             <div class="care-hero__copy">
               <span class="care-kicker">{{ t('世界内模拟医疗', 'IN-WORLD SIMULATED CARE') }}</span>
               <h1>{{ t('今天想安排什么照护？', 'What care would you like to arrange?') }}</h1>
@@ -49,9 +57,6 @@
                 {{ t('浏览门诊、体检与日常照护服务。这里不会收集你的真实健康资料。', 'Browse clinics, checkups, and everyday care. Your real health information is never requested here.') }}
               </p>
             </div>
-            <span class="care-hero__mascot" aria-hidden="true">
-              <HealthcareMascot size="hero" pose="standing" />
-            </span>
           </div>
 
           <form class="care-search" role="search" @submit.prevent>
@@ -144,7 +149,14 @@
           </div>
 
           <div v-else class="care-empty-state" data-testid="healthcare-empty-state">
-            <HealthcareMascot size="empty" pose="thinking" />
+            <img
+              class="care-empty-state__art"
+              :src="healthcareArt.search"
+              alt=""
+              aria-hidden="true"
+              loading="lazy"
+              data-required-asset="healthcare/ip/ondam-care-search-magnifier-v1.webp"
+            />
             <h2>{{ t('没有找到合适的服务', 'No matching care found') }}</h2>
             <p>{{ t('换一个类别或缩短关键词试试。我们不会用模型补写医疗机构。', 'Try another category or a shorter phrase. We never invent medical providers with a model.') }}</p>
             <button type="button" class="care-secondary-button" @click="resetDiscovery">{{ t('查看全部', 'View all') }}</button>
@@ -152,13 +164,23 @@
         </section>
 
         <section v-else-if="activeTab === 'appointments'" class="care-list-page" data-testid="healthcare-appointments">
-          <div class="care-page-title">
-            <span class="care-kicker">{{ t('我的安排', 'MY CARE') }}</span>
-            <h1>{{ t('预约', 'Appointments') }}</h1>
-            <p>{{ t('这些预约只保存在本设备的 S1 预览中，不会写入日历或钱包。', 'These appointments stay in this device-only S1 preview and do not write to Calendar or Wallet.') }}</p>
+          <div class="care-page-lead">
+            <div class="care-page-title">
+              <span class="care-kicker">{{ t('我的安排', 'MY CARE') }}</span>
+              <h1>{{ t('预约', 'Appointments') }}</h1>
+              <p>{{ t('这些预约只保存在本设备的 S1 预览中，不会写入日历或钱包。', 'These appointments stay in this device-only S1 preview and do not write to Calendar or Wallet.') }}</p>
+            </div>
+            <img
+              class="care-page-lead__art"
+              :src="healthcareArt.appointment"
+              alt=""
+              aria-hidden="true"
+              loading="lazy"
+              data-required-asset="healthcare/ip/ondam-care-appointment-scene-v1.webp"
+            />
           </div>
 
-          <div class="care-appointment-stack">
+          <div v-if="appointmentRows.length" class="care-appointment-stack">
             <article
               v-for="appointment in appointmentRows"
               :key="appointment.id"
@@ -196,16 +218,31 @@
               </div>
             </article>
           </div>
+          <div v-else class="care-empty-state">
+            <h2>{{ t('还没有本地预约', 'No local appointments yet') }}</h2>
+            <p>{{ t('从照护目录选择一个项目后，预约会显示在这里。', 'Choose a service from the care directory and it will appear here.') }}</p>
+            <button type="button" class="care-secondary-button" @click="activeTab = 'discover'">{{ t('浏览照护目录', 'Browse care directory') }}</button>
+          </div>
         </section>
 
         <section v-else class="care-list-page" data-testid="healthcare-reports">
-          <div class="care-page-title care-page-title--reports">
-            <span class="care-kicker">{{ t('私人档案', 'PRIVATE RECORDS') }}</span>
-            <h1>{{ t('报告收件箱', 'Report inbox') }}</h1>
-            <p>{{ t('全部为世界内 authored 示例。报告正文不会进入 Community、角色记忆或 Event Runtime。', 'All records are authored in-world samples. Report content never enters Community, role memory, or Event Runtime.') }}</p>
+          <div class="care-page-lead care-page-lead--reports">
+            <div class="care-page-title care-page-title--reports">
+              <span class="care-kicker">{{ t('私人档案', 'PRIVATE RECORDS') }}</span>
+              <h1>{{ t('报告收件箱', 'Report inbox') }}</h1>
+              <p>{{ t('全部为世界内 authored 示例。报告正文不会进入 Community、角色记忆或 Event Runtime。', 'All records are authored in-world samples. Report content never enters Community, role memory, or Event Runtime.') }}</p>
+            </div>
+            <img
+              class="care-page-lead__art"
+              :src="healthcareArt.report"
+              alt=""
+              aria-hidden="true"
+              loading="lazy"
+              data-required-asset="healthcare/ip/ondam-care-report-scene-v1.webp"
+            />
           </div>
 
-          <div class="care-report-stack">
+          <div v-if="reportRows.length" class="care-report-stack">
             <button
               v-for="report in reportRows"
               :key="report.id"
@@ -234,6 +271,10 @@
               </span>
               <i class="fas fa-chevron-right" aria-hidden="true"></i>
             </button>
+          </div>
+          <div v-else class="care-empty-state">
+            <h2>{{ t('报告收件箱是空的', 'The report inbox is empty') }}</h2>
+            <p>{{ t('世界内 authored 报告可用时会显示在这里。', 'Authored in-world reports will appear here when available.') }}</p>
           </div>
         </section>
       </template>
@@ -359,6 +400,14 @@
           <button type="button" class="care-icon-button" :aria-label="t('关闭', 'Close')" @click="privacyOpen = false"><i class="fas fa-xmark" aria-hidden="true"></i></button>
         </header>
         <div class="care-sheet__body care-privacy-list">
+          <img
+            class="care-privacy-art"
+            :src="healthcareArt.privacy"
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            data-required-asset="healthcare/ip/ondam-care-privacy-scene-v1.webp"
+          />
           <p><i class="fas fa-user-shield" aria-hidden="true"></i><span>{{ t('不要求填写或上传你的真实病史、检查结果或身份材料。', 'No real medical history, test result, or identity document is requested.') }}</span></p>
           <p><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i><span>{{ t('不调用 AI 生成诊断，也不从 Chat 或角色状态推断疾病。', 'AI does not generate diagnoses, and illness is never inferred from Chat or role state.') }}</span></p>
           <p><i class="fas fa-share-nodes" aria-hidden="true"></i><span>{{ t('S1 不写入日历、钱包、地图、电话、通知或事件系统。', 'S1 does not write to Calendar, Wallet, Map, Phone, notifications, or Event Runtime.') }}</span></p>
@@ -369,11 +418,12 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useI18n } from '../composables/useI18n'
 import { pushReturnTarget } from '../lib/navigation-return'
+import { projectUiAssetUrl } from '../lib/project-assets'
 import {
   HEALTHCARE_BRAND,
   HEALTHCARE_CATEGORIES,
@@ -397,6 +447,19 @@ const router = useRouter()
 const systemStore = useSystemStore()
 const { t, isZh } = useI18n()
 const brand = HEALTHCARE_BRAND
+const healthcareArt = Object.freeze({
+  welcome: projectUiAssetUrl('healthcare/ip/ondam-care-welcome-hero-v1.webp'),
+  appointment: projectUiAssetUrl('healthcare/ip/ondam-care-appointment-scene-v1.webp'),
+  report: projectUiAssetUrl('healthcare/ip/ondam-care-report-scene-v1.webp'),
+  privacy: projectUiAssetUrl('healthcare/ip/ondam-care-privacy-scene-v1.webp'),
+  search: projectUiAssetUrl('healthcare/ip/ondam-care-search-magnifier-v1.webp'),
+})
+onMounted(() => {
+  Object.values(healthcareArt).forEach((src) => {
+    const image = document.createElement('img')
+    image.src = src
+  })
+})
 const isNightTheme = computed(() => systemStore.settings.appearance.currentTheme === 'zen')
 
 const {
@@ -663,21 +726,21 @@ const acknowledgeActiveReport = () => {
   display: flex;
   align-items: center;
   gap: 12px;
-  border-bottom: 1px solid var(--care-line);
-  background: color-mix(in srgb, var(--care-panel) 90%, transparent);
-  backdrop-filter: blur(18px);
+  border-bottom: 0;
+  background: color-mix(in srgb, var(--care-bg) 82%, transparent);
+  backdrop-filter: blur(16px);
   z-index: 6;
 }
 
 .care-icon-button {
   width: 44px;
   height: 44px;
-  border: 1px solid var(--care-line);
+  border: 0;
   border-radius: 50%;
   display: inline-grid;
   place-items: center;
   color: var(--care-accent-strong);
-  background: var(--care-panel);
+  background: color-mix(in srgb, var(--care-panel-soft) 62%, transparent);
   cursor: pointer;
 }
 
@@ -746,7 +809,7 @@ const acknowledgeActiveReport = () => {
 .care-list-page,
 .care-focus-page,
 .care-report-detail {
-  width: min(1120px, 100%);
+  width: min(1080px, 100%);
   min-width: 0;
   margin: 0 auto;
   padding: clamp(22px, 4vw, 48px) clamp(16px, 4vw, 48px) 118px;
@@ -754,32 +817,27 @@ const acknowledgeActiveReport = () => {
 
 .care-hero {
   position: relative;
-  min-height: 210px;
+  min-height: 248px;
   padding: clamp(26px, 5vw, 58px);
   display: flex;
   align-items: flex-end;
   overflow: hidden;
   border-radius: 10px 44px 10px 44px;
-  color: #f6f8fb;
-  background:
-    linear-gradient(112deg, rgba(43, 60, 84, 0.97), rgba(91, 115, 150, 0.86)),
-    repeating-linear-gradient(90deg, transparent 0 40px, rgba(255,255,255,.05) 40px 41px);
+  color: var(--care-ink);
+  background: #c9dff1;
   box-shadow: var(--care-shadow);
 }
 
-.care-hero::after {
+.care-hero::before {
   content: '';
   position: absolute;
-  width: 310px;
-  height: 310px;
-  right: -90px;
-  top: -150px;
-  border: 1px solid rgba(255,255,255,.24);
-  border-radius: 50%;
-  box-shadow: 0 0 0 42px rgba(255,255,255,.04), 0 0 0 90px rgba(255,255,255,.025);
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(90deg, rgba(224, 238, 249, .94) 0%, rgba(224, 238, 249, .78) 42%, rgba(224, 238, 249, .08) 68%, transparent 100%);
 }
 
-.care-hero__copy { position: relative; z-index: 1; max-width: 670px; padding-right: clamp(96px, 24vw, 150px); }
+.care-hero__art { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center; }
+.care-hero__copy { position: relative; z-index: 2; max-width: 610px; padding-right: clamp(40px, 18vw, 120px); }
 .care-kicker,
 .care-sheet__eyebrow {
   display: block;
@@ -803,8 +861,11 @@ const acknowledgeActiveReport = () => {
 }
 
 .care-hero h1 { font-size: clamp(30px, 5vw, 54px); }
-.care-hero p { max-width: 620px; margin: 18px 0 0; color: rgba(248,252,248,.79); line-height: 1.65; }
-.care-hero__mascot { position: absolute; right: clamp(20px, 4vw, 40px); top: clamp(18px, 3vw, 30px); z-index: 1; filter: drop-shadow(0 10px 22px rgba(30, 44, 62, 0.28)); }
+.care-hero p { max-width: 560px; margin: 18px 0 0; color: color-mix(in srgb, var(--care-ink) 74%, transparent); line-height: 1.65; }
+.is-night .care-hero { color:#f6f8fb; background:#28394f; }
+.is-night .care-hero__art { filter:brightness(.62) saturate(.8); }
+.is-night .care-hero::before { background:linear-gradient(90deg, rgba(28,38,52,.96) 0%, rgba(28,38,52,.82) 42%, rgba(28,38,52,.16) 72%, transparent 100%); }
+.is-night .care-hero p { color:rgba(246,248,251,.76); }
 
 .care-search {
   width: min(680px, calc(100% - 32px));
@@ -829,51 +890,56 @@ const acknowledgeActiveReport = () => {
 
 .care-category-strip {
   display: flex;
-  gap: 8px;
+  gap: clamp(8px, 2vw, 22px);
   overflow-x: auto;
-  padding: 2px 0 18px;
+  padding: 3px 2px 15px;
+  border-bottom: 1px solid var(--care-line);
   scrollbar-width: none;
 }
 .care-category-strip::-webkit-scrollbar { display: none; }
 .care-category-strip button {
-  min-height: 42px;
-  padding: 0 15px;
+  min-height: 44px;
+  padding: 0 4px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   flex: 0 0 auto;
-  border: 1px solid var(--care-line);
-  border-radius: 99px;
-  background: var(--care-panel);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--care-muted);
+  background: transparent;
   cursor: pointer;
 }
-.care-category-strip button.is-active { color: var(--care-action-text); border-color: var(--care-accent-strong); background: var(--care-accent-strong); }
+.care-category-strip button.is-active { color: var(--care-accent-strong); border-bottom-color: var(--care-accent-strong); background: transparent; }
 
 .care-overview {
-  margin: 2px 0 22px;
+  margin: 12px 0 34px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 0;
+  border-block: 1px solid var(--care-line);
 }
 .care-overview > button {
   min-width: 0;
-  min-height: 94px;
-  padding: 15px;
+  min-height: 108px;
+  padding: 20px 22px;
   display: grid;
   grid-template-columns: 46px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  border: 1px solid var(--care-line);
-  border-radius: 18px 18px 6px 18px;
+  border: 0;
+  border-radius: 0;
   color: var(--care-ink);
-  background: var(--care-panel);
+  background: transparent;
   text-align: left;
-  box-shadow: 0 8px 20px rgba(38, 58, 50, .055);
+  box-shadow: none;
   cursor: pointer;
 }
-.care-overview > button:hover { background: var(--care-panel-soft); }
+.care-overview > button + button { border-left:1px solid var(--care-line); }
+.care-overview > button:hover { background:color-mix(in srgb,var(--care-panel-soft) 38%,transparent); }
 .care-overview > button > i { color: var(--care-muted); }
-.care-overview__icon { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 16px 16px 16px 5px; }
+.care-overview__icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius:50%; }
 .care-overview__icon.is-appointment { color: var(--care-accent-strong); background: var(--care-panel-soft); }
 .care-overview__icon.is-report { color: #7b3d19; background: #f6dfcf; }
 .is-night .care-overview__icon.is-report { color: #ffd3b4; background: #4b3023; }
@@ -884,7 +950,7 @@ const acknowledgeActiveReport = () => {
 .care-overview__copy span { color: var(--care-muted); font-size: 11px; }
 
 .care-section-heading {
-  margin: 14px 0 18px;
+  margin: 14px 0 8px;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -893,27 +959,28 @@ const acknowledgeActiveReport = () => {
 .care-section-heading h2 { margin: 0; font-family: Georgia, "Songti SC", serif; font-size: clamp(24px, 3vw, 34px); font-weight: 600; }
 .care-section-heading > span { color: var(--care-muted); font-size: 13px; }
 
-.care-institution-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.care-institution-card { position: relative; min-width: 0; overflow: hidden; border: 1px solid var(--care-line); border-radius: 8px 28px 8px 28px; background: var(--care-panel); box-shadow: 0 10px 24px rgba(38, 58, 50, .07); }
-.care-institution-card__body { width: 100%; min-height: 226px; padding: 25px; display: grid; grid-template-columns: 50px minmax(0, 1fr) auto; align-items: start; gap: 14px; border: 0; text-align: left; background: none; cursor: pointer; }
-.care-institution-card__body:hover { background: color-mix(in srgb, var(--care-panel-soft) 44%, transparent); }
-.care-institution-card__index { position: absolute; right: 17px; bottom: 9px; color: color-mix(in srgb, var(--care-accent) 18%, transparent); font-family: Georgia, serif; font-size: 58px; line-height: 1; }
-.care-institution-card__icon { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 17px 17px 17px 5px; color: var(--care-accent-strong); background: var(--care-panel-soft); }
+.care-institution-grid { max-width:900px; display:grid; grid-template-columns:1fr; gap:0; }
+.care-institution-card { position:relative; min-width:0; overflow:hidden; border:0; border-bottom:1px solid var(--care-line); border-radius:0; background:transparent; box-shadow:none; }
+.care-institution-card:first-child { border-top:1px solid var(--care-line); }
+.care-institution-card__body { width:100%; min-height:0; padding:24px 8px; display:grid; grid-template-columns:54px minmax(0,1fr) auto; align-items:center; gap:18px; border:0; text-align:left; background:none; cursor:pointer; }
+.care-institution-card__body:hover { background:color-mix(in srgb,var(--care-panel-soft) 35%,transparent); }
+.care-institution-card__index { display:none; }
+.care-institution-card__icon { width:52px; height:52px; display:grid; place-items:center; border-radius:50%; color:var(--care-accent-strong); background:var(--care-panel-soft); }
 .care-institution-card.is-apricot .care-institution-card__icon { color: #7b3d19; background: #f6dfcf; }
 .is-night .care-institution-card.is-apricot .care-institution-card__icon { color: #ffd3b4; background: #4b3023; }
 .care-institution-card.is-blue .care-institution-card__icon { color: #275565; background: #dbeaf0; }
 .is-night .care-institution-card.is-blue .care-institution-card__icon { color: #b8ddea; background: #203b45; }
 .care-institution-card.is-lilac .care-institution-card__icon { color: #654876; background: #ede4f2; }
 .is-night .care-institution-card.is-lilac .care-institution-card__icon { color: #ddc8e9; background: #3d3045; }
-.care-institution-card__content { min-width: 0; display: grid; gap: 7px; }
+.care-institution-card__content { min-width:0; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:5px 28px; align-items:center; }
 .care-institution-card__place { color: var(--care-accent); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-.care-institution-card__content strong { font-family: Georgia, "Songti SC", serif; font-size: 21px; line-height: 1.25; overflow-wrap: anywhere; }
-.care-institution-card__content > span:not(.care-institution-card__place):not(.care-institution-card__meta) { color: var(--care-muted); font-size: 13px; line-height: 1.55; }
-.care-institution-card__meta { margin-top: 9px; display: grid; gap: 6px; color: var(--care-muted); font-size: 12px; }
+.care-institution-card__content strong { grid-column:1; font-family:Georgia,"Songti SC",serif; font-size:22px; line-height:1.25; overflow-wrap:anywhere; }
+.care-institution-card__content > span:not(.care-institution-card__place):not(.care-institution-card__meta) { grid-column:1; color:var(--care-muted); font-size:13px; line-height:1.55; }
+.care-institution-card__meta { grid-column:2; grid-row:1/4; margin:0; display:grid; gap:8px; color:var(--care-muted); font-size:12px; }
 .care-institution-card__meta span { display: flex; align-items: center; gap: 7px; }
 .care-institution-card__arrow { margin-top: 4px; color: var(--care-muted); }
 .care-institution-card.is-unavailable { opacity: .86; }
-.care-unavailable-ribbon { position: absolute; left: 24px; bottom: 19px; display: flex; align-items: center; gap: 7px; color: var(--care-danger); font-size: 12px; font-weight: 700; }
+.care-unavailable-ribbon { position:absolute; right:50px; bottom:12px; display:flex; align-items:center; gap:7px; color:var(--care-danger); font-size:11px; font-weight:700; }
 
 .care-bottom-nav {
   min-height: 70px;
@@ -931,32 +998,45 @@ const acknowledgeActiveReport = () => {
 .care-bottom-nav__icon { position: relative; font-size: 18px; }
 .care-bottom-nav__badge { position: absolute; min-width: 17px; height: 17px; padding: 0 4px; top: -9px; right: -12px; display: grid; place-items: center; border: 2px solid var(--care-panel); border-radius: 99px; color: #fff; background: #a64d45; font-size: 9px; font-weight: 800; }
 
-.care-page-title { max-width: 720px; margin-bottom: 30px; }
+.care-page-lead { position:relative; min-height:260px; margin-bottom:36px; display:flex; align-items:center; overflow:hidden; border-radius:10px 42px 10px 42px; background:var(--care-panel-soft); }
+.care-page-lead::after { content:''; position:absolute; inset:0; z-index:1; background:linear-gradient(90deg,var(--care-panel-soft) 0%,color-mix(in srgb,var(--care-panel-soft) 94%,transparent) 46%,color-mix(in srgb,var(--care-panel-soft) 20%,transparent) 70%,transparent 100%); }
+.care-page-title { position:relative; z-index:2; width:62%; max-width:660px; margin:0; padding:clamp(28px,5vw,52px); align-self:center; }
 .care-page-title h1 { font-size: clamp(36px, 6vw, 62px); }
 .care-page-title p { margin: 14px 0 0; color: var(--care-muted); line-height: 1.65; }
-.care-page-title--reports { padding-left: 20px; border-left: 4px solid var(--care-apricot); }
+.care-page-title--reports { padding-left:clamp(28px,5vw,52px); border-left:0; }
+.care-page-lead__art { position:absolute; inset:0 0 0 auto; width:52%; height:100%; display:block; object-fit:cover; object-position:center 69%; border:0; border-radius:0; background:var(--care-panel-soft); box-shadow:none; }
+.care-page-lead--reports { background:#f4e9df; }
+.care-page-lead--reports::after { background:linear-gradient(90deg,#f4e9df 0%,rgba(244,233,223,.94) 46%,rgba(244,233,223,.18) 72%,transparent 100%); }
+.care-page-lead--reports .care-page-lead__art { object-position:center 73%; }
+.is-night .care-page-lead--reports { background:#302a2a; }
+.is-night .care-page-lead--reports::after { background:linear-gradient(90deg,#302a2a 0%,rgba(48,42,42,.94) 46%,rgba(48,42,42,.22) 72%,transparent 100%); }
+.is-night .care-page-lead__art { filter:brightness(.72) saturate(.82); }
 
 .care-appointment-stack,
-.care-report-stack { display: grid; gap: 14px; }
-.care-appointment-card { min-width: 0; display: grid; grid-template-columns: 112px minmax(0, 1fr); border: 1px solid var(--care-line); border-radius: 9px 28px 9px 28px; overflow: hidden; background: var(--care-panel); box-shadow: 0 10px 24px rgba(38,58,50,.06); }
-.care-appointment-card__date { padding: 25px 16px; display: grid; place-items: center; align-content: center; color: #f6fbf8; background: var(--care-accent-strong); text-align: center; }
+.care-report-stack { max-width:900px; display:grid; gap:0; }
+.care-appointment-card { min-width:0; display:grid; grid-template-columns:96px minmax(0,1fr); border:0; border-bottom:1px solid var(--care-line); border-radius:0; overflow:visible; background:transparent; box-shadow:none; }
+.care-appointment-card:first-child { border-top:1px solid var(--care-line); }
+.care-appointment-card__date { position:relative; padding:24px 16px; display:grid; place-items:center; align-content:center; color:var(--care-accent-strong); background:transparent; text-align:center; }
+.care-appointment-card__date::after { content:''; position:absolute; right:0; top:22px; bottom:22px; width:1px; background:var(--care-line); }
 .care-appointment-card__date span { font-size: 12px; font-weight: 800; text-transform: uppercase; }
 .care-appointment-card__date strong { font-family: Georgia, serif; font-size: 44px; line-height: 1; }
 .care-appointment-card__date small { margin-top: 5px; opacity: .75; }
-.care-appointment-card.is-cancelled .care-appointment-card__date { color: var(--care-muted); background: var(--care-panel-soft); }
-.care-appointment-card__body { min-width: 0; padding: 22px 25px; }
+.care-appointment-card.is-cancelled .care-appointment-card__date { color:var(--care-muted); background:transparent; }
+.care-appointment-card__body { min-width:0; padding:24px 28px; }
 .care-appointment-card__body h2 { margin: 7px 0 4px; font-family: Georgia, "Songti SC", serif; font-size: 23px; overflow-wrap: anywhere; }
 .care-appointment-card__body > p { margin: 0; color: var(--care-muted); }
-.care-status-chip { width: fit-content; padding: 4px 9px; border-radius: 99px; color: var(--care-accent-strong); background: var(--care-panel-soft); font-size: 11px; font-weight: 800; }
+.care-status-chip { width:fit-content; padding:0; border-radius:0; color:var(--care-accent-strong); background:transparent; font-size:11px; font-weight:800; }
+.care-status-chip::before { content:'•'; margin-right:6px; color:var(--care-apricot); }
 .care-appointment-card__body dl { margin: 17px 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .care-appointment-card__body dl div { min-width: 0; }
 .care-appointment-card__body dt { color: var(--care-muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .care-appointment-card__body dd { margin: 4px 0 0; font-size: 13px; overflow-wrap: anywhere; }
 .care-appointment-card__actions { margin-top: 17px; display: flex; gap: 8px; }
-.care-text-button { min-height: 40px; padding: 0 12px; border: 1px solid var(--care-line); border-radius: 12px; color: var(--care-accent-strong); background: transparent; cursor: pointer; }
+.care-text-button { min-height:40px; padding:0 4px; border:0; border-bottom:1px solid color-mix(in srgb,var(--care-accent) 35%,transparent); border-radius:0; color:var(--care-accent-strong); background:transparent; cursor:pointer; }
 
-.care-report-row { position: relative; width: 100%; min-width: 0; padding: 20px 18px; display: grid; grid-template-columns: 5px 44px minmax(0, 1fr) auto; align-items: center; gap: 14px; border: 1px solid var(--care-line); border-radius: 8px 22px 8px 22px; text-align: left; background: var(--care-panel); cursor: pointer; }
-.care-report-row:hover { background: color-mix(in srgb, var(--care-panel-soft) 45%, var(--care-panel)); }
+.care-report-row { position:relative; width:100%; min-width:0; padding:24px 8px; display:grid; grid-template-columns:5px 44px minmax(0,1fr) auto; align-items:center; gap:16px; border:0; border-bottom:1px solid var(--care-line); border-radius:0; text-align:left; background:transparent; cursor:pointer; }
+.care-report-row:first-child { border-top:1px solid var(--care-line); }
+.care-report-row:hover { background:color-mix(in srgb,var(--care-panel-soft) 34%,transparent); }
 .care-report-row__marker { width: 5px; height: 44px; border-radius: 99px; background: transparent; }
 .care-report-row.is-unread .care-report-row__marker { background: var(--care-apricot); }
 .care-report-row__icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; color: var(--care-accent-strong); background: var(--care-panel-soft); }
@@ -1053,6 +1133,7 @@ const acknowledgeActiveReport = () => {
 
 .care-source-unavailable,.care-empty-state { padding:clamp(32px,6vw,66px); display:grid; justify-items:center; text-align:center; border:1px dashed var(--care-line); border-radius:10px 30px 10px 30px; background:var(--care-panel); }
 .care-source-unavailable > i,.care-empty-state > i { font-size:34px; color:var(--care-danger); }
+.care-empty-state__art { width:clamp(118px,20vw,178px); aspect-ratio:1; display:block; object-fit:contain; filter:drop-shadow(0 9px 16px rgba(38,58,50,.12)); }
 .care-source-unavailable h2,.care-source-unavailable h3,.care-empty-state h2 { margin:15px 0 7px; font-family:Georgia,"Songti SC",serif; }
 .care-source-unavailable p,.care-empty-state p { max-width:600px; margin:4px 0 18px; color:var(--care-muted); line-height:1.65; }
 
@@ -1084,6 +1165,7 @@ const acknowledgeActiveReport = () => {
 .care-booking-receipt span { color:var(--care-muted); font-size:12px; line-height:1.5; }
 .care-sheet__error { padding:12px; border-radius:10px; color:var(--care-danger); background:color-mix(in srgb,var(--care-danger) 10%,transparent); }
 .care-privacy-list { display:grid; gap:10px; }
+.care-privacy-art { width:100%; height:156px; margin-bottom:4px; display:block; object-fit:cover; object-position:center 66%; border:1px solid var(--care-line); border-radius:8px 24px 8px 24px; background:var(--care-panel-soft); }
 .care-privacy-list p { margin:0; padding:15px; display:grid; grid-template-columns:24px minmax(0,1fr); gap:10px; border:1px solid var(--care-line); border-radius:14px; line-height:1.6; }
 .care-privacy-list i { margin-top:4px; color:var(--care-accent); }
 
@@ -1095,19 +1177,38 @@ const acknowledgeActiveReport = () => {
   .care-brand__mark { width:40px; height:40px; }
   .care-brand__words small { display:none; }
   .care-discover,.care-list-page,.care-focus-page,.care-report-detail { padding:18px 12px 96px; }
-  .care-hero { min-height:190px; padding:25px 22px 50px; border-radius:8px 30px 8px 30px; }
+  .care-hero { min-height:236px; padding:25px 22px 48px; border-radius:8px 30px 8px 30px; }
+  .care-hero::before { background:linear-gradient(90deg, rgba(224,238,249,.93) 0%, rgba(224,238,249,.78) 52%, rgba(224,238,249,.04) 78%, transparent 100%); }
+  .is-night .care-hero::before { background:linear-gradient(90deg, rgba(28,38,52,.96) 0%, rgba(28,38,52,.82) 58%, rgba(28,38,52,.16) 100%); }
+  .care-hero__art { object-position:62% center; }
+  .care-hero__copy { max-width:82%; padding-right:0; }
   .care-hero h1 { font-size:31px; }
   .care-hero p { font-size:13px; }
-  .care-hero__mascot { right: 16px; bottom: 14px; }
   .care-search { width:calc(100% - 20px); min-height:54px; margin-top:-25px; }
   .care-overview { grid-template-columns:1fr; }
+  .care-overview > button { min-height:88px; padding:15px 8px; }
+  .care-overview > button + button { border-left:0; border-top:1px solid var(--care-line); }
   .care-institution-grid { grid-template-columns:1fr; }
-  .care-institution-card__body { min-height:215px; padding:20px; grid-template-columns:46px minmax(0,1fr); }
+  .care-institution-card__body { min-height:0; padding:20px 4px; grid-template-columns:46px minmax(0,1fr); gap:13px; }
   .care-institution-card__arrow { display:none; }
-  .care-unavailable-ribbon { left:80px; }
+  .care-institution-card__content { grid-template-columns:1fr; gap:5px; }
+  .care-institution-card__content strong,
+  .care-institution-card__content > span:not(.care-institution-card__place):not(.care-institution-card__meta),
+  .care-institution-card__meta { grid-column:1; grid-row:auto; }
+  .care-institution-card__meta { margin-top:7px; display:flex; flex-wrap:wrap; gap:7px 14px; }
+  .care-unavailable-ribbon { left:auto; right:4px; bottom:7px; }
   .care-bottom-nav { justify-content:space-around; gap:3px; }
   .care-bottom-nav button { min-width:70px; }
-  .care-appointment-card { grid-template-columns:80px minmax(0,1fr); }
+  .care-page-lead { min-height:224px; margin-bottom:26px; border-radius:8px 30px 8px 30px; }
+  .care-page-lead::after { background:linear-gradient(90deg,var(--care-panel-soft) 0%,color-mix(in srgb,var(--care-panel-soft) 92%,transparent) 56%,color-mix(in srgb,var(--care-panel-soft) 8%,transparent) 86%,transparent 100%); }
+  .care-page-lead--reports::after { background:linear-gradient(90deg,#f4e9df 0%,rgba(244,233,223,.92) 56%,rgba(244,233,223,.08) 86%,transparent 100%); }
+  .is-night .care-page-lead--reports::after { background:linear-gradient(90deg,#302a2a 0%,rgba(48,42,42,.92) 56%,rgba(48,42,42,.08) 86%,transparent 100%); }
+  .care-page-lead__art { width:54%; height:100%; object-position:center 70%; }
+  .care-page-title { width:68%; padding:24px 18px; }
+  .care-page-title h1 { font-size:34px; }
+  .care-page-title p { font-size:12px; line-height:1.55; }
+  .care-page-title--reports { padding-left:18px; }
+  .care-appointment-card { grid-template-columns:76px minmax(0,1fr); }
   .care-appointment-card__date { padding:18px 10px; }
   .care-appointment-card__date strong { font-size:34px; }
   .care-appointment-card__body { padding:18px 16px; }

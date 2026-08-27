@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "baseUrl": "https://cloudflare-imgbed-7z3.pages.dev",
-  "updatedAt": "2026-08-24T17:12:56.723Z",
+  "updatedAt": "2026-08-27T08:43:34.298Z",
   "assets": [
     {
       "batchId": "map-place-media-batch-08-20260824",
@@ -7935,6 +7935,66 @@
       "verifiedAt": "2026-08-11T19:35:50.055Z"
     },
     {
+      "batchId": "healthcare-ui-scenes-20260827-v1",
+      "path": "output/imagegen/healthcare-ip/runtime-ui-20260827/ondam-care-appointment-scene-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/healthcare/ip/ondam-care-appointment-scene-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/healthcare/ip/ondam-care-appointment-scene-v1.webp",
+      "bytes": 19174,
+      "sha256": "04573ae1e12fe25a748581164193cf995813938e82bcf3a59f8256f077c441e1",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-27T08:43:34.293Z"
+    },
+    {
+      "batchId": "healthcare-ui-scenes-20260827-v1",
+      "path": "output/imagegen/healthcare-ip/runtime-ui-20260827/ondam-care-privacy-scene-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/healthcare/ip/ondam-care-privacy-scene-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/healthcare/ip/ondam-care-privacy-scene-v1.webp",
+      "bytes": 20840,
+      "sha256": "16ee2967a918b6dc0c1a86d0c9d16c9dd77480cad2f2922ea0769a87b95036c2",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-27T08:43:34.298Z"
+    },
+    {
+      "batchId": "healthcare-ui-scenes-20260827-v1",
+      "path": "output/imagegen/healthcare-ip/runtime-ui-20260827/ondam-care-report-scene-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/healthcare/ip/ondam-care-report-scene-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/healthcare/ip/ondam-care-report-scene-v1.webp",
+      "bytes": 19764,
+      "sha256": "c8ee3881eaea5313c927716bef1ce3bd2c05becf40e53b1b16af1643ad2e5557",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-27T08:43:34.271Z"
+    },
+    {
+      "batchId": "healthcare-ui-scenes-20260827-v1",
+      "path": "output/imagegen/healthcare-ip/runtime-ui-20260827/ondam-care-search-magnifier-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/healthcare/ip/ondam-care-search-magnifier-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/healthcare/ip/ondam-care-search-magnifier-v1.webp",
+      "bytes": 22416,
+      "sha256": "096847bf3a4e91b06a12d616da20508a3ba9b13ed57ec04eb1fd2c89584320f0",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-27T08:43:34.128Z"
+    },
+    {
+      "batchId": "healthcare-ui-scenes-20260827-v1",
+      "path": "output/imagegen/healthcare-ip/runtime-ui-20260827/ondam-care-welcome-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/healthcare/ip/ondam-care-welcome-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/healthcare/ip/ondam-care-welcome-hero-v1.webp",
+      "bytes": 26624,
+      "sha256": "7db6691f431a8e500f7101631cb17f8d4b5a21cf1e56b20806dc11473aa51c94",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-27T08:43:34.012Z"
+    },
+    {
       "batchId": "cloud-pastel-appearance-20260824",
       "path": "output/imagegen/cloud-pastel-animal-icons-accepted-round2/appearance-crested-peacock.webp",
       "aliasPaths": [],
@@ -8101,6 +8161,18 @@
       "sha256": "028c85633f8aa92922f73a37b904ffd5cb087614c72370f97f01984f539be10d",
       "mimeType": "image/png",
       "verifiedAt": "2026-08-23T19:03:33.869Z"
+    },
+    {
+      "batchId": "healthcare-elephant-logo-v2-20260827",
+      "path": "output/imagegen/healthcare-ip/ondam-care-elephant-medical-plus-v2.png",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/shared/app-icons/ondam-care-app-icon-v2.png",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/shared/app-icons/ondam-care-app-icon-v2.png",
+      "bytes": 1109691,
+      "sha256": "e26e36a720d0f4555ef408b10373d1a0b9b6953af745126b92693d8a828b7acd",
+      "mimeType": "image/png",
+      "verifiedAt": "2026-08-27T04:43:56.888Z"
     },
     {
       "batchId": "app-shell-brand-icons-20260823-v1",

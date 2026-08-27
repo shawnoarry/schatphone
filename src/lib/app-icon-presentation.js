@@ -89,7 +89,7 @@ APP_ICON_LABELS.app_healthcare = { zh: '温谈健康', en: 'Ondam Care', ko: '�
 BUILT_IN_APP_ICON_META.app_healthcare = {
   icon: 'fas fa-heart-pulse',
   accent: 'cool',
-  imageUrl: projectUiAssetUrl('shared/app-icons/ondam-care-app-icon-v1.png'),
+  imageUrl: projectUiAssetUrl('shared/app-icons/ondam-care-app-icon-v2.png'),
 }
 APP_ICON_LABELS.app_jari_housing = { zh: '住处', en: 'Jari', ko: '자리' }
 BUILT_IN_APP_ICON_META.app_jari_housing = {

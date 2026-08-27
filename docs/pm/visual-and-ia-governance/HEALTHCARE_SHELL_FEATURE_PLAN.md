@@ -12,7 +12,8 @@ It is not a real healthcare service. It never requests real health information, 
 
 The shell uses an `安静的诊疗档案夹 / calm care folio` identity:
 
-- the accepted Home/App Store identity is `ondam-care-app-icon-v1.png`, the user-selected calm-palette A1 baby-elephant doctor; the mascot is available for later appointment, report, empty-state, and guidance illustrations, while `fas fa-heart-pulse` remains the accessible and customization fallback glyph;
+- the accepted Home/App Store identity is `ondam-care-app-icon-v2.png`, the user-approved refinement of the calm-palette A1 baby-elephant doctor. V2 preserves the original composition, palette, proportions, and expression, adds restrained trunk/face separation, and places a rounded medical `+` on the slate bib; `fas fa-heart-pulse` remains the accessible and customization fallback glyph;
+- `HEALTHCARE_IP_ASSET_PLAN.md` maps the same elephant identity into the shell's real hero, discovery, appointment, report, privacy, unavailable, error, and cross-owner handoff surfaces without changing Healthcare product boundaries;
 - warm paper and ink-green surfaces instead of a generic clinical dashboard;
 - clipped folio corners, appointment-receipt perforation, revision stamps, and report seals as the recognizable material language;
 - institutional discovery cards use restrained geographic color families rather than interchangeable white cards;

@@ -205,7 +205,7 @@ describe('app icon presentation helpers', () => {
     const expected = {
       app_browser: 'prism-browser-app-icon-v1.png',
       app_community: 'ripple-community-app-icon-v1.png',
-      app_healthcare: 'ondam-care-app-icon-v1.png',
+      app_healthcare: 'ondam-care-app-icon-v2.png',
       app_jari_housing: 'jari-housing-app-icon-v1.png',
     }
 

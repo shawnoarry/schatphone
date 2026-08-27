@@ -1,10 +1,12 @@
 import { expect, test } from '@playwright/test'
+import { projectUiAssetUrl } from '../src/lib/project-assets.js'
 import { navigateInsideUnlockedApp, unlockToHome, waitForAppRouteReady } from './helpers/navigation.js'
+import { installProjectAssetRoute, prewarmProjectAssets } from './helpers/project-assets.js'
 
 const BRAND_ICONS = [
   ['app_browser', 'prism-browser-app-icon-v1.png'],
   ['app_community', 'ripple-community-app-icon-v1.png'],
-  ['app_healthcare', 'ondam-care-app-icon-v1.png'],
+  ['app_healthcare', 'ondam-care-app-icon-v2.png'],
   ['app_jari_housing', 'jari-housing-app-icon-v1.png'],
 ]
 
@@ -35,6 +37,11 @@ const expectLoadedBrandImage = async (image, fileName) => {
 
 test.beforeEach(async ({ page }) => {
   await seedSystem(page)
+  await prewarmProjectAssets(
+    page.request,
+    BRAND_ICONS.map(([, fileName]) => projectUiAssetUrl(`shared/app-icons/${fileName}`)),
+  )
+  await installProjectAssetRoute(page)
   await unlockToHome(page)
 })
 
