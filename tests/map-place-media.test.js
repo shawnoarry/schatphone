@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import projectAssetRegistry from '../config/project-assets.json'
 import {
   MAP_PLACE_MEDIA_AUTHENTICITY_GRADE,
   MAP_PLACE_MEDIA_KIND,
@@ -142,19 +143,22 @@ const APPROVED_HERO_BATCH_10_IDS = [
   'seoul-eggdrop-gangnam-woosung',
 ]
 
-const AREA_DETAIL_ONLY_PLACE_IDS = [
-  'seoul-sm-hq',
+const APPROVED_HERO_BATCH_11_IDS = [
   'seoul-myeongdong-kyoja-main',
-  'seoul-sillim-one-room-district',
   'seoul-namdaemun-pharmacy-district',
   'seoul-london-bagel-museum-anguk',
   'seoul-hongdae',
   'seoul-sanggye-jugong-district',
   'seoul-acro-river-park',
   'seoul-hannam-the-hill',
+  'seoul-club-ff',
+]
+
+const AREA_DETAIL_ONLY_PLACE_IDS = [
+  'seoul-sm-hq',
+  'seoul-sillim-one-room-district',
   'seoul-emart-wangsimni',
   'seoul-the-plus-plastic-surgery',
-  'seoul-club-ff',
 ]
 
 const INTEGRATED_GALLERY_COUNTS = {
@@ -210,31 +214,34 @@ const INTEGRATED_GALLERY_COUNTS = {
   ...Object.fromEntries(APPROVED_HERO_BATCH_08_IDS.map((placeId) => [placeId, 1])),
   ...Object.fromEntries(APPROVED_HERO_BATCH_09_IDS.map((placeId) => [placeId, 1])),
   ...Object.fromEntries(APPROVED_HERO_BATCH_10_IDS.map((placeId) => [placeId, 1])),
+  ...Object.fromEntries(APPROVED_HERO_BATCH_11_IDS.map((placeId) => [placeId, 1])),
   'seoul-yg-hq': 3,
   'seoul-samsung-medical-center': 2,
   'seoul-signiel': 3,
   'seoul-kb-kookmin-headquarters': 2,
   'seoul-lotte-department-main': 3,
   'seoul-lotte-avenuel-world-tower': 3,
-  'seoul-namdaemun-pharmacy-district': 1,
-  'seoul-london-bagel-museum-anguk': 1,
-  'seoul-hongdae': 1,
-  'seoul-sanggye-jugong-district': 1,
-  'seoul-acro-river-park': 1,
-  'seoul-hannam-the-hill': 1,
+  'seoul-myeongdong-kyoja-main': 3,
+  'seoul-sillim-one-room-district': 2,
+  'seoul-namdaemun-pharmacy-district': 4,
+  'seoul-london-bagel-museum-anguk': 4,
+  'seoul-hongdae': 4,
+  'seoul-sanggye-jugong-district': 4,
+  'seoul-acro-river-park': 4,
+  'seoul-hannam-the-hill': 4,
   'seoul-lg-twin-towers': 3,
   'seoul-starship-hq': 2,
   'seoul-hyundai-apgujeong-main': 3,
   'seoul-id-hospital': 2,
-  'seoul-sm-hq': 3,
+  'seoul-sm-hq': 6,
   'seoul-cube-hq': 2,
-  'seoul-emart-wangsimni': 1,
+  'seoul-emart-wangsimni': 3,
   'seoul-homeplus-world-cup': 2,
-  'seoul-the-plus-plastic-surgery': 1,
+  'seoul-the-plus-plastic-surgery': 2,
   'seoul-cgv-wangsimni': 3,
   'seoul-jennyhouse-cheongdam-hill': 2,
   'seoul-a-by-bom-cheongdam': 2,
-  'seoul-club-ff': 2,
+  'seoul-club-ff': 5,
   'seoul-raemian-one-bailey': 2,
   'seoul-ph129-cheongdam': 2,
   'seoul-soonsoo-cheongdam': 3,
@@ -266,7 +273,7 @@ describe('map place media governance', () => {
 
   test('validates the reviewed media registry', () => {
     const seoulPlaceIds = new Set(getMapPackById('real-seoul-v1').places.map((place) => place.id))
-    expect(MAP_PLACE_MEDIA_RECORDS).toHaveLength(224)
+    expect(MAP_PLACE_MEDIA_RECORDS).toHaveLength(254)
     for (const record of MAP_PLACE_MEDIA_RECORDS) {
       expect(validateMapPlaceMediaRecord(record)).toEqual({ valid: true, errors: [] })
     }
@@ -275,6 +282,19 @@ describe('map place media governance', () => {
         .filter((record) => record.mapPackId === 'real-seoul-v1' && !seoulPlaceIds.has(record.placeId))
         .map((record) => record.placeId)),
     ]).toEqual([])
+  })
+
+  test('registers every reviewed runtime URL at the exact path requested by the app', () => {
+    const verifiedDownloadUrls = new Set(
+      projectAssetRegistry.assets.map((asset) => asset.downloadUrl),
+    )
+    const missingRuntimeUrls = [
+      ...new Set(MAP_PLACE_MEDIA_RECORDS
+        .map((record) => record.asset?.url)
+        .filter((url) => url && !verifiedDownloadUrls.has(url))),
+    ]
+
+    expect(missingRuntimeUrls).toEqual([])
   })
 
   test('keeps exact heroes separate from detail-only area atmosphere', () => {

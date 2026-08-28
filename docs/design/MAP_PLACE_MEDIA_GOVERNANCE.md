@@ -1,6 +1,6 @@
 # Map Place Media Governance
 
-Updated: 2026-08-22
+Updated: 2026-08-28
 
 ## Purpose
 
@@ -73,18 +73,32 @@ Image failure returns to the same category fallback without shifting the sheet h
 
 Grades are evidence labels, not quality scores. A clear `B` is preferable to a falsely precise `A`, but it supplements Place Details and never substitutes for card-level place recognition.
 
+## Acquisition Tiers
+
+Acquisition effort follows the place's product role rather than applying one exact-facade search rule to the whole Seoul catalog:
+
+1. **Identity-sensitive named places**: headquarters, hospitals, malls, transport hubs, campuses, hotels, venues, landmarks, and other destinations whose specific building identity matters. Validate that the place and canonical name still exist, then prefer exact real photography. A clearly labeled generated reconstruction is acceptable when a bounded search does not produce a convincing card image.
+2. **Everyday facilities**: convenience stores, pharmacies, gas stations, routine service branches, and similar life infrastructure. Exact-branch photography is optional. A source-traced representative image from the same brand, a shared brand/category asset, or a clearly labeled generated category visual is sufficient for card recognition.
+3. **Area concepts and privacy-sensitive places**: residential districts, street clusters, and other records without one public facade. Use a truthful area photograph in the detail gallery or an explicitly generated/category card image; do not invent an exact storefront claim.
+4. **Fictional and user-created places**: prefer user media when provided, otherwise use generated reconstruction or the category fallback with the existing provenance rules.
+
+Shared brand/category assets may be reused by later places in the same category or brand. They remain grade `D / category_fallback` unless the media actually reconstructs the named place and qualifies for grade C. The UI and alt/truth copy must say `brand representative`, `category illustration`, or `generated image` as applicable; it must never call a shared asset the exact branch facade.
+
 ## Source Rules
 
-Use this order by presentation role:
+Use this order by presentation role and acquisition tier:
 
-1. card hero: an exact-place photograph with a durable source page, recorded creator, and the applicable reusable-license or personal-project usage metadata;
-2. card hero when separately approved: a generated reconstruction with durable generation provenance and visible generated labeling;
-3. card hero fallback: the reviewed category asset with copy that clearly says it does not represent the place's real appearance;
-4. detail gallery supplement: a source-traced real area photograph, clearly classified as `area_atmosphere` and never promoted to hero.
+1. identity-sensitive card hero: an exact-place photograph with a durable source page, recorded creator, and the applicable reusable-license or personal-project usage metadata;
+2. identity-sensitive card hero when exact photography remains weak after a bounded search: a generated reconstruction with durable generation provenance and visible generated labeling;
+3. everyday-facility card hero: an exact branch photograph when readily available, otherwise a source-traced same-brand representative image or a reviewed generated brand/category asset, visibly labeled so it does not claim the exact facade;
+4. card hero fallback: the reviewed category asset with copy that clearly says it does not represent the place's real appearance;
+5. detail gallery supplement: a source-traced real area photograph, clearly classified as `area_atmosphere` and never promoted to hero.
 
 Accepted photo evidence must provide an author/creator or source owner, durable source page, access date, and a byte hash for the locally archived source artifact. Record explicit reusable-license metadata whenever the source provides it. For this personal project, a user-selected source-traced photo may instead record `source_traced_personal_project_use`; this does not claim an open license and must not be rewritten as one. A previously reviewed candidate does not need to be re-selected or repeatedly downloaded: reuse a locally verified original or retained rendition when present. The archived file is source evidence, not a runtime URL.
 
 Candidate usability must be checked before a contact sheet is handed to the user. Once the user selects a candidate that the review page presented as usable, source archiving, derivation, upload, attribution, and registry completion are part of the same integration task. They cannot be converted into a new post-selection approval gate. If an actual identity mismatch, broken file, or technical failure appears later, preserve the selection and resolve or replace it before asking the user to repeat visual review.
+
+Exact-branch searching is bounded and must not block a batch. For an everyday facility, one focused identity check and one focused photo search are sufficient before moving to a reusable brand/category asset or generation. Candidate discovery must not ask the user to review imagery that the integration step already knows it cannot use.
 
 Reject:
 
@@ -123,6 +137,6 @@ Map owns selection, truth labeling, detail placement, alt text, and attribution 
 
 ## Current Scope
 
-The integrated runtime contains 166 reviewed real-photo derivatives across 81 Seoul places plus one explicit fictional category fallback. Seventy Seoul places currently have approved exact-photo heroes. Eleven places have reviewed detail media but no approved hero, so their cards continue to use the reviewed Seoul category fallback. Ten of those places use grade-B surrounding-area context; CGV Wangsimni uses a grade-A interior detail photo that is useful in Place Details but does not independently identify the branch strongly enough for the card. No generated reconstruction has been admitted.
+The integrated runtime contains 253 reviewed real-photo derivatives across 104 Seoul places plus one explicit fictional category fallback. One hundred Seoul places currently have approved exact-photo heroes. Four places have reviewed detail media but no approved hero, so their cards continue to use the reviewed Seoul category fallback: SM Entertainment HQ, the Sillim compact-housing area, E-Mart Wangsimni, and THE PLUS Plastic Surgery. CU BGF Headquarters Store and the GS25 record remain the only Seoul places without reviewed real media. No generated reconstruction has been admitted.
 
-The fixed built-in target is 113 place-specific decisions: 106 Seoul places and seven fictional places. Twenty-five Seoul places still have no place-specific photo, and 36 Seoul hero decisions remain. Extra detail slides deepen a place without satisfying its card-hero requirement. `area_atmosphere` continues to describe detail acquisition only; every card still requires exact/generated identity evidence or the explicit fallback.
+The fixed built-in target is 113 place-specific decisions: 106 Seoul places and seven fictional places. Two Seoul places still have no place-specific media, and six Seoul card-hero decisions remain. Extra detail slides deepen a place without satisfying its card-hero requirement. `area_atmosphere` continues to describe detail acquisition only; every card still requires exact/generated identity evidence or the explicit fallback.

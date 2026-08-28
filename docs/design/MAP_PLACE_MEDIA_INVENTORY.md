@@ -1,6 +1,6 @@
 # Map Place Media Inventory
 
-Updated: 2026-08-27
+Updated: 2026-08-28
 
 ## Purpose
 
@@ -22,18 +22,18 @@ hero completion; they do not freeze aspect ratio, crop, focal point, or derivati
 
 | Scope | Place count | Place-specific media now | Remaining place-specific decisions | Acquisition rule |
 | --- | ---: | ---: | ---: | --- |
-| Seoul built-in catalog | 106 | 104 places with reviewed real-photo media | 2 | source-traced real-photo search first |
+| Seoul built-in catalog | 106 | 104 places with reviewed real-photo media | 2 | exact-photo first for identity-sensitive places; representative or generated assets allowed for everyday facilities |
 | Fictional built-in catalog | 7 | 0 generated reconstructions | 7 | project-authored generation |
 | User-created places | unbounded | depends on user import/generation | one per created place when desired | user media first, optional generation |
-| **Fixed built-in target** | **113** | **104** | **9** | search real places; generate fictional places |
+| **Fixed built-in target** | **113** | **104** | **9** | use tiered acquisition for Seoul; generate fictional places |
 
 The existing shared Seoul and fictional/category fallbacks fill the image slot but are not counted as place-specific completion.
 
-Ninety-two of the 104 Seoul places with reviewed media currently have an approved exact-photo hero. The other twelve have reviewed detail media but still require a card-hero decision, so fourteen Seoul hero decisions remain. Detail-only coverage may be grade-B area context or a grade-A exact-place/context image whose selected composition is useful in the gallery but not suitable as the card identity image.
+One hundred of the 104 Seoul places with reviewed media currently have an approved exact-photo hero. The other four have reviewed detail media but still require a card-hero decision, so six Seoul hero decisions remain after including the two places without reviewed media. Detail-only coverage may be grade-B area context or a grade-A exact-place/context image whose selected composition is useful in the gallery but not suitable as the card identity image.
 
 ## Seoul Search Plan
 
-All 106 Seoul records are real-place search candidates. Search must start from a durable source page with a traceable creator or source owner; reusable-license metadata is recorded when present, while user-selected personal-project sources retain an explicit bounded-use status rather than a fabricated license. A search thumbnail is never a candidate record by itself.
+All 106 Seoul records first receive a canonical identity check, but they do not all require an exact-facade photo search. Identity-sensitive named destinations remain real-place search candidates. Everyday facilities may move after one bounded search to a same-brand representative image, a shared brand/category asset, or clearly labeled generation. When a real photograph is used, search must start from a durable source page with a traceable creator or source owner; reusable-license metadata is recorded when present, while user-selected personal-project sources retain an explicit bounded-use status rather than a fabricated license. A search thumbnail is never a candidate record by itself.
 
 ### Exact-photo preferred: 79 places
 
@@ -72,9 +72,11 @@ These records describe a district, residential area, street cluster, privacy-sen
 | Pharmacy districts | 3 | Jongno 5-ga Pharmacy Street; Namdaemun Pharmacy District; Gangnam Station Pharmacy District |
 | Restaurant branches | 5 | Myeongdong Kyoja Main Store; London Bagel Museum Anguk; Knotted Cheongdam; Kyochon Chicken Yeoksam No. 1; EGGDROP Gangnam Woosung |
 
-Current usable coverage inside this group is 25 places. The earlier eight grade-B detail-only records remain: Myeongdong Kyoja, the Sillim residential area, Hongdae, Sanggye Jugong, Acro River Park, Hannam The Hill, Namdaemun Pharmacy District, and London Bagel Museum Anguk. Club FF also remains exact-photo detail-only. Batch 09 supplies five exact heroes, while Batch 10 adds exact heroes and galleries for Soonsoo Cheongdam, 7-Eleven Myeongdong, Club NB2, Club Aura, LH Gangnam Complex 3, Mokdong New Town, Jongno 5-ga Pharmacy Street, Gangnam Station Pharmacy District, Knotted Cheongdam, Kyochon Chicken Yeoksam No. 1, and EGGDROP Gangnam Woosung. Only CU BGF Headquarters Store and GS25 Gangnam Central still lack reviewed real media; eleven card-hero decisions remain in this group.
+Current usable coverage inside this group is 25 places. Batch 11 promotes Myeongdong Kyoja, Namdaemun Pharmacy District, London Bagel Museum Anguk, Hongdae, Sanggye Jugong, Acro River Park, Hannam The Hill, and Club FF to exact-photo heroes and adds their selected detail slides. The Sillim residential area remains detail-only with one verified local area photograph. Batch 09 supplies five exact heroes, while Batch 10 adds exact heroes and galleries for Soonsoo Cheongdam, 7-Eleven Myeongdong, Club NB2, Club Aura, LH Gangnam Complex 3, Mokdong New Town, Jongno 5-ga Pharmacy Street, Gangnam Station Pharmacy District, Knotted Cheongdam, Kyochon Chicken Yeoksam No. 1, and EGGDROP Gangnam Woosung. Only CU BGF Headquarters Store and the GS25 record still lack reviewed real media; three card-hero decisions remain in this group.
 
 An exact source-traced photo may satisfy the card hero when the source page proves the branch, facade, or documented interior and the image passes identity and crop review. A truthful grade B remains valuable detail context, but it cannot be promoted into the card merely because an exact photo is unavailable.
+
+For CU, GS25, 7-Eleven, pharmacies, gas stations, and later equivalent everyday records, exact-branch photography is not a completion requirement. The preferred low-cost sequence is: reuse an already reviewed same-brand asset; use one source-traced representative brand/store photo; generate one reusable brand/category visual; then retain the generic category fallback. Shared or generated imagery must be labeled as representative or generated and must not claim to show the recorded address. Batch 11 therefore does not continue repeated exact-store searches for CU BGF Headquarters Store or the GS25 record.
 
 ## Media Adaptation Record
 
@@ -114,7 +116,7 @@ The seven fictional places should receive seven distinct `generated_reconstructi
 
 Each result must keep generation provider/model, prompt or prompt digest, generation date, source file hash, review decision, derivative hash, alt text, and visible grade-C labeling. The current fictional fallback remains until each generated image passes review.
 
-Real Seoul places do not move directly to generation because a convenient photo was not found. After a documented legal-photo search fails, a clearly labeled generated reconstruction may be proposed as grade C, but it must never imply documentary evidence.
+Identity-sensitive Seoul places move to generation only after a bounded exact-place search fails to produce a convincing card image. Everyday facilities may move directly to a reusable generated brand/category visual after the canonical brand/place check and one focused photo search. In both cases the result must retain generation provenance and must never imply documentary evidence of the exact facade.
 
 User-created places have no fixed generation count. Their preferred order is user-imported image, user-requested generation with provenance, then the existing category fallback.
 
@@ -122,8 +124,8 @@ User-created places have no fixed generation count. Their preferred order is use
 
 1. Complete high-recognition exact landmarks and transport hubs that users are most likely to select.
 2. Cover parks, campuses, malls, event venues, and major public buildings.
-3. Cover company and medical destinations, accepting reviewed area views when exact licensing is weak.
-4. Resolve the two remaining Seoul first-media gaps without substituting an unverified branch photo.
+3. Cover company and medical destinations, accepting reviewed area views or clearly labeled generated reconstruction when a bounded exact search remains weak.
+4. Resolve the remaining everyday-facility card gaps with reusable same-brand/category imagery or generation; do not repeat exact-branch searches indefinitely.
 5. Generate and review the seven fictional reconstructions as one visually coherent but individually identifiable set.
 
 Every candidate follows `MAP_PLACE_MEDIA_GOVERNANCE.md`: untouched downloads stay only in the Git-ignored local source archive, and only reviewed derivatives may enter the runtime asset registry.

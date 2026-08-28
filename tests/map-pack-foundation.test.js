@@ -198,6 +198,13 @@ describe('local map pack foundation', () => {
     expect(
       seoul.places.find((place) => place.id === 'seoul-jennyhouse-cheongdam-hill').position,
     ).toEqual({ kind: 'geo', lat: 37.5213, lng: 127.0443 })
+    expect(seoul.places.find((place) => place.id === 'seoul-gs25-gangnam-central')).toMatchObject({
+      nameZh: 'GS25 江南地铁店',
+      nameEn: 'GS25 Gangnam Metro',
+      detailZh: '首尔特别市江南区德黑兰路 101，江南站地下商街 A-10',
+      detailEn: 'A-10, Gangnam Station Underground Shopping Center, 101 Teheran-ro, Gangnam-gu, Seoul',
+      aliases: expect.arrayContaining(['GS25 Gangnam Central', 'GS25 江南中心店']),
+    })
     expect(isMapPlaceCategoryDefaultVisible('convenience_store')).toBe(false)
     expect(isMapPlaceCategoryDiscoveryOnly('convenience_store')).toBe(true)
     expect(isMapPlaceCategoryDefaultVisible('pharmacy')).toBe(false)
