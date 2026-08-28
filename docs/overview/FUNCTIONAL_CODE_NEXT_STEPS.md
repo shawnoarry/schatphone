@@ -12,7 +12,7 @@ Do not restart completed Contacts 4.1, memory 4.2, World Hub 4.3, or service-acc
 
 The best next work is:
 
-1. finish the promoted roadmap 4.5-CMG plan by integrating the validated `CMG-09` bounded-reading slice and then executing dependent `CMG-10`, preserving its history and recovery rules;
+1. finish the promoted roadmap 4.5-CMG plan by executing `CMG-10` after integrated `CMG-09`, preserving its history and recovery rules;
 2. preserve the completed non-active IndexedDB/Book Batch 2B foundation, active Book-only reference cutover, browser evidence, and unchanged legacy fallback;
 3. keep Gallery/R2, dual write, legacy Book deletion, garbage collection, and each non-Book owner migration separately approved inside the relevant CMG retention slice;
 4. security/toolchain hardening and release-gate alignment;
@@ -159,9 +159,9 @@ Current contract status:
 - the K-pop 2 + 6 + 1 Book/WorldBook content slice is already landed, and its music-show-day prose rule remains narrative input rather than executable configuration;
 - pure request/draft/artifact/policy schemas, the registered Event Runtime text caller, Book structured-profile/regex validation, deterministic world/profile resolution, persistent policies/bindings/audit, and the global Text Presenter are landed;
 - `CMG-08` adds explicit complete-scene retention, same-occurrence reuse, new-revision regeneration, retained/archived World Hub paging, and removal of the historical 120-artifact cap;
-- `CMG-09` bounded retained-history indexing is validated in the current working tree but not yet integrated; no production trigger Adapter, safe regex execution engine, built-in structured transform profile, interactive HTML, or broader source Adapter is implemented.
+- `CMG-09` bounded retained-history indexing is integrated at `3126c1c`; no production trigger Adapter, safe regex execution engine, built-in structured transform profile, interactive HTML, or broader source Adapter is implemented.
 
-The next active continuity gate is not another Mini Scene feature. It is the roadmap-controlled `CMG-09` integration followed by `CMG-10` migration/recovery proof:
+The next active continuity gate is not another Mini Scene feature. It is roadmap-controlled `CMG-10` migration/recovery proof after integrated `CMG-09`:
 
 - preserve full retained Mini Scene history while returning only requested World Hub pages;
 - preserve storage/backup compatibility and prove reopen, restore, rollback, and high-row-count behavior;

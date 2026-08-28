@@ -406,7 +406,7 @@ describe('workflow governance', () => {
     expect(roadmap).toContain('24 Pinia store files')
     expect(roadmap).not.toContain('42 route-view files, 19 Pinia stores')
     expect(architectureHandoff).toContain(
-      '`CMG-00` through `CMG-08` and `DCF-01` through `DCF-06` are complete',
+      '`CMG-00` through `CMG-09` and `DCF-01` through `DCF-06` are complete',
     )
     expect(architectureHandoff).not.toContain(
       '`CMG-08`, `DCF-04`, and `DCF-06` require their own exact non-overlapping reservations',

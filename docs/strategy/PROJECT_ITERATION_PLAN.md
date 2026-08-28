@@ -2,7 +2,7 @@
 
 Updated: 2026-08-28
 
-Integrated baseline: `dc26226`
+Integrated baseline: `3126c1c`
 
 This is long-range sequencing guidance. It is not an implementation board and cannot override `docs/roadmap/TODO_ROADMAP.md`.
 
@@ -18,7 +18,7 @@ The project has already passed prototype viability, basic cross-module integrati
 
 ### Phase A: Continuity Closure
 
-- integrate the validated `CMG-09` bounded-reading slice after completed `CMG-08`, then execute `CMG-10`;
+- execute `CMG-10` migration/recovery proof after integrated `CMG-08` and `CMG-09`;
 - preserve canonical history without unbounded prompt/list cost;
 - prove failure, reopen, backup/restore, and migration behavior.
 

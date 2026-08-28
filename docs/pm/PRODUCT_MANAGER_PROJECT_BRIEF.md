@@ -2,7 +2,7 @@
 
 Updated: 2026-08-28
 
-Integrated baseline: `dc26226`
+Integrated baseline: `3126c1c`
 
 ## 1. Product
 
@@ -24,8 +24,8 @@ The project is an integrated V1 in product-preview and release-hardening work. T
 
 Follow the roadmap exactly:
 
-1. integrate the validated working-tree `CMG-09` bounded-reading slice after completed `CMG-08`;
-2. execute dependent `CMG-10` migration/recovery proof;
+1. execute `CMG-10` migration/recovery proof after integrated `CMG-08` and `CMG-09`;
+2. preserve the bounded continuity-reading contract during that recovery work;
 3. installed-PWA/relaunch, backup round trip, external protection, and true-device proof;
 4. World Pack device validation where it overlaps that release matrix.
 

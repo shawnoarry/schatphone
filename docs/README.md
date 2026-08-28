@@ -18,8 +18,8 @@ If you are taking over implementation work:
 
 Current alignment note:
 
-- integrated whole-project baseline: `dc26226` on 2026-08-28; uncommitted working-tree changes are preserved but excluded from integrated capability claims;
-- roadmap 4.5-CMG remains the active continuity-governance lane: `CMG-08` is integrated, `CMG-09` is implementation-complete and validated in the working tree but awaits a scoped commit, and `CMG-10` remains dependent;
+- integrated whole-project baseline: `3126c1c` on 2026-08-28; excluded local cache and QA/visual artifacts remain outside capability claims;
+- roadmap 4.5-CMG remains the active continuity-governance lane: `CMG-08` and `CMG-09` are integrated, and `CMG-10` is the next dependency-safe slice;
 - the initial S1 App Shell portfolio, Calendar Mail/Work Hub handoffs, Event reason-feedback maintenance, commerce checkout/support flows, and current Appearance theme/icon foundations are integrated at their named scoped baselines;
 - installed-PWA/relaunch, backup round trip, external protections, true-device proof, and several provider/module depth gates remain open;
 - package handoffs retain detailed milestone evidence and are not replaced by this map or another whole-project rollup.

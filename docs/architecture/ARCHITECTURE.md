@@ -2,7 +2,7 @@
 
 Updated: 2026-08-28
 
-Integrated baseline: `dc26226`
+Integrated baseline: `3126c1c`
 
 ## 1. Architecture Goals
 
@@ -281,7 +281,7 @@ The generic provider contract supports user-authorized JSON search APIs that ret
 - `relationship-event-gating.js` reads stored category/modifier classifications, never raw premise prose;
 - relationship runtime owns memory grouping and current state;
 - one continuing matter is one shared experience with progress updates, a concise role-memory summary, and references to owner-native supporting records. Summaries are grouped by experience or subject, never by an arbitrary row count;
-- Chat consumes current relationship truth from Relationship Runtime exactly once. The current `CMG-09` working implementation bounds that projection to 3 relevant role memories / 720 characters and 2 non-archived stable-ID-deduplicated shared-experience summaries / 480 characters; source modules/IDs, supporting-record counts, and raw recent relationship events remain owner-review data rather than prompt content. Profile premise/classification remains context and cannot become a competing current answer;
+- Chat consumes current relationship truth from Relationship Runtime exactly once. Integrated `CMG-09` bounds that projection to 3 relevant role memories / 720 characters and 2 non-archived stable-ID-deduplicated shared-experience summaries / 480 characters; source modules/IDs, supporting-record counts, and raw recent relationship events remain owner-review data rather than prompt content. Profile premise/classification remains context and cannot become a competing current answer;
 - Relationship Runtime and Mini Scene may maintain rebuildable in-memory indexes for person/state paging, but those indexes do not change persisted shapes or authorize retention loss; Contacts and World Hub return only the requested page while every owner record remains durable;
 - cleanup helpers remove or anonymize source-linked data through explicit handlers.
 

@@ -2,9 +2,9 @@
 
 Updated: 2026-08-28
 
-Integrated baseline: `dc26226`
+Integrated baseline: `3126c1c`
 
-Working tree: Contacts V3-4A archive/restore, V3-4B permanent-delete coordination, V3-4C user-facing lifecycle flow, the validated CMG-09 bounded continuity-reading implementation, and local QA artifacts are excluded from integrated capability claims until committed.
+Working tree: excluded local tool caches and QA/visual artifacts remain outside integrated capability claims.
 
 Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 
@@ -16,8 +16,8 @@ The project is not yet a production-hardened final release. Named physical-devic
 
 ## 2. Current Execution Order
 
-1. Integrate the validated working-tree `CMG-09` slice: Contacts/World Hub page owner history while Chat receives one current relationship plus bounded relevant memories and active shared-experience summaries; `CMG-08` retained Mini Scene history is already integrated.
-2. `CMG-10`: close migration, restore, failure, reopen, and high-row-count proof only after `CMG-09` integration.
+1. `CMG-10`: close migration, restore, failure, reopen, and high-row-count proof after integrated `CMG-09` bounded continuity reading.
+2. Preserve Contacts/World Hub paging and Chat prompt bounds while proving legacy and recovery behavior.
 3. Complete the remaining hosted product proof: installed PWA, relaunch, backup round trip, external protections, and named true-device evidence.
 4. Run World Pack true-device validation only where it overlaps the release device matrix.
 
@@ -30,12 +30,12 @@ This table summarizes package status. It does not replace any package's named mi
 | Package | Scoped current status | Important integrated progress | Main open boundary | Detail owner |
 | --- | --- | --- | --- | --- |
 | Contacts / Relationship | `Contacts V2 DONE / CONTACTS-V3-0 THROUGH V3-3 DONE / V3-4 DECISION FREEZE COMPLETE / V3-4A THROUGH V3-4C DONE; V3-5 gated; CMG hardening partial` | role archive, relationship truth, memory review, shared-experience lineage, retention-cap removal; per-world Self Profile ownership, extensible cards, Persona Confirmation, bounded projections, rollback-safe archive/restore, archived Wallet suspension/restore, searchable archived-people management, and atomic permanent-delete coordination with ID tombstones | public projection, broader consumer adoption, and automatic extraction remain gated | `docs/pm/contacts-relationship-system-v2/STATUS_AND_HANDOFF.md` |
-| Chat / Chat Directory | `PARTIAL_DONE` | role/service/group threads, direct-provider Chat proof, rich/source cards, explicit remember action, current Relationship Runtime prompt truth, formal Contacts-owned `chat_context`, and archived-person new-message/binding/social-automation suspension | working-tree CMG-09 prompt bounds await integration; archived-history UI treatment, installed-PWA/true-device proof, and automatic memory extraction remain open | `docs/pm/chat-and-chat-directory/STATUS_AND_HANDOFF.md` |
+| Chat / Chat Directory | `PARTIAL_DONE` | role/service/group threads, direct-provider Chat proof, rich/source cards, explicit remember action, bounded Relationship Runtime prompt truth, formal Contacts-owned `chat_context`, and archived-person new-message/binding/social-automation suspension | archived-history UI treatment, installed-PWA/true-device proof, and automatic memory extraction remain open | `docs/pm/chat-and-chat-directory/STATUS_AND_HANDOFF.md` |
 | Event Runtime / World Hub | `PARTIAL_DONE` | EVE-4C owner-native commerce chain, Event Notebook, revision-bound Contacts identity projection, CJA-5 midpoint family, Event Instance cap removal, bilingual reason feedback, and optional retained Mini Scene history | identity remains read-only; organization ownership, new identity-conditioned event families, production Mini Scene trigger, and EVE-5 remain separately gated | `docs/pm/event-runtime-and-world-hub/STATUS_AND_HANDOFF.md` |
 | Map / Calendar / Reminders | `INTEGRATED_LOCAL / scoped milestones` | Calendar V3 plus storage V4 handoffs, Agenda Journey/Activity Session, Mail and Work Hub schedule proposals, Map journeys/Footprints, 104 Seoul places with reviewed media and 92 exact card heroes | source-conflict actions, remaining place-media/hero decisions, PWA/true-device proof, later MJE stages | `docs/pm/map-calendar-reminders/STATUS_AND_HANDOFF.md` |
 | Commerce / Finance / Assets | `PARTIAL_DONE` | eleven Shopping storefronts, paid checkout and support flows, fifteen Food Delivery entries with scoped carts/orders, Wallet cards/activity/statements/payees/receipt sharing, ordinary consequence proof | refund/cancellation settlement, tracking shares, Assets/Stock depth, named physical-device proof | `docs/pm/commerce-finance-and-assets/STATUS_AND_HANDOFF.md` |
 | Visual / IA | `PARTIAL_DONE` | Home/App Store systems, thirteen S1 App previews plus Notification Center, day/night and authored theme/icon foundations, visual workflow and Playwright quality gate | cross-module consistency, real-device polish, and later approved focused slices | `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md` |
-| Module Architecture | `IN_PROGRESS / CMG-09 IMPLEMENTATION_COMPLETE_READY_FOR_COMMIT` | release-local backup/recovery, same-container writer safety, Book Repository cutover, shared Image/TTS/Music contracts, CMG-00 through CMG-08 and DCF repairs | integrate validated CMG-09; CMG-10 remains dependent; later hotspot/adapter/type work remains gated | `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` |
+| Module Architecture | `IN_PROGRESS / CMG-00 THROUGH CMG-09 DONE` | release-local backup/recovery, same-container writer safety, Book Repository cutover, shared Image/TTS/Music contracts, CMG-00 through CMG-09 and DCF repairs | CMG-10 is next; later hotspot/adapter/type work remains gated | `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` |
 
 ## 4. What Users Can Do Now
 

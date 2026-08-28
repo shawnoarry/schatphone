@@ -148,7 +148,7 @@ Current safe sequence:
 5. leave V3-5 consumer adoption gated until the roadmap explicitly promotes one bounded consumer slice;
 6. stop before Work Hub organization ownership, ordinary work chains, Work Hub events, Chronicle, Community/Media, SMS, EVE-5, Mini Scene expansion, or another event family.
 
-Work Hub organization ownership, the first Work Hub-native event, and broader identity-conditioned Event Runtime work remain separately gated after this Contacts identity foundation. Integrated `CMG-08` remains separate Mini Scene persistence work, while working-tree `CMG-09` bounds Relationship Runtime/Chat reads without becoming Contacts V3 lifecycle scope.
+Work Hub organization ownership, the first Work Hub-native event, and broader identity-conditioned Event Runtime work remain separately gated after this Contacts identity foundation. Integrated `CMG-08` remains separate Mini Scene persistence work, while integrated `CMG-09` bounds Relationship Runtime/Chat reads without becoming Contacts V3 lifecycle scope.
 
 The older cross-device plans remain implementation history. They are not current task sources unless the live roadmap promotes an exact remaining slice.
 

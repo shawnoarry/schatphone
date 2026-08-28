@@ -2,13 +2,13 @@
 
 Updated: 2026-08-28
 
-Integrated alignment baseline: `dc26226`; CMG-09 remains working-tree-only until committed.
+Integrated alignment baseline: `3126c1c`.
 
 This is the current handoff for architecture cleanup, state ownership, persistence, security, and release-quality work.
 
 ## 1. Current Status
 
-Status: `IN_PROGRESS / CMG-08_DONE 2026-08-27 / CMG-09_IMPLEMENTATION_COMPLETE_READY_FOR_COMMIT 2026-08-28`
+Status: `IN_PROGRESS / CMG-08_DONE 2026-08-27 / CMG-09_DONE 2026-08-28 / CMG-10_NEXT`
 
 Roadmap owner: 4.5 Architecture, Security, And Documentation Maintenance.
 
@@ -21,8 +21,8 @@ Current active architecture slice:
 - same-container tabs use a fail-closed writer boundary: after the safe wait times out, the later page remains a read-only preview with retry and refresh-current-save actions; cooperative release triggers the same bounded retry automatically, while force takeover and last-write-wins remain excluded;
 - persistent-storage permission is never requested on first launch; the first qualifying high-volume durable action asks in context, while Settings exposes current status and explicit retry;
 - authoritative Chat/role/relationship/memory/user-document records and still-referenced assets cannot be silently or irreversibly deleted; cold archival must remain reversible. A complete Mini Scene is optional presentation history: explicit user deletion may remove the retained presentation, but never the canonical event result, approved role memory, diary/timeline projection, or owner audit evidence;
-- roadmap 4.5-CMG governs the confirmed shared-experience, role-memory, Event Instance, Mini Scene, and persistence-result defects through fixed IDs. `CMG-00` through `CMG-08` and `DCF-01` through `DCF-06` are complete; `CMG-09` is implementation-complete and validated in the current controller checkout but not integrated until committed, and `CMG-10` remains dependent on that integration;
-- `CMG-09` preserves storage shapes and every owner record while indexing Relationship Runtime memories by person and Mini Scene retained history by state. Contacts/World Hub clone only the requested page. Chat consumes one current relationship, at most 3 relevant role memories / 720 characters, and at most 2 non-archived shared-experience summaries / 480 characters, deduplicated by stable experience ID; raw source modules/IDs, supporting-record counts, and recent relationship-event rows do not enter the prompt;
+- roadmap 4.5-CMG governs the confirmed shared-experience, role-memory, Event Instance, Mini Scene, and persistence-result defects through fixed IDs. `CMG-00` through `CMG-09` and `DCF-01` through `DCF-06` are complete; `CMG-10` is now dependency-unblocked but remains a separate slice;
+- `CMG-09 DONE 2026-08-28` at `3126c1c` preserves storage shapes and every owner record while indexing Relationship Runtime memories by person and Mini Scene retained history by state. Contacts/World Hub clone only the requested page. Chat consumes one current relationship, at most 3 relevant role memories / 720 characters, and at most 2 non-archived shared-experience summaries / 480 characters, deduplicated by stable experience ID; raw source modules/IDs, supporting-record counts, and recent relationship-event rows do not enter the prompt;
 - any canonical content formally published, confirmed, applied, or admitted into an owning module's history is durable when it can be revisited, referenced, or affect continuity, regardless of user/AI/system origin. A generated presentation remains temporary until the user explicitly chooses to retain the complete Mini Scene;
 - full AI prompts, raw provider responses, transport payloads, uncommitted drafts, and rebuildable projections remain non-authoritative; canonical committed content, authoritative state/facts, cross-module references, and minimum provenance are durable;
 - text AI callers now share a transient stable-prefix/dynamic-context envelope: Chat and Event Text Composer consume it without transferring fact ownership, official OpenAI requests receive conservative cache hints, unmanaged providers keep their prior shape, and only managed official-OpenAI token usage can report a cache hit; cache routing identities are opaque rather than readable role identifiers;
@@ -382,19 +382,19 @@ Current execution record:
 | Field | Value |
 | --- | --- |
 | Plan baseline | `DCF-04 DONE 2026-08-22` at `26534bd`; `DCF-06 DONE 2026-08-22` at `ec31855`; both commits are based on synchronized Calendar-evidence baseline `1d41869`. Earlier CMG/DCF completion evidence remains in the completion log below. |
-| Next dependency-safe items | Commit/integrate the validated `CMG-09` slice. `CMG-10` remains gated until that integration; Contacts V3-5 and visual work remain separate. |
-| Active item | `CMG-09 / BOUNDED_CONTINUITY_READING / IMPLEMENTATION_COMPLETE_READY_FOR_COMMIT 2026-08-28` |
+| Next dependency-safe items | `CMG-10` is dependency-unblocked after `CMG-09` integration; Contacts V3-5 and visual work remain separate. |
+| Active item | `CMG-09 / BOUNDED_CONTINUITY_READING / DONE 2026-08-28` |
 | Integration controller PC | current local Codex task |
 | PC-A physical machine / role | current PC / shared-`main` implementation, validation, and documentation alignment |
 | PC-B physical machine / role | none for this slice |
-| Source branch, base, and worktree | `main`; commit base `dc26226`; `D:\github\schatphone` existing checkout, no separate worktree |
-| Existing dirty/untracked inventory | Contacts V3-4A/V3-4B/V3-4C behavior, tests, and documentation plus visual/QA artifacts, `.codex/**`, tool caches, and `tmp/**` are user/other-task owned. `src/stores/miniScene.js`, the roadmap, and PM documentation contain overlapping Contacts changes; none may be reset, cleaned, overwritten, or broadly staged. |
+| Source branch, base, and worktree | `main`; integrated commit `3126c1c`; `D:\github\schatphone` existing checkout, no separate worktree |
+| Existing dirty/untracked inventory | Only excluded visual/QA artifacts, tool caches, and `tmp/**` remain untracked; none may be reset or cleaned. |
 | Risk lane | Elevated shared-checkout risk plus prompt-content regression, hidden whole-history scans, accidental storage-shape change, and attribution of Contacts-owned edits in shared files. |
 | Reserved paths | The CMG-09 hunks in `src/stores/relationshipRuntime.js` and `src/stores/miniScene.js`; `tests/continuity-reading-cost.test.js`; focused updates in `tests/relationship-runtime-store.test.js` and `tests/chat-worldbook-binding-visibility.test.js`; and matching roadmap/package/Chat/architecture status text. Contacts lifecycle, profile binding cleanup, visual work, `.codex/**`, and `tmp/**` are excluded. |
 | Acceptance | Preserve all owner history and storage formats; page Contacts/World Hub reads without cloning unrelated rows; emit one current relationship plus at most 3 relevant memories / 720 characters and 2 non-archived stable-ID-deduplicated shared experiences / 480 characters; exclude raw source metadata, supporting counts, and recent relationship rows from Chat prompts. |
 | Validation | Focused CMG-09 coverage passes 6 files / 56 tests; real shared-experience consumer coverage passes 5 files / 38 tests; corrected Chat/Runtime focus passes 4 files / 42 tests; full Vitest passes 340 files / 2571 tests; lint, the 706-module production build, governance 19/19, and `git diff --check` pass. No route or UI changed, so no E2E or physical-device claim. |
-| Integration state | `IMPLEMENTATION_COMPLETE / READY_FOR_COMMIT 2026-08-28`; exact staging is required because unrelated work shares files and the checkout. |
-| Remote synchronization | local `origin/main` and HEAD both start at `dc26226`; this continuation does not authorize commit or push. |
+| Integration state | `INTEGRATED_LOCAL / DONE 2026-08-28` at `3126c1c`; exact staged-file review matched all 70 approved files. |
+| Remote synchronization | local `main` contains `3126c1c`; `origin/main` remains `dc26226` because no push was authorized. |
 
 For every item start, replace the current execution record with the task ID, executor PC, worktree path, branch, exact base commit, dirty/untracked inventory, risk lane, reserved paths, acceptance, and required checks. For every workgroup handoff, record the source commit and `READY_FOR_INTEGRATION_REVIEW` without changing the roadmap row to `DONE`. After integration and controller validation, append a compact completion entry below and update the canonical ledger with the date and evidence commit.
 
@@ -423,7 +423,9 @@ Completion log:
 
 16. `CMG-08 DONE 2026-08-27`: Mini Scene generation now opens a memory-only temporary presentation and persists complete content only after explicit save. Same-occurrence retained replay precedes provider calls; explicit regeneration creates a linked revision; V1 artifacts migrate as retained; history no longer has a 120-row cap; World Hub pages saved/archived scenes and provides open/archive/restore/confirmed-delete. Retain and management writes are receipt-gated with rollback or visible retry, and unsaved close releases only the full presentation payload. Focused coverage passes 5 files / 23 tests; dedicated desktop/simulated-Pixel-5 Playwright passes 2/2; full lint, 338 Vitest files / 2543 tests, the 705-module build, governance 19/19, and diff checks pass. No physical-device claim.
 
-`CMG-06` is complete at `f9f14f9`; `CMG-07` is complete on the Event Instance V2 retention/migration paths; `DCF-04` and `DCF-06` are integrated locally at the commits above. `CMG-08` is integrated. `CMG-09` is implementation-complete and validated in the current working tree, but remains unintegrated until a scoped commit; `CMG-10` stays gated.
+17. `CMG-09 DONE 2026-08-28` at `3126c1c`: Relationship Runtime indexes per-person memory aggregates, Mini Scene indexes retained/archived history, Contacts and World Hub clone only requested pages, and Chat receives one current relationship plus bounded relevant-memory and active-shared-experience summaries without raw supporting records. Storage formats and complete owner history remain unchanged. Focused coverage passes 6 files / 56 tests; real shared-experience consumers pass 5 files / 38 tests; full Vitest passes 340 files / 2571 tests; lint, the 706-module build, governance 19/19, and diff checks pass. No UI or E2E change.
+
+`CMG-06` is complete at `f9f14f9`; `CMG-07` is complete on the Event Instance V2 retention/migration paths; `DCF-04` and `DCF-06` are integrated locally at the commits above. `CMG-08` is integrated, and `CMG-09` is integrated at `3126c1c`; `CMG-10` is the next dependency-safe CMG item.
 
 The 2026-07-22 product-release audit changes that order through roadmap 4.9:
 

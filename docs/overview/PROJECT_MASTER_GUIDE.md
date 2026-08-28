@@ -2,9 +2,9 @@
 
 Updated: 2026-08-28
 
-Integrated baseline: `dc26226`
+Integrated baseline: `3126c1c`
 
-Working tree: Contacts V3.4 lifecycle work, validated CMG-09 bounded continuity reading, and local QA/visual artifacts are preserved but excluded from integrated capability and measurement claims until committed.
+Working tree: excluded local tool caches and QA/visual artifacts remain outside integrated capability and measurement claims.
 
 ## 1. Purpose And Status Method
 
@@ -299,7 +299,7 @@ Largest current files:
 
 ## 9. Current Execution Direction
 
-1. integrate the validated working-tree `CMG-09` reading-cost slice, then complete dependent `CMG-10` migration/recovery proof;
+1. complete `CMG-10` migration/recovery proof after integrated `CMG-09` reading-cost closure;
 2. keep production Mini Scene trigger integration separately gated to a named accepted event family;
 3. close installed-PWA/relaunch, backup round trip, external protection, and named true-device evidence;
 4. run World Pack true-device validation only where it overlaps the release matrix;
