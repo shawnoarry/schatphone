@@ -132,6 +132,7 @@ const createMarkerElement = (pin, pending = false) => {
   button.className = [
     'openfreemap-marker-button',
     pin?.source === 'user' ? 'is-user' : '',
+    pin?.source === 'role_position' ? 'is-role-position' : '',
     pin?.source === 'map_event' ? 'is-event' : '',
     pending ? 'is-pending' : '',
   ].filter(Boolean).join(' ')
@@ -157,8 +158,7 @@ const createMarkerElement = (pin, pending = false) => {
   label.className = 'openfreemap-marker-label'
   label.textContent = labelText
   button.append(marker, label)
-  if (!pending && props.allowPinPlacement) {
-    button.classList.add('is-placement-pass-through')
+  if (!pending && pin?.source === 'role_position') {
     button.tabIndex = -1
     button.setAttribute('aria-hidden', 'true')
   } else if (!pending) {
@@ -570,7 +570,7 @@ onBeforeUnmount(() => {
 }
 
 :global(.openfreemap-marker-button.is-pending) { --map-marker-tone: #d9a514; pointer-events: none; }
-:global(.openfreemap-marker-button.is-placement-pass-through) { pointer-events: none; }
+:global(.openfreemap-marker-button.is-role-position) { z-index: -1; pointer-events: none; }
 :global(.openfreemap-marker-button.is-pending .openfreemap-marker-shape) { animation: openfreemap-pin-pulse 1.4s ease-in-out infinite; }
 
 @keyframes openfreemap-pin-pulse {

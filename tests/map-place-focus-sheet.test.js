@@ -383,4 +383,16 @@ describe('MapPlaceFocusSheet', () => {
     await invited.get('[data-testid="map-place-expand-event"]').trigger('click')
     expect(invited.emitted('expand-event')).toHaveLength(1)
   })
+
+  test('offers an explicit development preview without presenting it as a real invitation', async () => {
+    const wrapper = createWrapper({
+      entryAction: 'leave',
+      eventPreviewAvailable: true,
+    })
+
+    expect(wrapper.find('[data-testid="map-place-event-invitation"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="map-place-event-preview"]').text()).toContain('Test event')
+    await wrapper.get('[data-testid="map-place-preview-event"]').trigger('click')
+    expect(wrapper.emitted('preview-event')).toHaveLength(1)
+  })
 })

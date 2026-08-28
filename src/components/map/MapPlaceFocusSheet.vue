@@ -28,6 +28,7 @@ const props = defineProps({
     validator: (value) => ['unavailable', 'enter', 'leave'].includes(value),
   },
   eventInvitation: { type: Object, default: null },
+  eventPreviewAvailable: { type: Boolean, default: false },
   canManage: { type: Boolean, default: false },
   pinVisible: { type: Boolean, default: true },
   t: { type: Function, required: true },
@@ -40,6 +41,7 @@ const emit = defineEmits([
   'enter',
   'leave',
   'expand-event',
+  'preview-event',
   'share',
   'manage',
   'show-pin',
@@ -525,6 +527,30 @@ onBeforeUnmount(() => {
             <i class="fas fa-chevron-right" aria-hidden="true"></i>
           </button>
         </section>
+
+        <section
+          v-else-if="eventPreviewAvailable"
+          class="map-place-event-invitation is-preview"
+          data-testid="map-place-event-preview"
+          aria-labelledby="map-place-event-preview-title"
+        >
+          <span class="map-place-event-invitation-icon" aria-hidden="true">
+            <i class="fas fa-flask"></i>
+          </span>
+          <div>
+            <h3 id="map-place-event-preview-title">{{ t('测试事件', 'Test event') }}</h3>
+            <p>{{ t('跳过前置条件，直接预览互动', 'Preview the interaction without prerequisites') }}</p>
+          </div>
+          <button
+            type="button"
+            :aria-label="t('打开测试事件', 'Open test event')"
+            :title="t('打开测试事件', 'Open test event')"
+            data-testid="map-place-preview-event"
+            @click="emit('preview-event')"
+          >
+            <i class="fas fa-chevron-right" aria-hidden="true"></i>
+          </button>
+        </section>
       </div>
 
       <div class="map-place-focus-actions">
@@ -931,6 +957,10 @@ onBeforeUnmount(() => {
 .map-place-event-invitation h3 { font-size: 14px; font-weight: 850; line-height: 1.35; }
 .map-place-event-invitation p { margin-top: 2px; color: #765f34; font-size: 12px; line-height: 1.4; }
 .map-place-event-invitation button { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 6px; background: #fff; color: #8d4d09; }
+.map-place-event-invitation.is-preview { border-style: dashed; border-color: #9ab6aa; background: #f2f8f5; color: #244b3c; }
+.map-place-event-invitation.is-preview .map-place-event-invitation-icon { background: #17664f; }
+.map-place-event-invitation.is-preview p { color: #5b7167; }
+.map-place-event-invitation.is-preview button { color: #17664f; }
 
 .map-place-focus-actions { position: relative; z-index: 2; display: grid; min-width: 0; grid-template-columns: repeat(3, 40px); align-items: center; justify-content: end; gap: 7px; margin-top: 11px; border-top: 1px solid #e3e8e5; background: rgba(252, 253, 252, 0.98); padding-top: 10px; }
 .map-place-focus-primary,

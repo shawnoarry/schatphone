@@ -40,12 +40,23 @@ const instance = {
   },
 }
 
+const media = {
+  labelZh: '地点实景',
+  labelEn: 'Exact-place photo',
+  asset: {
+    url: 'https://example.com/broadcast-center.webp',
+    altZh: '电视台建筑入口',
+    altEn: 'Broadcast center entrance',
+  },
+}
+
 const createWrapper = (overrides = {}) =>
   mount(MapEventSurfaceSheet, {
     attachTo: document.body,
     props: {
       surface,
       instance,
+      media,
       placeName: 'MBC Broadcast Center',
       t: (_zh, en) => en,
       ...overrides,
@@ -59,6 +70,12 @@ describe('MapEventSurfaceSheet', () => {
     expect(wrapper.get('[data-testid="map-event-surface-sheet"]').attributes('role')).toBe('dialog')
     expect(wrapper.text()).toContain('MBC Broadcast Center')
     expect(wrapper.text()).toContain('Local text')
+    expect(wrapper.get('[data-testid="map-event-scene-image"]').attributes('src')).toBe(
+      media.asset.url,
+    )
+    expect(wrapper.get('[data-testid="map-event-scene-image"]').attributes('alt')).toBe(
+      media.asset.altEn,
+    )
     expect(wrapper.get('[data-testid="map-event-choices"]').findAll('button')).toHaveLength(3)
 
     await wrapper.get('[data-testid="map-event-choice-check_equipment"]').trigger('click')
@@ -66,7 +83,9 @@ describe('MapEventSurfaceSheet', () => {
     await wrapper.get('[data-testid="map-event-dismiss"]').trigger('click')
     expect(wrapper.emitted('dismiss')).toHaveLength(1)
 
-    await wrapper.get('[data-testid="map-event-surface-sheet"]').trigger('keydown', { key: 'Escape' })
+    await wrapper
+      .get('[data-testid="map-event-surface-sheet"]')
+      .trigger('keydown', { key: 'Escape' })
     expect(wrapper.emitted('close')).toHaveLength(1)
     wrapper.unmount()
   })
@@ -82,9 +101,12 @@ describe('MapEventSurfaceSheet', () => {
     expect(wrapper.get('[data-testid="map-event-source-stale"]').text()).toContain(
       'choices are no longer available',
     )
-    wrapper.get('[data-testid="map-event-choices"]').findAll('button').forEach((button) => {
-      expect(button.attributes('disabled')).toBeDefined()
-    })
+    wrapper
+      .get('[data-testid="map-event-choices"]')
+      .findAll('button')
+      .forEach((button) => {
+        expect(button.attributes('disabled')).toBeDefined()
+      })
     wrapper.unmount()
   })
 
@@ -102,6 +124,13 @@ describe('MapEventSurfaceSheet', () => {
     )
     expect(wrapper.find('[data-testid="map-event-choices"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="map-event-dismiss"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  test('labels an ephemeral test interaction as a preview', () => {
+    const wrapper = createWrapper({ preview: true })
+    expect(wrapper.text()).toContain('Test preview')
+    expect(wrapper.text()).toContain('TEST · SCENE')
     wrapper.unmount()
   })
 

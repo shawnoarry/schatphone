@@ -64,6 +64,7 @@ const createPinIcon = (pin, pending = false) => {
   wrapper.className = [
     'map-scene-marker',
     pending ? 'map-scene-marker-pending' : '',
+    pin?.source === 'role_position' ? 'map-scene-marker-role-position' : '',
     pin?.source === 'map_event' ? 'map-scene-marker-event' : '',
   ].filter(Boolean).join(' ')
   if (pin?.tone) wrapper.style.setProperty('--map-marker-tone', pin.tone)
@@ -158,10 +159,10 @@ const renderMarkers = () => {
     if (!point) return
     const marker = L.marker(normalizedToLatLng(point), {
       icon: createPinIcon(pin),
-      interactive: !props.allowPinPlacement,
-      keyboard: !props.allowPinPlacement,
+      interactive: pin?.source !== 'role_position',
+      keyboard: pin?.source !== 'role_position',
       riseOnHover: true,
-      zIndexOffset: pin?.source === 'map_event' ? 600 : 0,
+      zIndexOffset: pin?.source === 'map_event' ? 600 : pin?.source === 'role_position' ? -1000 : 0,
       title: t(pin.nameZh || pin.labelZh || pin.name, pin.nameEn || pin.labelEn || pin.name),
     })
     const label = t(pin.nameZh || pin.labelZh || pin.name, pin.nameEn || pin.labelEn || pin.name)
@@ -169,7 +170,7 @@ const renderMarkers = () => {
       direction: 'top',
       opacity: 1,
     })
-    if (!props.allowPinPlacement) marker.on('click', () => emit('select-pin', pin))
+    if (pin?.source !== 'role_position') marker.on('click', () => emit('select-pin', pin))
     marker.addTo(markerLayer)
   })
 

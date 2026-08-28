@@ -10,6 +10,7 @@ import { useMusicStore } from '../src/stores/music'
 import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
 import { SIMULATION_SURPRISE_MODE, useSimulationStore } from '../src/stores/simulation'
 import { useSystemStore } from '../src/stores/system'
+import { resetDialogServiceForTest, useDialog } from '../src/composables/useDialog'
 
 const DummyView = { template: '<div />' }
 
@@ -35,6 +36,7 @@ describe('MapView information architecture', () => {
 
   beforeEach(async () => {
     localStorage.clear()
+    resetDialogServiceForTest()
     vi.useFakeTimers()
     setActivePinia(createPinia())
     router = createTestRouter()
@@ -217,6 +219,70 @@ describe('MapView information architecture', () => {
     expect(wrapper.get('[data-testid="map-place-enter"]').exists()).toBe(true)
   })
 
+  test('previews the event surface at any entered place without persisting runtime history', async () => {
+    const mapStore = useMapStore()
+    const simulationStore = useSimulationStore()
+    const place = mapStore.activeMapPlaces.find((item) => item.placeId === 'address:1')
+    wrapper.findComponent({ name: 'MapSceneCanvas' }).vm.$emit('select-pin', place)
+    await nextTick()
+
+    await wrapper.get('[data-testid="map-place-enter"]').trigger('click')
+    await nextTick()
+    expect(wrapper.find('[data-testid="map-place-event-invitation"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="map-place-event-preview"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="map-place-preview-event"]').trigger('click')
+    await nextTick()
+    expect(wrapper.get('[data-testid="map-event-surface-sheet"]').text()).toMatch(
+      /测试预览|Test preview/,
+    )
+    expect(wrapper.get('[data-testid="map-event-choices"]').findAll('button')).toHaveLength(3)
+    expect(simulationStore.eventInstances).toHaveLength(0)
+
+    await wrapper.get('[data-testid="map-event-choice-check_equipment"]').trigger('click')
+    await nextTick()
+    expect(wrapper.get('[data-testid="map-event-consequence"]').exists()).toBe(true)
+    expect(simulationStore.eventInstances).toHaveLength(0)
+
+    await wrapper.get('[data-testid="map-event-return"]').trigger('click')
+    await nextTick()
+    expect(wrapper.get('[data-testid="map-place-detail-sheet"]').text()).toContain('家')
+  })
+
+  test('allows explicit place entry from a mobile-scale nearby position', async () => {
+    const mapStore = useMapStore()
+    const place = mapStore.activeMapPlaces.find((item) => item.placeId === 'seoul-mbc-hq')
+    mapStore.setCurrentLocation({
+      label: 'Near MBC',
+      detail: 'About seven meters from MBC',
+      source: 'map_point',
+      mapPackId: place.mapPackId,
+      position: {
+        ...place.position,
+        lat: place.position.lat + 0.000063,
+      },
+    })
+
+    wrapper.findComponent({ name: 'MapSceneCanvas' }).vm.$emit('select-pin', place)
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="map-place-context"]').text()).toMatch(
+      /距当前位置 7 米 · 可进入|7 m away · Entry available/,
+    )
+    expect(wrapper.get('[data-testid="map-place-enter"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="map-place-use-destination"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="map-place-enter"]').trigger('click')
+    await nextTick()
+
+    expect(mapStore.currentLocation).toMatchObject({
+      source: 'place_entry',
+      placeId: place.placeId,
+      position: place.position,
+    })
+    expect(mapStore.placeSession).toMatchObject({ state: 'inside', placeId: place.placeId })
+  })
+
   test('persists a blank map point as the role position and locks reselection during a journey', async () => {
     const mapStore = useMapStore()
     const mapScene = wrapper.findComponent({ name: 'MapSceneCanvas' })
@@ -227,7 +293,7 @@ describe('MapView information architecture', () => {
 
     expect(mapScene.props('allowPinPlacement')).toBe(true)
     expect(wrapper.get('[data-testid="map-role-position-mode"]').text()).toMatch(
-      /Tap any blank map point|点击地图任意空白位置/,
+      /Tap a blank map point or choose an existing place pin|点击地图空白处，或选择已有地点图钉/,
     )
 
     mapScene.vm.$emit('place-pin', { position: selectedPosition })
@@ -260,7 +326,7 @@ describe('MapView information architecture', () => {
       (place) => place.placeId === 'seoul-samsung-town',
     )
     mapStore.setTripEndpoint('to', nearbyDestination.detailZh)
-    expect(mapStore.tripEstimate.distanceKm).toBe(0.3)
+    expect(mapStore.tripEstimate.distanceKm).toBeCloseTo(0.141, 3)
 
     expect(mapStore.setTripTransportMode('walk').ok).toBe(true)
     expect(mapStore.startTrip().ok).toBe(true)
@@ -269,6 +335,39 @@ describe('MapView information architecture', () => {
     expect(wrapper.find('[data-testid="map-set-current-location"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="map-current-location"]').text()).toMatch(
       /Start position|出发位置/,
+    )
+  })
+
+  test('confirms an existing place pin as the role position and layers it above the role marker', async () => {
+    const mapStore = useMapStore()
+    const mapScene = wrapper.findComponent({ name: 'MapSceneCanvas' })
+    const place = mapStore.activeMapPlaces.find((item) => item.placeId === 'seoul-mbc-hq')
+    const originalPlaceId = mapStore.currentLocation.placeId
+    const { dialogState, submitDialog } = useDialog()
+
+    await wrapper.get('[data-testid="map-set-current-location"]').trigger('click')
+    mapScene.vm.$emit('select-pin', place)
+    await nextTick()
+
+    expect(dialogState.visible).toBe(true)
+    expect(dialogState.title).toMatch(/Set role position here|将角色位置设为这里/)
+    expect(mapStore.currentLocation.placeId).toBe(originalPlaceId)
+
+    submitDialog()
+    await flushPromises()
+
+    expect(mapStore.currentLocation).toMatchObject({
+      source: 'map_place',
+      placeId: place.placeId,
+      position: place.position,
+    })
+    expect(wrapper.get('[data-testid="map-role-position-feedback"]').text()).toMatch(
+      /Role position updated|角色位置已更新/,
+    )
+
+    const pins = mapScene.props('pins')
+    expect(pins.findIndex((pin) => pin.source === 'role_position')).toBeLessThan(
+      pins.findIndex((pin) => pin.placeId === place.placeId),
     )
   })
 
@@ -625,7 +724,7 @@ describe('MapView information architecture', () => {
     expect(wrapper.get('[data-testid="map-trip-to-input"]').element.value).toBe(
       worldPlaceOption.attributes('value'),
     )
-    expect(mapStore.tripEstimate.distanceKm).toBe(0.3)
+    expect(mapStore.tripEstimate.distanceKm).toBeCloseTo(0.155, 3)
   })
 
   test('requires a visible transport choice, updates the estimate, and locks it after departure', async () => {

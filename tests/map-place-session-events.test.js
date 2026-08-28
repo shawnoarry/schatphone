@@ -8,6 +8,7 @@ import {
   clusterMapEventSurfacePins,
   createEmptyMapPlaceSession,
   createMapEventSurfaceHostRegistry,
+  createMapPlaceSessionEventPreview,
   createMapPlaceSessionCheckpointV1,
   createMapPositionEvidence,
   enterMapPlaceSession,
@@ -275,6 +276,48 @@ describe('EVE-2C Map place-session boundary', () => {
       instance: {
         lifecycle: 'resolved',
         outcome: { requestState: 'validated' },
+      },
+    })
+  })
+
+  test('materializes an ephemeral preview for an ineligible place without changing source semantics', () => {
+    const place = {
+      ...createPlace({ id: 'quiet-home' }),
+      placeCategoryId: 'residence',
+      capabilityIds: ['rest'],
+    }
+    const session = enterSession(place)
+    const preview = createMapPlaceSessionEventPreview({
+      session,
+      mapPack: { id: place.mapPackId, version: 1, coordinateKind: 'canvas' },
+      place,
+      locale: 'en',
+      now: NOW,
+    })
+
+    expect(preview.ok).toBe(true)
+    expect(preview.instance).toMatchObject({
+      lifecycle: 'active',
+      source: { recordId: session.sessionId, recordRevision: session.revision },
+      place: { placeId: place.placeId, placeCategoryId: 'production_center' },
+      text: { source: 'local' },
+    })
+    expect(session).toMatchObject({
+      placeCategoryId: 'residence',
+      capabilityIds: ['rest'],
+    })
+
+    const resolved = resolveMapPlaceSessionEventInstance({
+      instance: preview.instance,
+      session,
+      choiceId: 'check_equipment',
+      now: NOW + 1_000,
+    })
+    expect(resolved).toMatchObject({
+      ok: true,
+      instance: {
+        lifecycle: 'resolved',
+        choices: { selectedId: 'check_equipment', outcomeId: 'equipment_checked' },
       },
     })
   })

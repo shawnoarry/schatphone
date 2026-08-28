@@ -70,6 +70,7 @@ import {
 import {
   MAP_EVENT_POSITION_PROVENANCE,
   MAP_PLACE_SESSION_CHECKPOINT_ID,
+  MAP_PLACE_ENTRY_RADIUS_KM,
   MAP_PLACE_SESSION_RECORD_TYPE,
   MAP_PLACE_SESSION_STATE,
   clusterMapEventSurfacePins,
@@ -3301,6 +3302,28 @@ export const useMapStore = defineStore('map', () => {
       trip.destinationPlaceId !== place.placeId
     ) {
       return { ok: false, code: 'PLACE_SESSION_ARRIVAL_PLACE_MISMATCH' }
+    }
+    const current = normalizeCurrentLocation(currentLocation.value, mapPacks.value)
+    const distanceKm =
+      current.mapPackId === place.mapPackId && current.position && place.position
+        ? calculateMapDistanceKm(activeMapPack.value, current.position, place.position)
+        : null
+    const isStableCurrentPlace =
+      current.positionEvidence?.placeId === place.placeId &&
+      mapPositionsEqual(current.position, place.position, activeMapPack.value.coordinateKind)
+    if (!isStableCurrentPlace) {
+      if (!Number.isFinite(distanceKm) || distanceKm > MAP_PLACE_ENTRY_RADIUS_KM) {
+        return { ok: false, code: 'PLACE_SESSION_PLACE_MISMATCH' }
+      }
+      setCurrentLocation({
+        source: 'place_entry',
+        label: place.nameZh || place.nameEn || place.label || current.label,
+        detail: place.detailZh || place.detailEn || place.detail || current.detail,
+        mapPackId: place.mapPackId,
+        placeId: place.placeId,
+        position: place.position,
+        evidenceAt: now,
+      })
     }
     const result = enterMapPlaceSession({
       previousSession: placeSession.value,

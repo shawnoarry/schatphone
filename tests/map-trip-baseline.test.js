@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useMapStore } from '../src/stores/map'
 import { useSystemStore } from '../src/stores/system'
 import * as pushLib from '../src/lib/push'
+import { MAP_TRIP_ESTIMATE_VERSION } from '../src/lib/map-journey'
 
 const startTripWithMode = (store, transportMode = 'hired_vehicle') => {
   expect(store.setTripTransportMode(transportMode)).toMatchObject({
@@ -48,7 +49,7 @@ describe('map trip baseline loop', () => {
     expect(store.tripState.status).toBe('traveling')
     expect(store.tripState).toMatchObject({
       transportMode: 'walk',
-      estimateVersion: 1,
+      estimateVersion: MAP_TRIP_ESTIMATE_VERSION,
       journeySchemaVersion: 3,
       phase: 'departed',
     })
@@ -68,7 +69,7 @@ describe('map trip baseline loop', () => {
     expect(store.tripHistory[0]?.status).toBe('arrived')
     expect(store.tripHistory[0]).toMatchObject({
       transportMode: 'walk',
-      estimateVersion: 1,
+      estimateVersion: MAP_TRIP_ESTIMATE_VERSION,
       journeySchemaVersion: 3,
       journeyId: store.tripState.journeyId,
       phase: 'arrived',
@@ -368,7 +369,7 @@ describe('map trip baseline loop', () => {
     expect(restoredStore.tripHistory[0]).toMatchObject({
       status: 'cancelled',
       transportMode: 'hired_vehicle',
-      estimateVersion: 1,
+      estimateVersion: MAP_TRIP_ESTIMATE_VERSION,
     })
 
     vi.advanceTimersByTime(60 * 60 * 1000)

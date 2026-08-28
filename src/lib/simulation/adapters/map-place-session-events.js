@@ -1,10 +1,12 @@
 import { normalizeMapPosition } from '../../map-packs'
 import {
   EVENT_INSTANCE_LIFECYCLE,
+  EVENT_TEXT_MODE,
   normalizeEventId,
   normalizeEventInstanceV1,
   normalizeEventText,
 } from '../event-contracts'
+import { materializeLocalEventInstanceV1 } from '../event-instance-materializer'
 import {
   EVENT_SURFACE_ACTION_KIND,
   EVENT_SURFACE_ANCHOR_KIND,
@@ -32,6 +34,8 @@ export const MAP_EVENT_POSITION_PROVENANCE = Object.freeze({
   MANUAL: 'manual',
   JOURNEY_ARRIVAL: 'journey_arrival',
 })
+
+export const MAP_PLACE_ENTRY_RADIUS_KM = 0.03
 export const MAP_PLACE_SESSION_STATE = Object.freeze({
   INSIDE: 'inside',
   LEFT: 'left',
@@ -452,6 +456,73 @@ export const evaluateMapPlaceSessionEventInvitation = ({
       copy,
     },
   }
+}
+
+export const createMapPlaceSessionEventPreview = ({
+  session: rawSession,
+  mapPack = {},
+  place = {},
+  locale = 'zh-CN',
+  now = Date.now(),
+} = {}) => {
+  const session = normalizeMapPlaceSession(rawSession)
+  const placeId = normalizeEventId(place.placeId || place.id)
+  if (
+    session.state !== MAP_PLACE_SESSION_STATE.INSIDE ||
+    !placeId ||
+    placeId !== session.placeId ||
+    normalizeEventId(place.mapPackId || mapPack.id) !== session.mapPackId
+  ) {
+    return { ok: false, instance: null, reason: 'preview_source_unavailable' }
+  }
+
+  const previewId = `event_instance_preview_${session.sessionId}_${session.revision}`
+  return materializeLocalEventInstanceV1({
+    instanceId: previewId,
+    source: {
+      moduleKey: 'map',
+      recordType: MAP_PLACE_SESSION_RECORD_TYPE,
+      recordId: session.sessionId,
+      recordRevision: session.revision,
+      checkpointId: MAP_PLACE_SESSION_CHECKPOINT_ID,
+      checkpointAt: session.enteredAt,
+    },
+    world: {
+      worldContextId: 'world_context_development_preview',
+      worldPackId: session.worldPackId,
+      mapPackId: session.mapPackId,
+      mapPackVersion: session.mapPackVersion || mapPack.version || 1,
+    },
+    place: {
+      placeId: session.placeId,
+      // The preview reuses the approved local scene without changing the place's real semantics.
+      placeCategoryId: 'production_center',
+      capabilityIds: ['work', 'wait'],
+      anchor: {
+        kind: 'stable_place',
+        mapPackId: session.mapPackId,
+        placeId: session.placeId,
+      },
+    },
+    presence: {
+      activationScope: 'interior',
+      relation: session.state,
+      provenance: session.presence.provenance,
+      placeSessionId: session.sessionId,
+      placeSessionRevision: session.revision,
+      journeyId: session.presence.journeyId,
+      evidenceAt: session.presence.evidenceAt,
+    },
+    runtime: { proposalId: previewId },
+    locale,
+    textMode: EVENT_TEXT_MODE.LOCAL_ONLY,
+    textContext: {
+      participants: [],
+      facts: [`Development preview at ${place.nameEn || place.nameZh || place.label || placeId}`],
+    },
+    seed: previewId,
+    now,
+  })
 }
 
 export const validateMapPlaceSessionEventResolution = (

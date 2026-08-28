@@ -40,6 +40,12 @@ import {
   isMapTransportMode,
 } from '../lib/map-journey'
 import { MAP_JOURNEY_EVENT_PROPOSAL_STATUS } from '../lib/simulation/adapters/map-journey-events'
+import {
+  MAP_PLACE_ENTRY_RADIUS_KM,
+  createMapPlaceSessionEventPreview,
+  projectMapPlaceSessionEventSurface,
+  resolveMapPlaceSessionEventInstance,
+} from '../lib/simulation/adapters/map-place-session-events'
 import { buildMusicIntegrationRoute } from '../lib/music-module-interface'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import MapAreaFeedbackPanel from '../components/map/MapAreaFeedbackPanel.vue'
@@ -140,6 +146,8 @@ const selectedEventSurfaceId = ref('')
 const selectedEventStackIds = ref([])
 const eventReturnPlaceId = ref('')
 const placeEventApplying = ref(false)
+const previewEventInstance = ref(null)
+const isDevelopment = import.meta.env.DEV
 let runtimeTimer = null
 
 const MAP_PACK_PREVIEW_SCOPE_ID = 'map-runtime-pack'
@@ -213,7 +221,8 @@ const isSelectedPlaceStableCurrentLocation = computed(() => {
 const isSelectedPlaceCurrentLocation = computed(
   () =>
     isSelectedPlaceStableCurrentLocation.value ||
-    (Number.isFinite(selectedPlaceDistanceKm.value) && selectedPlaceDistanceKm.value <= 0.001),
+    (Number.isFinite(selectedPlaceDistanceKm.value) &&
+      selectedPlaceDistanceKm.value <= MAP_PLACE_ENTRY_RADIUS_KM),
 )
 
 const isSelectedPlaceInside = computed(() => {
@@ -286,7 +295,11 @@ const selectedPlaceContextLabel = computed(() => {
   if (isSelectedPlaceInside.value) return t('已进入地点', 'Inside this place')
   if (isSelectedPlaceJourneyDestination.value) return t('正在前往这里', 'Heading here')
   if (isJourneyPlanningLocked.value) return t('当前行程中 · 浏览地点', 'Active journey · Browsing place')
-  if (isSelectedPlaceCurrentLocation.value) return t('当前位置', 'Current position')
+  if (isSelectedPlaceStableCurrentLocation.value) return t('当前位置', 'Current position')
+  if (isSelectedPlaceCurrentLocation.value) {
+    const meters = Math.max(1, Math.round(selectedPlaceDistanceKm.value * 1000))
+    return t(`距当前位置 ${meters} 米 · 可进入`, `${meters} m away · Entry available`)
+  }
   if (!selectedMapPlace.value?.position) return t('此地点暂无可用坐标', 'This place has no usable coordinates')
   if (selectedMapPlace.value.mapPackId !== activeMapPackId.value) {
     return t('此地点位于另一张地图', 'This place belongs to another map')
@@ -313,7 +326,7 @@ const selectedPlacePrimaryAction = computed(() => {
 const selectedPlaceEntryAction = computed(() => {
   if (isSelectedPlaceInside.value) return 'leave'
   if (
-    isSelectedPlaceStableCurrentLocation.value &&
+    isSelectedPlaceCurrentLocation.value &&
     !isTripTraveling.value &&
     (!isTripArrived.value || isSelectedPlaceJourneyDestination.value)
   ) return 'enter'
@@ -582,19 +595,6 @@ const visibleMapPlaces = computed(() =>
 
 const mapScenePins = computed(() =>
   [
-    ...activeMapPlaces.value
-    .filter(
-      (place) =>
-        place?.position &&
-        (mapStore.isMapPlaceVisible(place) || selectedMapPlace.value?.placeId === place.placeId),
-    )
-    .map((place) => ({
-      ...place,
-      name: mapPlaceName(place),
-      detail: mapPlaceDetail(place),
-      icon: mapPlaceVisual(place).icon,
-      tone: mapPlaceVisual(place).tone,
-    })),
     ...(currentLocation.value?.mapPackId === activeMapPackId.value && currentLocation.value?.position
       ? [{
           placeId: 'map-role-position',
@@ -608,6 +608,19 @@ const mapScenePins = computed(() =>
           tone: '#17664f',
         }]
       : []),
+    ...activeMapPlaces.value
+    .filter(
+      (place) =>
+        place?.position &&
+        (mapStore.isMapPlaceVisible(place) || selectedMapPlace.value?.placeId === place.placeId),
+    )
+    .map((place) => ({
+      ...place,
+      name: mapPlaceName(place),
+      detail: mapPlaceDetail(place),
+      icon: mapPlaceVisual(place).icon,
+      tone: mapPlaceVisual(place).tone,
+    })),
     ...mapEventSurfacePins.value,
   ],
 )
@@ -732,9 +745,42 @@ const setTripToMapPlace = (place) => {
   selectMapDestination(place)
 }
 
+const confirmRolePositionPlace = async (place) => {
+  if (!rolePositionMode.value || !canSetRolePosition.value || !place?.position) return
+  const confirmed = await confirmDialog({
+    title: t('将角色位置设为这里？', 'Set role position here?'),
+    message: t(
+      `确认后，${mapPlaceName(place)}将成为角色当前位置。`,
+      `After confirmation, ${mapPlaceName(place)} will become the role location.`,
+    ),
+    details: [mapPlaceDetail(place)],
+    confirmText: t('确认位置', 'Confirm location'),
+    cancelText: t('再看看', 'Keep looking'),
+    tone: 'accent',
+  })
+  if (!confirmed || !rolePositionMode.value || !canSetRolePosition.value) return
+  mapStore.setCurrentLocation({
+    label: mapPlaceName(place),
+    detail: mapPlaceDetail(place),
+    source: 'map_place',
+    mapPackId: activeMapPackId.value,
+    placeId: place.placeId || place.id,
+    position: place.position,
+    syncTripOrigin: true,
+  })
+  rolePositionMode.value = false
+  rolePositionNotice.value = t('角色位置已更新', 'Role position updated')
+  mapFocusTarget.value = { ...place.position }
+  mapFocusRequestId.value += 1
+}
+
 const onMapPinSelected = (place) => {
   if (place?.source === 'role_position') {
     focusCurrentLocation()
+    return
+  }
+  if (rolePositionMode.value && place?.source !== 'map_event') {
+    void confirmRolePositionPlace(place)
     return
   }
   if (place?.source === 'map_event') {
@@ -816,8 +862,27 @@ const leaveSelectedPlace = () => {
   mapStore.leavePlace()
 }
 
+const previewEventSurface = computed(() => {
+  const instance = previewEventInstance.value
+  if (!instance) return null
+  const place = activeMapPlaces.value.find((item) => item.placeId === instance.place.placeId)
+  if (!place) return null
+  return projectMapPlaceSessionEventSurface({
+    instance,
+    sourceRecord: placeSession.value,
+    mapPack: activeMapPack.value,
+    place,
+  })
+})
+
+const isSelectedEventPreview = computed(() =>
+  Boolean(previewEventSurface.value?.id === selectedEventSurfaceId.value),
+)
+
 const selectedEventSurface = computed(() =>
-  mapEventSurfaces.value.find((surface) => surface.id === selectedEventSurfaceId.value) || null,
+  (isSelectedEventPreview.value ? previewEventSurface.value : null) ||
+  mapEventSurfaces.value.find((surface) => surface.id === selectedEventSurfaceId.value) ||
+  null,
 )
 
 const selectedEventStack = computed(() =>
@@ -827,7 +892,9 @@ const selectedEventStack = computed(() =>
 )
 
 const selectedEventInstance = computed(() =>
-  selectedEventSurface.value
+  isSelectedEventPreview.value
+    ? previewEventInstance.value
+    : selectedEventSurface.value
     ? simulationStore.getEventInstance(selectedEventSurface.value.proposalId)
     : null,
 )
@@ -837,6 +904,12 @@ const selectedEventPlace = computed(() => {
   return activeMapPlaces.value.find((place) => place.placeId === placeId) || null
 })
 
+const selectedEventMedia = computed(() => (
+  selectedEventPlace.value
+    ? resolveMapPlaceMedia(selectedEventPlace.value, activeMapPackId.value)
+    : null
+))
+
 const openSelectedPlaceEvent = () => {
   if (!selectedPlaceEventInvitation.value || placeEventApplying.value) return
   placeEventApplying.value = true
@@ -844,6 +917,7 @@ const openSelectedPlaceEvent = () => {
     const placeId = selectedMapPlace.value?.placeId || selectedMapPlace.value?.id || ''
     const result = mapStore.expandPlaceSessionEvent({ locale: systemLanguage.value })
     if (!result.ok || !result.instance) return
+    previewEventInstance.value = null
     eventReturnPlaceId.value = placeId
     selectedMapPlace.value = null
     selectedEventStackIds.value = []
@@ -852,6 +926,25 @@ const openSelectedPlaceEvent = () => {
   } finally {
     placeEventApplying.value = false
   }
+}
+
+const openSelectedPlaceEventPreview = () => {
+  if (!isDevelopment || !isSelectedPlaceInside.value || placeEventApplying.value) return
+  const place = selectedMapPlace.value
+  const placeId = place?.placeId || place?.id || ''
+  if (!placeId) return
+  const result = createMapPlaceSessionEventPreview({
+    session: placeSession.value,
+    mapPack: activeMapPack.value,
+    place,
+    locale: systemLanguage.value,
+  })
+  if (!result.ok || !result.instance) return
+  previewEventInstance.value = result.instance
+  eventReturnPlaceId.value = placeId
+  selectedMapPlace.value = null
+  selectedEventStackIds.value = []
+  selectedEventSurfaceId.value = `event_surface:map:${result.instance.id}`
 }
 
 const selectEventSurfaceFromStack = (surfaceId) => {
@@ -863,6 +956,7 @@ const closeEventSurface = () => {
   selectedEventSurfaceId.value = ''
   selectedEventStackIds.value = []
   eventReturnPlaceId.value = ''
+  previewEventInstance.value = null
   if (!returnPlaceId) return
   const place = activeMapPlaces.value.find((item) => item.placeId === returnPlaceId)
   if (!place) return
@@ -874,6 +968,15 @@ const resolveSelectedPlaceEvent = (choiceId) => {
   if (!selectedEventInstance.value || placeEventApplying.value) return
   placeEventApplying.value = true
   try {
+    if (isSelectedEventPreview.value) {
+      const result = resolveMapPlaceSessionEventInstance({
+        instance: previewEventInstance.value,
+        session: placeSession.value,
+        choiceId,
+      })
+      if (result.ok && result.instance) previewEventInstance.value = result.instance
+      return
+    }
     mapStore.resolvePlaceSessionEventChoice(selectedEventInstance.value.id, choiceId)
   } finally {
     placeEventApplying.value = false
@@ -884,6 +987,10 @@ const dismissSelectedPlaceEvent = () => {
   if (!selectedEventInstance.value || placeEventApplying.value) return
   placeEventApplying.value = true
   try {
+    if (isSelectedEventPreview.value) {
+      closeEventSurface()
+      return
+    }
     const result = mapStore.dismissPlaceSessionEvent(selectedEventInstance.value.id)
     if (result.ok) closeEventSurface()
   } finally {
@@ -2320,7 +2427,7 @@ onBeforeUnmount(() => {
           <i :class="rolePositionMode ? 'fas fa-location-crosshairs' : 'fas fa-check'" aria-hidden="true"></i>
           <span>
             <strong>{{ rolePositionMode ? t('设定角色位置', 'Set role position') : rolePositionNotice }}</strong>
-            <small v-if="rolePositionMode">{{ t('点击地图任意空白位置确认坐标', 'Tap any blank map point to confirm') }}</small>
+            <small v-if="rolePositionMode">{{ t('点击地图空白处，或选择已有地点图钉', 'Tap a blank map point or choose an existing place pin') }}</small>
           </span>
           <button type="button" :aria-label="rolePositionMode ? t('取消', 'Cancel') : t('关闭', 'Dismiss')" @click="rolePositionMode ? cancelRolePositionMode() : rolePositionNotice = ''">
             {{ rolePositionMode ? t('取消', 'Cancel') : t('知道了', 'Done') }}
@@ -2874,6 +2981,7 @@ onBeforeUnmount(() => {
       :entry-action="selectedPlaceEntryAction"
       :anchor="selectedPlaceAnchor"
       :event-invitation="selectedPlaceEventInvitation"
+      :event-preview-available="isDevelopment && isSelectedPlaceInside && !selectedPlaceEventInvitation"
       :can-manage="selectedMapPlace.source === 'user'"
       :pin-visible="selectedPlacePinVisible"
       :t="t"
@@ -2883,6 +2991,7 @@ onBeforeUnmount(() => {
       @enter="enterSelectedPlace"
       @leave="leaveSelectedPlace"
       @expand-event="openSelectedPlaceEvent"
+      @preview-event="openSelectedPlaceEventPreview"
       @share="shareSelectedPlaceToChat"
       @manage="openSelectedPlaceManager"
       @show-pin="showSelectedPlacePin"
@@ -2894,6 +3003,8 @@ onBeforeUnmount(() => {
       :stack="selectedEventStack"
       :instance="selectedEventInstance"
       :place-name="selectedEventPlace ? mapPlaceName(selectedEventPlace) : ''"
+      :media="selectedEventMedia"
+      :preview="isSelectedEventPreview"
       :busy="placeEventApplying"
       :t="t"
       @close="closeEventSurface"

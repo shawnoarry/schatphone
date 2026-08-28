@@ -43,6 +43,25 @@ describe('map journey transport estimates', () => {
     expect(estimates[3].minutes).toBeLessThan(estimates[2].minutes)
     expect(estimates.every((estimate) => estimate.estimateVersion === MAP_TRIP_ESTIMATE_VERSION)).toBe(true)
   })
+
+  test('keeps a measured walking distance of a few meters instead of inflating it to 300 meters', () => {
+    expect(estimateMapJourney({ measuredDistanceKm: 0.007, transportMode: 'walk' })).toMatchObject({
+      distanceKm: 0.007,
+      minutes: 1,
+      durationSeconds: 60,
+    })
+  })
+
+  test('keeps the text-based fallback when no measured distance is available', () => {
+    expect(
+      estimateMapJourney({
+        fromText: 'Home',
+        toText: 'Unknown destination',
+        measuredDistanceKm: null,
+        transportMode: 'walk',
+      }).distanceKm,
+    ).toBeGreaterThanOrEqual(3)
+  })
 })
 
 describe('map journey lifecycle', () => {

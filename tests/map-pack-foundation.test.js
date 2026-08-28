@@ -379,7 +379,7 @@ describe('local map pack foundation', () => {
     )
     store.setTripEndpoint('to', samsungTown.detailZh)
 
-    expect(store.tripEstimate.distanceKm).toBe(0.3)
+    expect(store.tripEstimate.distanceKm).toBeCloseTo(0.155, 3)
   })
 
   test('switches worlds locally and blocks cross-world switching during a trip', () => {

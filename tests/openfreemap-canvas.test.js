@@ -162,7 +162,7 @@ describe('OpenFreeMap canvas', () => {
     maplibreMock.failMarkerAdd = false
   })
 
-  test('selects canonical markers normally and makes them pass through during coordinate placement', async () => {
+  test('keeps canonical markers selectable during coordinate placement', async () => {
     const userPin = {
       placeId: 'address:17',
       source: 'user',
@@ -211,10 +211,10 @@ describe('OpenFreeMap canvas', () => {
     const placementMarker = maplibreMock.markers.find(
       (marker) => !marker.removed && !marker.element.classList.contains('is-pending'),
     )
-    expect(placementMarker.element.classList.contains('is-placement-pass-through')).toBe(true)
-    expect(placementMarker.element.tabIndex).toBe(-1)
+    expect(placementMarker.element.classList.contains('is-placement-pass-through')).toBe(false)
+    expect(placementMarker.element.tabIndex).toBe(0)
     placementMarker.element.click()
-    expect(wrapper.emitted('select-pin')).toHaveLength(1)
+    expect(wrapper.emitted('select-pin')).toHaveLength(2)
 
     const placedPosition = { kind: 'geo', lat: 37.5712, lng: 126.9918 }
     map.emit('click', { lngLat: placedPosition })
@@ -225,6 +225,38 @@ describe('OpenFreeMap canvas', () => {
 
     wrapper.unmount()
     expect(map.removed).toBe(true)
+  })
+
+  test('keeps a coincident role marker non-interactive beneath a place marker', async () => {
+    const position = { kind: 'geo', lat: 37.579, lng: 126.89 }
+    const rolePin = {
+      placeId: 'map-role-position',
+      source: 'role_position',
+      name: 'Role position',
+      position,
+    }
+    const placePin = {
+      placeId: 'seoul-mbc-hq',
+      source: 'map_pack',
+      name: 'MBC',
+      position,
+    }
+    const wrapper = mountCanvas({ pins: [rolePin, placePin], allowPinPlacement: true })
+    await flushPromises()
+    const map = maplibreMock.maps[0]
+    map.emit('load')
+    await nextTick()
+
+    const activeMarkers = maplibreMock.markers.filter((marker) => !marker.removed)
+    expect(activeMarkers).toHaveLength(2)
+    expect(activeMarkers[0].element.classList.contains('is-role-position')).toBe(true)
+    expect(activeMarkers[0].element.getAttribute('aria-hidden')).toBe('true')
+    expect(activeMarkers[0].element.tabIndex).toBe(-1)
+
+    activeMarkers[0].element.click()
+    expect(wrapper.emitted('select-pin')).toBeUndefined()
+    activeMarkers[1].element.click()
+    expect(wrapper.emitted('select-pin')?.[0]?.[0]).toEqual(placePin)
   })
 
   test('keeps a slow online startup alive beyond the previous ten-second boundary', async () => {

@@ -82,7 +82,7 @@ const openMbcPlace = async (page) => {
   await expect(page.getByTestId('map-place-detail-sheet')).toBeVisible()
 }
 
-const moveMbcToCurrentLocation = async (page) => {
+const moveNearMbcCurrentLocation = async (page) => {
   await page.goto('/schatphone/manifest.webmanifest')
   await page.evaluate(async (place) => {
     const key = 'schatphone:store:map'
@@ -96,20 +96,20 @@ const moveMbcToCurrentLocation = async (page) => {
     data.activeMapPackId = 'real-seoul-v1'
     data.currentLocation = {
       source: 'saved',
-      label: place.label,
-      detail: place.detail,
+      label: 'Near MBC',
+      detail: 'About seven meters from MBC',
       mapPackId: 'real-seoul-v1',
-      placeId: place.placeId,
-      position: place.position,
+      placeId: '',
+      position: { ...place.position, lat: place.position.lat + 0.000063 },
       positionEvidence: {
         provenance: 'manual',
-        placeId: place.placeId,
+        placeId: '',
         evidenceAt: now,
         journeyId: '',
         journeyArrivedAt: 0,
       },
     }
-    data.tripForm = { ...(data.tripForm || {}), from: place.detail }
+    data.tripForm = { ...(data.tripForm || {}), from: 'About seven meters from MBC' }
     envelope.data = data
     envelope.savedAt = now
     if (envelope.generation?.lineage) {
@@ -184,8 +184,9 @@ test.describe('EVE-2C Map K-pop place-session events', () => {
     await seedEventScenario(page)
     await unlockToHome(page)
     await navigateInsideUnlockedApp(page, '/map')
-    await moveMbcToCurrentLocation(page)
+    await moveNearMbcCurrentLocation(page)
 
+    await expect(page.getByTestId('map-place-context')).toContainText(/7 m away|距当前位置 7 米/)
     await expect(page.getByTestId('map-place-enter')).toBeVisible()
     await expect(page.getByTestId('map-place-event-invitation')).toHaveCount(0)
     await page.getByTestId('map-place-enter').click()
@@ -328,7 +329,7 @@ test.describe('EVE-2C Map K-pop place-session events', () => {
     await seedEventScenario(page, { worldview: SCI_FI_WORLDVIEW })
     await unlockToHome(page)
     await navigateInsideUnlockedApp(page, '/map')
-    await moveMbcToCurrentLocation(page)
+    await moveNearMbcCurrentLocation(page)
     await page.getByTestId('map-place-enter').click()
 
     await expect(page.getByTestId('map-place-leave')).toBeVisible()
@@ -337,6 +338,87 @@ test.describe('EVE-2C Map K-pop place-session events', () => {
     expect((await readPersistedData(page, 'schatphone:store:simulation')).eventInstances).toEqual([])
     await expectNoHorizontalOverflow(page, 'map-place-detail-sheet')
     await captureVisualEvidence(page, testInfo, 'off-pack-no-event')
+    expect(pageErrors).toEqual([])
+  })
+
+  test('opens a non-persistent development preview at an ordinary entered place', async ({ page }) => {
+    const pageErrors = []
+    page.on('pageerror', (error) => pageErrors.push(error.message))
+    await mockOpenFreeMapStyle(page)
+    await seedEventScenario(page)
+    await unlockToHome(page)
+    await navigateInsideUnlockedApp(page, '/map')
+
+    await page.getByTestId('map-destination-search').fill('家')
+    const homeResult = page
+      .getByTestId('map-local-place-results')
+      .locator('.map-place-result')
+      .filter({ hasText: '家' })
+      .first()
+    await expect(homeResult).toBeVisible()
+    await homeResult.click()
+    await page.getByTestId('map-place-enter').click()
+
+    await expect(page.getByTestId('map-place-event-invitation')).toHaveCount(0)
+    await expect(page.getByTestId('map-place-event-preview')).toBeVisible()
+    await page.getByTestId('map-place-preview-event').click()
+    await expect(page.getByTestId('map-event-surface-sheet')).toContainText(/Test preview|测试预览/)
+    await expect(page.getByTestId('map-event-choices').getByRole('button')).toHaveCount(3)
+    await page.getByTestId('map-event-choice-wait_for_staff').click()
+    await expect(page.getByTestId('map-event-consequence')).toBeVisible()
+    expect((await readPersistedData(page, 'schatphone:store:simulation')).eventInstances).toEqual([])
+    expect(pageErrors).toEqual([])
+  })
+
+  test('confirms an existing pin as role position without blocking the coincident place pin', async ({ page }) => {
+    const pageErrors = []
+    page.on('pageerror', (error) => pageErrors.push(error.message))
+    await mockOpenFreeMapStyle(page)
+    await seedEventScenario(page)
+    await unlockToHome(page)
+    await navigateInsideUnlockedApp(page, '/map')
+
+    await openMbcPlace(page)
+    await page.getByTestId('map-place-detail-sheet').getByRole('button', { name: /Close|关闭/ }).click()
+    await page.waitForTimeout(500)
+    await page.getByTestId('map-set-current-location').click()
+    await expect(page.getByTestId('map-role-position-mode')).toContainText(
+      /choose an existing place pin|选择已有地点图钉/,
+    )
+    const mbcMarker = page.locator('.openfreemap-marker-button[aria-label*="MBC"]').first()
+    await expect(mbcMarker).toBeVisible()
+    await mbcMarker.click()
+
+    await expect(page.locator('.app-dialog-title')).toContainText(
+      /Set role position here|将角色位置设为这里/,
+    )
+    expect((await readPersistedData(page, 'schatphone:store:map')).currentLocation.placeId).not.toBe(
+      PLACE_ID,
+    )
+    await page.getByRole('button', { name: /Confirm location|确认位置/ }).click()
+    await expect(page.getByTestId('map-role-position-feedback')).toBeVisible()
+    await expect
+      .poll(async () => (await readPersistedData(page, 'schatphone:store:map')).currentLocation)
+      .toMatchObject({ source: 'map_place', placeId: PLACE_ID, position: MBC_PLACE.position })
+
+    const markerLayerState = await page.locator('.openfreemap-marker-button').evaluateAll(
+      (markers) => {
+        const roleIndex = markers.findIndex((marker) => marker.classList.contains('is-role-position'))
+        const placeIndex = markers.findIndex((marker) => marker.getAttribute('aria-label')?.includes('MBC'))
+        return {
+          roleIndex,
+          placeIndex,
+          rolePointerEvents:
+            roleIndex >= 0 ? window.getComputedStyle(markers[roleIndex]).pointerEvents : '',
+        }
+      },
+    )
+    expect(markerLayerState.roleIndex).toBeGreaterThanOrEqual(0)
+    expect(markerLayerState.roleIndex).toBeLessThan(markerLayerState.placeIndex)
+    expect(markerLayerState.rolePointerEvents).toBe('none')
+
+    await page.locator('.openfreemap-marker-button[aria-label*="MBC"]').first().click()
+    await expect(page.getByTestId('map-place-detail-sheet')).toBeVisible()
     expect(pageErrors).toEqual([])
   })
 })

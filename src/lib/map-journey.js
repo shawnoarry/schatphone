@@ -1,4 +1,4 @@
-export const MAP_TRIP_ESTIMATE_VERSION = 1
+export const MAP_TRIP_ESTIMATE_VERSION = 2
 
 export const MAP_JOURNEY_SCHEMA_VERSION = 3
 
@@ -89,7 +89,7 @@ const JOURNEY_CHECKPOINT_BY_ID = new Map(
 )
 
 const ESTIMATE_PROFILES = Object.freeze({
-  walk: Object.freeze({ minutesPerKm: 12.5, overheadMinutes: 0, minimumMinutes: 3 }),
+  walk: Object.freeze({ minutesPerKm: 12.5, overheadMinutes: 0, minimumMinutes: 1 }),
   public_transit: Object.freeze({ minutesPerKm: 3, overheadMinutes: 6, minimumMinutes: 8 }),
   hired_vehicle: Object.freeze({ minutesPerKm: 3.5, overheadMinutes: 0, minimumMinutes: 3 }),
   private_vehicle: Object.freeze({ minutesPerKm: 2.8, overheadMinutes: 3, minimumMinutes: 4 }),
@@ -291,8 +291,9 @@ export const estimateMapJourney = ({
   const from = typeof fromText === 'string' ? fromText.trim() : ''
   const to = typeof toText === 'string' ? toText.trim() : ''
   const measured = Number(measuredDistanceKm)
-  const distanceKm = Number.isFinite(measured) && measured > 0
-    ? Math.max(0.3, Math.round(measured * 10) / 10)
+  const hasMeasuredDistance = measuredDistanceKm !== null && measuredDistanceKm !== ''
+  const distanceKm = hasMeasuredDistance && Number.isFinite(measured) && measured >= 0
+    ? Math.round(measured * 1000) / 1000
     : Math.max(3, Math.abs(from.length - to.length) % 18 + 3)
   const normalizedMode = normalizeMapTransportMode(transportMode)
   const mode = getMapTransportMode(normalizedMode)
