@@ -47,6 +47,11 @@ const chatSnapshot = {
       entityType: 'main_role',
       isMain: true,
       bio: 'A main relationship contact.',
+      templateLink: {
+        primaryWorldId: '',
+        profileTemplateId: 'preset_basic_modern',
+        profileTemplateVersion: 1,
+      },
       profileValues: [{ fieldId: 'club', value: 'Drama club', visibilityLevel: 'familiar' }],
     },
     {
@@ -208,7 +213,9 @@ test('Contacts opens as a phone contact list on mobile', async ({ page }) => {
   await page.getByTestId('contacts-recent-2').click()
   await expect(page.getByTestId('contacts-role-detail')).toContainText('Main contact')
   await expect(page.getByTestId('contacts-person-profile-summary')).toContainText('Persona')
-  await expect(page.getByTestId('contacts-persona-paste-from-overview')).toBeVisible()
+  await expect(page.getByTestId('contacts-open-persona-classification')).toContainText(
+    'Import persona',
+  )
   await expect(page.getByTestId('contacts-persona-fill-from-overview')).toBeVisible()
 
   await page.getByTestId('contacts-persona-fill-from-overview').click()
@@ -223,12 +230,13 @@ test('Contacts opens as a phone contact list on mobile', async ({ page }) => {
   )
   await expect(page.locator('.contacts-world-field-type-chip')).toHaveCount(0)
   await page.getByTestId('contacts-cancel-world-profile-fields').click()
+  await page.getByTestId('contacts-detail-sheet-back').click()
   await page.getByTestId('contacts-open-persona-classification').click()
   await expect(page.getByTestId('contacts-persona-classification-panel')).toContainText(
     'Organize Main contact\'s persona',
   )
   await expect(page.getByTestId('contacts-persona-classification-panel')).toContainText(
-    'Review it before saving',
+    'review draft only',
   )
   await page.getByTestId('contacts-close-persona-classification').click()
   await page.getByTestId('contacts-detail-sheet-back').click()

@@ -855,7 +855,6 @@ describe('Contacts profile template entity UI', () => {
     const wrapper = await mountContactsView()
     await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
     await flushUi()
-    await openDetailSheet(wrapper, 'world-fields')
     await wrapper.get('[data-testid="contacts-open-persona-classification"]').trigger('click')
     await wrapper
       .get('[data-testid="contacts-persona-source"]')
@@ -949,7 +948,6 @@ describe('Contacts profile template entity UI', () => {
     const wrapper = await mountContactsView()
     await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
     await flushUi()
-    await openDetailSheet(wrapper, 'world-fields')
     await wrapper.get('[data-testid="contacts-open-persona-classification"]').trigger('click')
     await wrapper
       .get('[data-testid="contacts-persona-source"]')
@@ -1010,7 +1008,6 @@ describe('Contacts profile template entity UI', () => {
     const wrapper = await mountContactsView()
     await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
     await flushUi()
-    await openDetailSheet(wrapper, 'world-fields')
     await wrapper.get('[data-testid="contacts-open-persona-classification"]').trigger('click')
     await wrapper.get('[data-testid="contacts-persona-source"]').setValue(sourceText)
     await wrapper.get('[data-testid="contacts-classify-persona"]').trigger('click')
@@ -1169,7 +1166,7 @@ describe('Contacts profile template entity UI', () => {
 
     const overview = wrapper.get('[data-testid="contacts-person-profile-summary"]')
     expect(overview.text()).toContain('No persona added for Empty persona role yet')
-    expect(overview.text()).toContain('Paste a persona')
+    expect(overview.text()).toContain('Import persona')
     expect(overview.text()).toContain('Fill item by item')
     expect(wrapper.text()).not.toContain('No cross-module relationship facts')
 
@@ -1178,6 +1175,89 @@ describe('Contacts profile template entity UI', () => {
 
     expect(wrapper.get('[data-testid="contacts-detail-sheet-world-fields"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="contacts-world-profile-fields-editor"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  test('imports a JSON persona into the review source without saving the profile', async () => {
+    const chatStore = useChatStore()
+    const profile = chatStore.addRoleProfile({
+      roleId: '12501',
+      name: 'Imported persona role',
+      entityType: CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+      templateLink: {
+        primaryWorldId: '',
+        profileTemplateId: 'preset_basic_modern',
+        profileTemplateVersion: 1,
+      },
+      profileValues: [],
+    })
+    const beforeProfile = JSON.stringify(chatStore.getRoleProfileById(profile.id))
+
+    const wrapper = await mountContactsView()
+    await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
+    await flushUi()
+    await wrapper.get('[data-testid="contacts-open-persona-classification"]').trigger('click')
+    await flushUi()
+
+    const input = wrapper.get('[data-testid="contacts-persona-source-file"]')
+    Object.defineProperty(input.element, 'files', {
+      configurable: true,
+      value: [
+        new File(['{"occupation":"Producer","habits":["tea","walking"]}'], 'persona.json', {
+          type: 'application/json',
+        }),
+      ],
+    })
+    await input.trigger('change')
+    await flushUi()
+
+    expect(wrapper.get('[data-testid="contacts-persona-source"]').element.value).toContain(
+      '"occupation": "Producer"',
+    )
+    expect(wrapper.get('[data-testid="contacts-persona-imported-file"]').text()).toContain(
+      'persona.json',
+    )
+    expect(JSON.stringify(chatStore.getRoleProfileById(profile.id))).toBe(beforeProfile)
+
+    wrapper.unmount()
+  })
+
+  test('keeps the existing persona source when file import fails', async () => {
+    const chatStore = useChatStore()
+    const profile = chatStore.addRoleProfile({
+      roleId: '12502',
+      name: 'Failed import persona role',
+      entityType: CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+      templateLink: {
+        primaryWorldId: '',
+        profileTemplateId: 'preset_basic_modern',
+        profileTemplateVersion: 1,
+      },
+      profileValues: [],
+    })
+    const beforeProfile = JSON.stringify(chatStore.getRoleProfileById(profile.id))
+    const existingSource = 'Keep this pasted persona unchanged.'
+
+    const wrapper = await mountContactsView()
+    await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
+    await flushUi()
+    await wrapper.get('[data-testid="contacts-open-persona-classification"]').trigger('click')
+    await wrapper.get('[data-testid="contacts-persona-source"]').setValue(existingSource)
+
+    const input = wrapper.get('[data-testid="contacts-persona-source-file"]')
+    Object.defineProperty(input.element, 'files', {
+      configurable: true,
+      value: [new File(['{invalid'], 'persona.json', { type: 'application/json' })],
+    })
+    await input.trigger('change')
+    await flushUi()
+
+    expect(wrapper.get('[data-testid="contacts-persona-source"]').element.value).toBe(existingSource)
+    expect(wrapper.get('[data-testid="contacts-persona-classification-error"]').text()).toContain(
+      'current input was kept',
+    )
+    expect(JSON.stringify(chatStore.getRoleProfileById(profile.id))).toBe(beforeProfile)
 
     wrapper.unmount()
   })
@@ -1291,7 +1371,10 @@ describe('Contacts profile template entity UI', () => {
     const pending = wrapper.get('[data-testid="contacts-world-profile-pending-summary"]')
     expect(pending.text()).toContain('Details to add')
     expect(pending.text()).toContain('Organization: 2 details to add')
+    expect(wrapper.find('[data-testid="contacts-open-persona-classification"]').exists()).toBe(false)
 
+    await wrapper.get('[data-testid="contacts-detail-sheet-back"]').trigger('click')
+    await flushUi()
     await wrapper.get('[data-testid="contacts-open-persona-classification"]').trigger('click')
     await flushUi()
 

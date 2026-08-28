@@ -469,13 +469,20 @@ test('Contacts persona review confirms one revision and fails closed on desktop 
   await expect(page.getByTestId('contacts-world-profile-pending-summary')).toBeVisible()
   await expect(page.getByTestId('contacts-world-field-category-personality')).toHaveCount(0)
 
+  await page.getByTestId('contacts-detail-sheet-back').click()
   await page.getByTestId('contacts-open-persona-classification').click()
   await expect(page.getByTestId('contacts-world-profile-category-list')).toHaveCount(0)
   await expect(page.getByTestId('contacts-world-profile-pending-summary')).toHaveCount(0)
   await expect(page.getByTestId('contacts-persona-classification-panel')).toContainText(
     isMobile ? '只整理复核草稿' : 'review draft only',
   )
-  await page.getByTestId('contacts-persona-source').fill(personaSourceText)
+  await page.getByTestId('contacts-persona-source-file').setInputFiles({
+    name: 'persona.md',
+    mimeType: 'text/markdown',
+    buffer: Buffer.from(personaSourceText),
+  })
+  await expect(page.getByTestId('contacts-persona-imported-file')).toContainText('persona.md')
+  await expect(page.getByTestId('contacts-persona-source')).toHaveValue(personaSourceText)
   await page.getByTestId('contacts-classify-persona').click()
 
   await expect(page.getByTestId('contacts-persona-classification-summary')).toContainText('1')
@@ -507,6 +514,7 @@ test('Contacts persona review confirms one revision and fails closed on desktop 
   await expect(page.getByTestId('contacts-world-profile-pending-summary')).toBeVisible()
   expect(await readPersistedPersonaProfile(page)).toBe(beforeProfile)
 
+  await page.getByTestId('contacts-detail-sheet-back').click()
   await page.getByTestId('contacts-open-persona-classification').click()
   await page.getByTestId('contacts-persona-source').fill(personaSourceText)
   await page.getByTestId('contacts-classify-persona').click()
@@ -535,6 +543,7 @@ test('Contacts persona review confirms one revision and fails closed on desktop 
   await expectNoHorizontalOverflow(page)
 
   const afterSave = await readPersistedPersonaProfile(page)
+  await page.getByTestId('contacts-detail-sheet-back').click()
   await page.getByTestId('contacts-open-persona-classification').click()
   await page.getByTestId('contacts-persona-source').fill('Occupation: Director')
   await page.getByTestId('contacts-classify-persona').click()

@@ -32,6 +32,10 @@ import {
   createPersonaReviewRows,
 } from '../lib/persona-profile-classifier'
 import {
+  PERSONA_SOURCE_FILE_ACCEPT,
+  importPersonaSourceFile,
+} from '../lib/persona-profile-source-import'
+import {
   PERSONA_REVIEW_DECISIONS,
   buildPersonaProfileConfirmation,
 } from '../lib/persona-profile-confirmation'
@@ -176,6 +180,8 @@ const profileTemplateAdaptationBusy = ref(false)
 const profileTemplateAdaptationStatus = ref('')
 const isPersonaClassificationOpen = ref(false)
 const personaClassificationSource = ref('')
+const personaSourceFileInput = ref(null)
+const personaImportedSource = ref(null)
 const personaClassificationBusy = ref(false)
 const personaClassificationError = ref('')
 const personaClassificationDraft = ref(null)
@@ -1455,6 +1461,7 @@ const resetPersonaClassification = () => {
   personaClassificationRequestId += 1
   isPersonaClassificationOpen.value = false
   personaClassificationSource.value = ''
+  personaImportedSource.value = null
   personaClassificationBusy.value = false
   personaClassificationError.value = ''
   personaClassificationDraft.value = null
@@ -1468,6 +1475,7 @@ const openPersonaClassification = () => {
   personaClassificationRequestId += 1
   isPersonaClassificationOpen.value = true
   personaClassificationSource.value = ''
+  personaImportedSource.value = null
   personaClassificationBusy.value = false
   personaClassificationError.value = ''
   personaClassificationDraft.value = null
@@ -1475,13 +1483,63 @@ const openPersonaClassification = () => {
   personaConfirmationBusy.value = false
 }
 
+const personaImportErrorText = (reason) => {
+  const messages = {
+    unsupported_format: t(
+      '请选择 TXT、Markdown 或 JSON 文件。原输入保持不变。',
+      'Choose a TXT, Markdown, or JSON file. The current input was kept.',
+    ),
+    read_failed: t(
+      '无法读取这个文件。原输入保持不变。',
+      'This file could not be read. The current input was kept.',
+    ),
+    empty_file: t(
+      '这个文件没有可导入的文字。原输入保持不变。',
+      'This file has no importable text. The current input was kept.',
+    ),
+    invalid_json: t(
+      'JSON 文件格式无效。请修正后重试，原输入保持不变。',
+      'The JSON file is invalid. Fix it and try again; the current input was kept.',
+    ),
+    too_large: t(
+      `文件内容超过 ${MAX_PERSONA_SOURCE_TEXT} 个字符。原输入保持不变。`,
+      `The file exceeds ${MAX_PERSONA_SOURCE_TEXT} characters. The current input was kept.`,
+    ),
+  }
+  return messages[reason] || messages.read_failed
+}
+
+const openPersonaSourceFilePicker = () => {
+  if (personaClassificationBusy.value) return
+  personaSourceFileInput.value?.click()
+}
+
+const importPersonaSource = async (event) => {
+  const input = event?.target
+  const file = input?.files?.[0]
+  if (!file) return
+
+  const result = await importPersonaSourceFile(file)
+  if (input) input.value = ''
+  if (!result.ok) {
+    personaClassificationError.value = personaImportErrorText(result.reason)
+    return
+  }
+
+  personaClassificationSource.value = result.source.text
+  personaImportedSource.value = result.source
+  personaClassificationError.value = ''
+  personaClassificationDraft.value = null
+  personaReviewRows.value = []
+}
+
 const classifyPersonaDescription = async () => {
   const profile = selectedProfile.value
   const sourceText = personaClassificationSource.value.trim()
   if (!profile?.id || !sourceText) {
     personaClassificationError.value = t(
-      '\u8bf7\u5148\u7c98\u8d34\u4e00\u6bb5\u4eba\u7269\u63cf\u8ff0\u3002',
-      'Paste a persona description first.',
+      '请先粘贴或导入一段人物描述。',
+      'Paste or import a persona description first.',
     )
     return
   }
@@ -3951,11 +4009,11 @@ onBeforeUnmount(() => {
                 <button
                   type="button"
                   class="contacts-primary-action"
-                  data-testid="contacts-persona-paste-from-overview"
+                  data-testid="contacts-open-persona-classification"
                   @click="openPersonaFromOverview"
                 >
-                  <i class="fas fa-align-left" aria-hidden="true"></i>
-                  {{ t('粘贴一段人设', 'Paste a persona') }}
+                  <i class="fas fa-file-import" aria-hidden="true"></i>
+                  {{ t('导入人设', 'Import persona') }}
                 </button>
                 <button
                   type="button"
@@ -4499,17 +4557,10 @@ onBeforeUnmount(() => {
                   {{ selectedWorldFieldIntroText }}
                 </p>
               </div>
-              <div v-if="!isProfileTemplateEditorOpen" class="contacts-world-profile-actions">
-                <button
-                  v-if="!isPersonaClassificationOpen"
-                  type="button"
-                  class="contacts-small-action contacts-ai-draft-action"
-                  data-testid="contacts-open-persona-classification"
-                  @click="openPersonaClassification"
-                >
-                  <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
-                  {{ t('粘贴人设', 'Paste persona') }}
-                </button>
+              <div
+                v-if="!isProfileTemplateEditorOpen && !isPersonaClassificationOpen"
+                class="contacts-world-profile-actions"
+              >
                 <button
                   type="button"
                   class="contacts-small-action"
@@ -4534,8 +4585,8 @@ onBeforeUnmount(() => {
                     <p>
                       {{
                         t(
-                          '粘贴整段文字，只整理复核草稿，不会直接修改人物资料。',
-                          'Paste a full description to create a review draft only. The profile will not change directly.',
+                          '粘贴文字或导入 TXT、Markdown、JSON 文件，只整理复核草稿，不会直接修改人物资料。',
+                          'Paste text or import a TXT, Markdown, or JSON file to create a review draft only. The profile will not change directly.',
                         )
                       }}
                     </p>
@@ -4552,8 +4603,20 @@ onBeforeUnmount(() => {
                 </button>
               </header>
 
-              <label class="contacts-persona-source" for="contacts-persona-source">
-                <span>{{ t('粘贴人物设定', 'Paste the persona') }}</span>
+              <div class="contacts-persona-source">
+                <label for="contacts-persona-source">
+                  {{ t('粘贴或导入人设', 'Paste or import persona') }}
+                </label>
+                <input
+                  ref="personaSourceFileInput"
+                  class="contacts-persona-source__file-input"
+                  data-testid="contacts-persona-source-file"
+                  type="file"
+                  :accept="PERSONA_SOURCE_FILE_ACCEPT"
+                  :aria-label="t('导入人设文件', 'Import persona file')"
+                  :disabled="personaClassificationBusy"
+                  @change="importPersonaSource"
+                />
                 <textarea
                   id="contacts-persona-source"
                   v-model="personaClassificationSource"
@@ -4567,10 +4630,25 @@ onBeforeUnmount(() => {
                   "
                   :disabled="personaClassificationBusy"
                 ></textarea>
-                <small>
-                  {{ personaClassificationSource.length }} / {{ MAX_PERSONA_SOURCE_TEXT }}
-                </small>
-              </label>
+                <div class="contacts-persona-source__meta">
+                  <button
+                    type="button"
+                    class="contacts-small-action"
+                    data-testid="contacts-import-persona-file"
+                    :disabled="personaClassificationBusy"
+                    @click="openPersonaSourceFilePicker"
+                  >
+                    <i class="fas fa-file-arrow-up" aria-hidden="true"></i>
+                    {{ t('导入文件', 'Import file') }}
+                  </button>
+                  <span v-if="personaImportedSource" data-testid="contacts-persona-imported-file">
+                    {{ personaImportedSource.name }} · {{ personaImportedSource.extension.toUpperCase() }}
+                  </span>
+                  <small>
+                    {{ personaClassificationSource.length }} / {{ MAX_PERSONA_SOURCE_TEXT }}
+                  </small>
+                </div>
+              </div>
 
               <p
                 v-if="personaClassificationError"
@@ -5111,7 +5189,7 @@ onBeforeUnmount(() => {
                 v-if="selectedProfileWorldFieldGroups.length === 0"
                 class="contacts-empty-detail"
               >
-                {{ t('还没有选择人物资料卡。可以粘贴人设，或逐项填写。', 'No profile style has been selected yet. Paste a persona or fill it in item by item.') }}
+                {{ t('还没有选择人物资料卡。可以导入人设，或逐项填写。', 'No profile style has been selected yet. Import a persona or fill it in item by item.') }}
               </p>
             </div>
 
@@ -7546,7 +7624,7 @@ onBeforeUnmount(() => {
   gap: 6px;
 }
 
-.contacts-persona-source > span {
+.contacts-persona-source > label {
   color: var(--contacts-text);
   font-size: 12px;
   font-weight: 800;
@@ -7571,8 +7649,35 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 0 3px rgba(66, 111, 143, 0.14);
 }
 
-.contacts-persona-source small {
-  justify-self: end;
+.contacts-persona-source__file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.contacts-persona-source__meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.contacts-persona-source__meta > span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--contacts-muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contacts-persona-source__meta small {
+  margin-left: auto;
+  flex: 0 0 auto;
   color: var(--contacts-muted);
   font-size: 10px;
 }

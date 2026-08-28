@@ -12,7 +12,7 @@ Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 
 当前可检验流程已经调整为：
 
-`联系人个人页 -> 粘贴人设 / 逐项填写 -> 检查归类结果 -> 确认保存 -> 按类目阅读人物资料`
+`联系人个人页 -> 导入人设 / 逐项填写 -> 粘贴或选择文本文件 -> 检查归类结果 -> 确认保存 -> 按类目阅读人物资料`
 
 这一轮不新增另一套人设文案，也不改变 Contacts、Chat、Relationship Runtime、Work Hub 或 Event Runtime 的数据归属。
 
@@ -22,7 +22,8 @@ Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 
 - 人物姓名、身份、简介和关系状态先出现；
 - 已确认资料按类目直接阅读，不再先展示完成数量或系统术语；
-- 空资料人物直接显示“粘贴一段人设”和“逐项填写”；
+- 空资料人物直接显示“导入人设”和“逐项填写”；
+- “导入人设”是唯一主入口；二级资料阅读页不再重复放置同一操作；
 - 关系、共同经历、相处细节、最近活动和档案管理仍可继续进入。
 
 ### 2.2 逐项填写
@@ -35,9 +36,12 @@ Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 - 仍可增加人物专属资料，也可以明确选择让同世界其他人物使用同一资料项。
 - 二级阅读页只展开已有确认值的类目；整类尚未填写的内容合并为一条“待补充资料”摘要，可直接继续填写，不再用多张空卡拉长手机页面。
 
-### 2.3 粘贴整段人设
+### 2.3 导入整段人设
 
 - 入口标题为“整理某人的人设”；
+- 同一输入区支持直接粘贴，以及本地读取 `.txt`、`.md`、`.markdown`、`.json`；
+- TXT/Markdown 原文保持不变，JSON 校验后以完整的格式化文本进入复核来源；
+- 空文件、超限、无效 JSON、不支持的格式或读取失败都不会覆盖既有输入，也不会修改正式人物资料；
 - 结果分为“可以直接填写 / 建议新增 / 需要你选择 / 暂时保留原文”；
 - 每一项都可以修改名称、内容和读取范围；
 - 新资料项可以选择所属类目；
@@ -63,7 +67,7 @@ Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 
 1. 查看 Eva 首页是否像一张人物资料，而不是后台计数面板；
 2. 点击“逐项填写”，检查字段名称、帮助文字、读取范围和资料卡样式是否容易理解；
-3. 返回后点击“粘贴人设”，检查输入入口和整理说明；
+3. 返回后点击“导入人设”，分别检查粘贴文字和导入 TXT、Markdown、JSON；
 4. 查看 Jackie，比较两个人物内容是否足以表现资料卡差异；
 5. 新建一个空人物，确认空状态是否能自然引导到两种填写方式；
 6. 重点记录内容密度、类目命名、按钮位置和仍显得像脚手架的区域。
@@ -72,6 +76,10 @@ Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 
 ## 4. 已通过的验证
 
+- 2026-08-28 人设唯一入口与本地文件导入优化：新增 9 项导入解析测试，覆盖 TXT、MD、Markdown、JSON、无效 JSON、空文件、超限、不支持格式和读取失败；Contacts 资料视图针对性测试共 33 项通过；
+- 完整 `npm.cmd run test -- --dir tests`：342 个文件 / 2604 项全部通过；
+- 独立 `5175` 端口完成 desktop Chromium 与模拟 Pixel 5 验证：WorldBook/Contacts Persona 8 项通过，Contacts 手机界面 4 项通过；文件导入、双语/日夜既有矩阵、取消重开、AI 失败、WCAG A/AA 和零横向溢出保持通过；
+- `npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run governance:check` 与 `git diff --check` 通过；
 - `npm.cmd run lint`;
 - `npm.cmd run build`;
 - `npm.cmd run governance:check`;
@@ -87,7 +95,7 @@ Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 
 - 用户尚未共同验收，因此 `CONTACTS-V3-2C` 继续保持 `IN_PROGRESS`；
 - 当前不是 Contacts 全应用视觉重做完成声明；
-- 类目命名、输入控件节奏和人物专属新增区仍可以根据实际观感继续调整；本轮已收紧二级阅读页空类目密度和 Persona 整理态焦点；
+- 类目命名、输入控件节奏和人物专属新增区仍可以根据实际观感继续调整；本轮已收紧二级阅读页空类目密度、Persona 整理态焦点和唯一导入入口；
 - 没有新增正式 AI 模型配置、事件触发、Work Hub 权限或下游消费者能力；
 - `CONTACTS-V3-5` 继续保持 gated。
 
