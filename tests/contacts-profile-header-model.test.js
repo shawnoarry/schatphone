@@ -34,7 +34,8 @@ describe('Contacts profile header model interface', () => {
       avatarUrl: 'avatar://mina',
       eyebrow: 'Profile',
       name: 'Mina',
-      metaText: 'Producer \u00b7 ID 007-42',
+      roleId: '007-42',
+      metaText: 'Producer',
       bioText: 'Keeps the group schedule steady.',
       isNpc: false,
       upgradeHint: 'Upgrade will not force Chat Directory binding.',
@@ -56,7 +57,8 @@ describe('Contacts profile header model interface', () => {
         },
       ),
     ).toMatchObject({
-      metaText: 'Role not set \u00b7 ID 8',
+      roleId: 8,
+      metaText: 'Role not set',
       bioText: 'No profile intro yet.',
     })
   })
@@ -85,6 +87,7 @@ describe('Contacts profile header model interface', () => {
       avatarUrl: '',
       eyebrow: 'Profile',
       name: '',
+      roleId: '',
       metaText: '',
       bioText: '',
       isNpc: false,

@@ -2440,8 +2440,8 @@ onBeforeUnmount(() => {
       <p class="sr-only" data-testid="chat-directory-boundary-copy">
         {{
           t(
-            '\u8054\u7cfb\u4eba\u9875\u7ba1\u7406\u5df2\u8fdb\u5165 Chat \u7684\u8054\u7cfb\u4eba\u4e0e\u804a\u5929\u504f\u597d\u3002\u89d2\u8272\u6863\u6848\u6765\u81ea\u4e3b\u901a\u8baf\u5f55\uff0c\u4e5f\u53ef\u4ece\u4e3b\u901a\u8baf\u5f55\u76f4\u63a5\u5f00\u59cb\u804a\u5929\uff1b\u89e3\u7ed1\u548c\u670d\u52a1\u53f7\u7ba1\u7406\u4ecd\u5728\u8fd9\u91cc\u5b8c\u6210\u3002',
-            'Contacts manages people already in Chat and their Chat-only preferences. Role profiles come from main Contacts and can start Chat there; unbinding and service-account management stay here.',
+            '联系人页管理人物档案；Chat 联系人管理谁进入聊天、聊天偏好、解绑和服务号。角色档案来自主通讯录，添加到 Chat 的操作只在这里完成。',
+            'Contacts manages person profiles. Chat Contacts manages who enters Chat, Chat-only preferences, unbinding, and service accounts. Role profiles come from main Contacts, and adding them to Chat happens only here.',
           )
         }}
       </p>
@@ -2754,6 +2754,7 @@ onBeforeUnmount(() => {
             v-if="!batchMode"
             type="button"
             class="chat-directory-add-contact"
+            data-testid="chat-directory-add-contact"
             @click="openBindModal"
           >
             <span class="chat-directory-add-contact__icon"><i class="fas fa-user-plus"></i></span>
@@ -3566,6 +3567,7 @@ onBeforeUnmount(() => {
     <div
       v-if="showBindModal"
       class="fixed inset-0 z-40 bg-black/35 px-4 flex items-end justify-center pb-6"
+      data-testid="chat-directory-bind-modal"
       @click.self="closeBindModal"
     >
       <div class="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl">
@@ -3575,7 +3577,7 @@ onBeforeUnmount(() => {
             <i class="fas fa-times"></i>
           </button>
         </div>
-        <select v-model.number="bindProfileId" class="mt-4 w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-yellow-300 focus:bg-white">
+        <select v-model.number="bindProfileId" data-testid="chat-directory-bind-profile" class="mt-4 w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-yellow-300 focus:bg-white">
           <option v-for="profile in unboundRoleProfilesRaw" :key="profile.id" :value="profile.id">
             {{ profile.name }} · {{ profile.role || t('未设置角色', 'Role not set') }}
           </option>
@@ -3584,6 +3586,7 @@ onBeforeUnmount(() => {
           <button @click="closeBindModal" class="rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600">{{ t('取消', 'Cancel') }}</button>
           <button
             @click="bindSelectedProfile"
+            data-testid="chat-directory-confirm-bind"
             class="rounded-full bg-yellow-300 px-4 py-2 text-sm font-extrabold text-gray-950 shadow-sm"
           >
             {{ t('确认绑定', 'Confirm Bind') }}

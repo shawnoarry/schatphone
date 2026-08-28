@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { beforeEach, describe, expect, test } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
@@ -49,10 +49,9 @@ describe('Contacts and Chat Directory boundary copy', () => {
     await flushUi()
 
     const copy = wrapper.get('[data-testid="contacts-boundary-copy"]').text()
-    expect(copy).toContain('Every role lives here')
-    expect(copy).toContain('no chat needed')
-    expect(copy).toContain('Open a profile to start chatting')
-    expect(copy).toContain('Chat Directory')
+    expect(copy).toContain('Every person profile lives here')
+    expect(copy).toContain('Persona, relationships, and history')
+    expect(copy).toContain('managed only in Chat Contacts')
 
     wrapper.unmount()
   })
@@ -70,24 +69,22 @@ describe('Contacts and Chat Directory boundary copy', () => {
     await flushUi()
 
     const copy = wrapper.get('[data-testid="chat-directory-boundary-copy"]').text()
-    expect(copy).toContain('manages people already in Chat')
+    expect(copy).toContain('manages who enters Chat')
     expect(copy).toContain('Chat-only preferences')
     expect(copy).toContain('Role profiles come from main Contacts')
-    expect(copy).toContain('can start Chat there')
-    expect(copy).toContain('unbinding and service-account management stay here')
+    expect(copy).toContain('adding them to Chat happens only here')
 
     wrapper.unmount()
   })
 
-  test('starts one direct Chat binding from the selected Contacts profile', async () => {
+  test('keeps Chat actions off the selected Contacts profile', async () => {
     const chatStore = useChatStore()
     const profile = chatStore.addRoleProfile({
       roleId: '7101',
-      name: 'Direct Chat Role',
+      name: 'Contacts-only profile',
       role: 'Neighbor',
       isMain: true,
     })
-    const bindRoleProfile = vi.spyOn(chatStore, 'bindRoleProfile')
     const router = createTestRouter()
     await router.push(`/contacts?profileId=${profile.id}`)
     await router.isReady()
@@ -100,65 +97,14 @@ describe('Contacts and Chat Directory boundary copy', () => {
     await flushUi()
 
     expect(wrapper.get('[data-testid="contacts-role-detail"]').text()).toContain(profile.name)
-    await wrapper.get('[data-testid="contacts-start-chat"]').trigger('click')
-    await flushUi()
-
-    expect(bindRoleProfile).toHaveBeenCalledTimes(1)
-    expect(bindRoleProfile).toHaveBeenCalledWith(profile.id)
-    const contact = chatStore.contacts.find(
-      (item) => item.kind === 'role' && Number(item.profileId) === Number(profile.id),
+    expect(wrapper.find('[data-testid="contacts-start-chat"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="contacts-open-chat"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="contacts-header-edit-basic-profile"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="contacts-hero-edit-basic-profile"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="contacts-manage-identity-bindings"]').text()).toContain(
+      'Identity and bindings',
     )
-    expect(contact).toBeTruthy()
-    expect(chatStore.getConversationByContactId(contact.id)).toBeTruthy()
-    expect(router.currentRoute.value).toMatchObject({
-      path: `/chat/${contact.id}`,
-      query: { source: 'contacts', profileId: String(profile.id) },
-    })
-
-    wrapper.unmount()
-  })
-
-  test('reuses an existing Chat target without binding or duplicating the conversation', async () => {
-    const chatStore = useChatStore()
-    const profile = chatStore.addRoleProfile({
-      roleId: '7102',
-      name: 'Existing Chat Role',
-      isMain: true,
-    })
-    const existing = chatStore.bindRoleProfile(profile.id, {
-      chatSocialState: 'incoming_request',
-      chatSocialNote: 'Keep this existing social state.',
-    })
-    const existingConversation = chatStore.getConversationByContactId(existing.id)
-    chatStore.updateRoleProfile(profile.id, {
-      capabilities: { canAppearInChatDirectory: false },
-    })
-    const bindRoleProfile = vi.spyOn(chatStore, 'bindRoleProfile')
-    const router = createTestRouter()
-    await router.push(`/contacts?profileId=${profile.id}`)
-    await router.isReady()
-
-    const wrapper = mount(ContactsView, {
-      global: {
-        plugins: [router],
-      },
-    })
-    await flushUi()
-    await wrapper.get('[data-testid="contacts-open-chat"]').trigger('click')
-    await flushUi()
-
-    expect(bindRoleProfile).not.toHaveBeenCalled()
-    expect(
-      chatStore.contacts.filter(
-        (item) => item.kind === 'role' && Number(item.profileId) === Number(profile.id),
-      ),
-    ).toHaveLength(1)
-    expect(chatStore.getConversationByContactId(existing.id)).toBe(existingConversation)
-    expect(chatStore.getContactById(existing.id)).toMatchObject({
-      chatSocialState: 'incoming_request',
-      chatSocialNote: 'Keep this existing social state.',
-    })
-    expect(router.currentRoute.value.path).toBe(`/chat/${existing.id}`)
+    expect(chatStore.isRoleProfileBound(profile.id)).toBe(false)
 
     wrapper.unmount()
   })

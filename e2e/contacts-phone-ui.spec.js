@@ -212,6 +212,31 @@ test('Contacts opens as a phone contact list on mobile', async ({ page }) => {
   await expect(page.getByTestId('contacts-recent-2')).toContainText('Main contact')
   await page.getByTestId('contacts-recent-2').click()
   await expect(page.getByTestId('contacts-role-detail')).toContainText('Main contact')
+  await expect(page.getByTestId('contacts-role-id')).toHaveText('ID 9002')
+  await page.getByTestId('contacts-open-appearance').click()
+  await expect(page.getByTestId('contacts-appearance-sheet')).toContainText('Primary appearance')
+  await page.getByTestId('contacts-appearance-file-input').setInputFiles(
+    'public/icons/pwa-icon-192.png',
+  )
+  await expect(page.locator('[data-testid^="contacts-appearance-asset-"]')).toHaveCount(1)
+  await expect(page.locator('[data-testid^="contacts-appearance-asset-"]').first()).toContainText(
+    'Current primary',
+  )
+  const appearanceAccessibility = await new AxeBuilder({ page })
+    .include('[data-testid="contacts-appearance-sheet"]')
+    .withTags(['wcag2a', 'wcag2aa'])
+    .analyze()
+  expect(appearanceAccessibility.violations).toEqual([])
+  await expectNoHorizontalOverflow(page)
+
+  await page.getByTestId('contacts-open-appearance-gallery').click()
+  await expect(page).toHaveURL(/#\/gallery\?person=2$/)
+  await navigateInsideUnlockedApp(page, '/contacts?profileId=2')
+  await page.getByTestId('contacts-open-appearance').click()
+  await page.getByTestId('contacts-open-appearance-camera').click()
+  await expect(page).toHaveURL(/#\/camera\?from=contacts&profileId=2$/)
+  await navigateInsideUnlockedApp(page, '/contacts?profileId=2')
+
   await expect(page.getByTestId('contacts-person-profile-summary')).toContainText('Persona')
   await expect(page.getByTestId('contacts-open-persona-classification')).toContainText(
     'Import persona',

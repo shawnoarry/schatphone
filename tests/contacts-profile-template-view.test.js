@@ -7,6 +7,7 @@ import { callAI } from '../src/lib/ai'
 import ContactsView from '../src/views/ContactsView.vue'
 import { resetDialogServiceForTest, useDialog } from '../src/composables/useDialog'
 import { useChatStore } from '../src/stores/chat'
+import { useGalleryStore } from '../src/stores/gallery'
 import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
 import { useSystemStore } from '../src/stores/system'
 import {
@@ -32,6 +33,7 @@ const createTestRouter = () =>
       { path: '/contacts', component: ContactsView },
       { path: '/home', component: DummyView },
       { path: '/gallery', component: DummyView },
+      { path: '/camera', component: DummyView },
     ],
   })
 
@@ -1147,7 +1149,185 @@ describe('Contacts profile template entity UI', () => {
     await wrapper.get('[data-testid="contacts-worldbook-template-create-profile"]').trigger('click')
     await flushUi()
 
-    expect(wrapper.get('[data-testid="contacts-profile-modal"]').text()).toContain('Create Role Profile')
+    expect(wrapper.get('[data-testid="contacts-profile-modal"]').text()).toContain('Create person')
+
+    wrapper.unmount()
+  })
+
+  test('keeps basic identity editing separate from persona authoring', async () => {
+    const chatStore = useChatStore()
+    const profile = chatStore.addRoleProfile({
+      roleId: '1249',
+      name: 'Basic identity role',
+      role: 'Assistant',
+      bio: 'Existing persona text must remain unchanged.',
+      entityType: CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+    })
+
+    const wrapper = await mountContactsView()
+    await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
+    await flushUi()
+    await wrapper.get('[data-testid="contacts-manage-identity-bindings"]').trigger('click')
+    await flushUi()
+
+    const modal = wrapper.get('[data-testid="contacts-profile-modal"]')
+    expect(modal.text()).toContain('Edit basic information')
+    expect(modal.text()).toContain('Identity label')
+    expect(wrapper.get('[data-testid="contacts-profile-role-id"]').attributes('readonly')).toBeDefined()
+    expect(wrapper.get('[data-testid="contacts-role-id-lock-copy"]').text()).toContain(
+      'The ID stays fixed after creation',
+    )
+    expect(modal.text()).toContain('Import or fill the full persona from the person page')
+    expect(modal.text()).not.toContain('AI Fill')
+    expect(modal.text()).not.toContain('Detailed Prompt')
+    expect(modal.text()).not.toContain('Avatar source')
+    expect(modal.find('[data-testid^="contacts-profile-avatar"]').exists()).toBe(false)
+    expect(modal.find('textarea').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="contacts-profile-role"]').setValue('Private assistant')
+    await wrapper.get('[data-testid="contacts-profile-submit"]').trigger('click')
+    await flushUi()
+
+    const updated = chatStore.getRoleProfileById(profile.id)
+    expect(updated.role).toBe('Private assistant')
+    expect(updated.bio).toBe('Existing persona text must remain unchanged.')
+
+    wrapper.unmount()
+  })
+
+  test('puts the stable contact ID upfront and opens dedicated appearance management from the image', async () => {
+    const chatStore = useChatStore()
+    const profile = chatStore.addRoleProfile({
+      roleId: '8842A',
+      name: 'Visible identity',
+      role: 'Producer',
+      entityType: CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+    })
+
+    const wrapper = await mountContactsView(`/contacts?profileId=${profile.id}`)
+
+    expect(wrapper.get('[data-testid="contacts-role-id"]').text()).toBe('ID 8842A')
+    await wrapper.get('[data-testid="contacts-open-appearance"]').trigger('click')
+    await flushUi()
+
+    const appearance = wrapper.get('[data-testid="contacts-appearance-sheet"]')
+    expect(appearance.text()).toContain('Primary appearance')
+    expect(appearance.text()).toContain('Import images')
+    expect(appearance.text()).toContain('Camera')
+    expect(appearance.text()).toContain('Person album')
+    expect(appearance.text()).toContain('does not generate images')
+
+    wrapper.unmount()
+  })
+
+  test('selects a Gallery person image as the primary appearance', async () => {
+    const chatStore = useChatStore()
+    const galleryStore = useGalleryStore()
+    const profile = chatStore.addRoleProfile({
+      roleId: '8843',
+      name: 'Gallery identity',
+      entityType: CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+    })
+    const imported = galleryStore.importAssetFromUrl({
+      url: 'https://example.com/gallery-identity.jpg',
+      name: 'Gallery portrait',
+      category: 'reference',
+    })
+    galleryStore.setAssetPersons(imported.assetId, [profile.id])
+
+    const wrapper = await mountContactsView(`/contacts?profileId=${profile.id}`)
+    await wrapper.get('[data-testid="contacts-open-appearance"]').trigger('click')
+    await flushUi()
+    await wrapper.get(`[data-testid="contacts-appearance-asset-${imported.assetId}"]`).trigger('click')
+    await flushUi()
+
+    expect(chatStore.getRoleProfileById(profile.id).avatarImage).toMatchObject({
+      sourceType: 'gallery',
+      galleryAssetId: imported.assetId,
+    })
+    expect(galleryStore.findAssetById(imported.assetId).personIds).toEqual([String(profile.id)])
+
+    wrapper.unmount()
+  })
+
+  test('imports an image through Gallery, tags the person, and uses it as primary appearance', async () => {
+    const chatStore = useChatStore()
+    const galleryStore = useGalleryStore()
+    const profile = chatStore.addRoleProfile({
+      roleId: '8844',
+      name: 'Imported identity',
+      entityType: CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+    })
+    const galleryAsset = galleryStore.importAssetFromUrl({
+      url: 'https://example.com/imported-identity.jpg',
+      name: 'Imported portrait',
+      category: 'reference',
+    })
+    vi.spyOn(galleryStore, 'importAssetsFromFiles').mockResolvedValue({
+      ok: true,
+      importedIds: [galleryAsset.assetId],
+      duplicateAssetIds: [],
+    })
+
+    const wrapper = await mountContactsView(`/contacts?profileId=${profile.id}`)
+    await wrapper.get('[data-testid="contacts-open-appearance"]').trigger('click')
+    await flushUi()
+    const fileInput = wrapper.get('[data-testid="contacts-appearance-file-input"]')
+    Object.defineProperty(fileInput.element, 'files', {
+      configurable: true,
+      value: [new File(['portrait'], 'portrait.png', { type: 'image/png' })],
+    })
+    await fileInput.trigger('change')
+    await flushUi()
+
+    expect(galleryStore.importAssetsFromFiles).toHaveBeenCalledWith(expect.any(Array), {
+      category: 'reference',
+    })
+    expect(galleryStore.findAssetById(galleryAsset.assetId).personIds).toEqual([
+      String(profile.id),
+    ])
+    expect(chatStore.getRoleProfileById(profile.id).avatarImage).toMatchObject({
+      sourceType: 'gallery',
+      galleryAssetId: galleryAsset.assetId,
+    })
+
+    wrapper.unmount()
+  })
+
+  test('keeps the old appearance and restores person tags when the profile write fails', async () => {
+    const chatStore = useChatStore()
+    const galleryStore = useGalleryStore()
+    const profile = chatStore.addRoleProfile({
+      roleId: '8845',
+      name: 'Rollback identity',
+      avatar: 'https://example.com/old-avatar.jpg',
+      avatarImage: {
+        imageSourceType: 'url',
+        imageUrl: 'https://example.com/old-avatar.jpg',
+      },
+      entityType: CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+    })
+    const candidate = galleryStore.importAssetFromUrl({
+      url: 'https://example.com/new-avatar.jpg',
+      name: 'Candidate portrait',
+      category: 'reference',
+    })
+    galleryStore.setAssetPersons(candidate.assetId, [profile.id])
+
+    const wrapper = await mountContactsView(`/contacts?profileId=${profile.id}`)
+    await wrapper.get('[data-testid="contacts-open-appearance"]').trigger('click')
+    await flushUi()
+    galleryStore.setAssetPersons(candidate.assetId, [])
+    const updateRoleProfile = vi.spyOn(chatStore, 'updateRoleProfile').mockReturnValue(false)
+    await wrapper.get(`[data-testid="contacts-appearance-asset-${candidate.assetId}"]`).trigger('click')
+    await flushUi()
+
+    expect(updateRoleProfile).toHaveBeenCalledTimes(1)
+    expect(galleryStore.findAssetById(candidate.assetId).personIds).toEqual([])
+    expect(chatStore.getRoleProfileById(profile.id).avatarImage).toMatchObject({
+      sourceType: 'url',
+      url: 'https://example.com/old-avatar.jpg',
+    })
 
     wrapper.unmount()
   })

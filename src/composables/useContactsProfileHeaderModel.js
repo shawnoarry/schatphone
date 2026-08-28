@@ -19,6 +19,7 @@ export function buildContactsProfileHeader(
       avatarUrl: '',
       eyebrow: t('\u6863\u6848', 'Profile'),
       name: '',
+      roleId: '',
       metaText: '',
       bioText: '',
       isNpc: false,
@@ -32,7 +33,8 @@ export function buildContactsProfileHeader(
     avatarUrl: getAvatarUrl(profile),
     eyebrow: t('\u6863\u6848', 'Profile'),
     name: profile.name || '',
-    metaText: `${profile.role || t('\u672a\u8bbe\u7f6e\u89d2\u8272', 'Role not set')} \u00b7 ID ${formatRoleId(profile.roleId, profile.id)}`,
+    roleId: formatRoleId(profile.roleId, profile.id),
+    metaText: profile.role || t('\u672a\u8bbe\u7f6e\u89d2\u8272', 'Role not set'),
     bioText: profile.bio || t('\u6682\u65e0\u6863\u6848\u7b80\u4ecb\u3002', 'No profile intro yet.'),
     isNpc: profile.entityType === CONTACTS_ENTITY_TYPES.NPC,
     upgradeHint: chatBound

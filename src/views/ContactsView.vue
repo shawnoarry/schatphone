@@ -93,9 +93,7 @@ import { useContactsWorldFieldModel } from '../composables/useContactsWorldField
 import { useI18n } from '../composables/useI18n'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import AssetThumbnailOption from '../components/assets/AssetThumbnailOption.vue'
-import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
 import {
-  buildContactsChatSourceQuery,
   normalizeContactsProfileIdQuery,
   pushReturnTarget,
 } from '../lib/navigation-return'
@@ -119,7 +117,7 @@ const { t } = useI18n()
 const { confirmDialog, promptDialog } = useDialog()
 
 const { user, settings } = storeToRefs(systemStore)
-const { roleProfiles, loadingAI } = storeToRefs(chatStore)
+const { roleProfiles } = storeToRefs(chatStore)
 
 const isWorldBookProfileTemplateHandoff = computed(() => {
   const from = Array.isArray(route.query.from) ? route.query.from[0] : route.query.from
@@ -138,6 +136,7 @@ const isProfileTemplateEditorOpen = ref(false)
 const showProfileBindings = ref(false)
 const CONTACTS_DETAIL_SHEETS = Object.freeze({
   OVERVIEW: 'overview',
+  APPEARANCE: 'appearance',
   RELATIONSHIP: 'relationship',
   WORLD_FIELDS: 'world-fields',
   MEMORIES: 'memories',
@@ -146,6 +145,8 @@ const CONTACTS_DETAIL_SHEETS = Object.freeze({
   DANGER: 'danger',
 })
 const activeDetailSheet = ref(CONTACTS_DETAIL_SHEETS.OVERVIEW)
+const appearanceFileInput = ref(null)
+const appearanceImportBusy = ref(false)
 const profileScrollElement = ref(null)
 const dangerIncludeLinkedRecords = ref(false)
 const retainUnsupportedReferences = ref(false)
@@ -259,23 +260,11 @@ const normalizeDraftAvatarImage = (profile = {}) => {
   }
 }
 
-const buildDraftAvatarImage = () => ({
-  imageSourceType: profileDraft.avatarImageSourceType,
-  imageUrl: profileDraft.avatarImageSourceType === 'url' ? profileDraft.avatarImageUrl : '',
-  imageGalleryAssetId:
-    profileDraft.avatarImageSourceType === 'gallery' ? profileDraft.avatarImageGalleryAssetId : '',
-  imageAlt: profileDraft.name,
-})
-
 const profileDraft = reactive({
   roleId: '',
   name: '',
   role: '',
-  avatarImageSourceType: 'none',
-  avatarImageUrl: '',
-  avatarImageGalleryAssetId: '',
   isMain: false,
-  bio: '',
   knowledgePointIds: [],
   assetPack: createEmptyAssetPack(),
   assetFolderBindings: createEmptyAssetFolderBindings(),
@@ -351,8 +340,6 @@ const activeAssetCategoryConfig = computed(() =>
 const availableAssets = computed(() =>
   galleryStore.getAssetsByCategory(assetPackCategory.value).slice(0, 48),
 )
-
-const galleryImageAssets = computed(() => galleryStore.assets.slice(0, 80))
 
 const hasAnyGalleryAsset = computed(() => galleryStore.assets.length > 0)
 const profileImageFolderOptions = computed(() =>
@@ -442,13 +429,23 @@ const getDraftFolderPreviewAssets = (slotKey, limit = 3) =>
   }))
 
 const draftPreviewKeepAliveAssetIds = computed(() => {
-  const previewIds = [
-    ...availableAssets.value.map((asset) => asset.id),
-    profileDraft.avatarImageSourceType === 'gallery' ? profileDraft.avatarImageGalleryAssetId : '',
-    ...Object.keys(draftFolderBindingSummaryMap.value).flatMap((slotKey) =>
-      getDraftFolderPreviewAssetIds(slotKey, 3),
-    ),
-  ]
+  const profileAvatarIds = roleProfiles.value
+    .map((profile) => normalizeDraftAvatarImage(profile))
+    .filter((image) => image.sourceType === 'gallery')
+    .map((image) => image.galleryAssetId)
+  const modalAssetIds = showProfileModal.value
+    ? [
+        ...availableAssets.value.map((asset) => asset.id),
+        ...Object.keys(draftFolderBindingSummaryMap.value).flatMap((slotKey) =>
+          getDraftFolderPreviewAssetIds(slotKey, 3),
+        ),
+      ]
+    : []
+  const appearanceAssetIds =
+    activeDetailSheet.value === CONTACTS_DETAIL_SHEETS.APPEARANCE
+      ? selectedProfileAppearanceAssets.value.map((asset) => asset.id)
+      : []
+  const previewIds = [...profileAvatarIds, ...modalAssetIds, ...appearanceAssetIds]
 
   return [...new Set(previewIds.filter((assetId) => typeof assetId === 'string' && assetId.trim()))]
 })
@@ -526,6 +523,7 @@ const isContactsDetailSheetOpen = computed(
 
 const activeDetailSheetTitle = computed(() => {
   const titles = {
+    [CONTACTS_DETAIL_SHEETS.APPEARANCE]: t('形象', 'Appearance'),
     [CONTACTS_DETAIL_SHEETS.RELATIONSHIP]: t('关系', 'Relationship'),
     [CONTACTS_DETAIL_SHEETS.WORLD_FIELDS]: t('人物资料', 'Profile card'),
     [CONTACTS_DETAIL_SHEETS.MEMORIES]: t('记忆', 'Memories'),
@@ -755,11 +753,6 @@ const selectedRoleChatContact = computed(() => {
   const profileId = selectedProfile.value?.id
   if (!profileId) return null
   return chatStore.contacts.find((contact) => contact.kind === 'role' && Number(contact.profileId) === Number(profileId)) || null
-})
-const selectedProfileCanStartChat = computed(() => {
-  const profile = selectedProfile.value
-  if (!profile?.id || profile.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE) return false
-  return profile.capabilities?.canAppearInChatDirectory !== false
 })
 const universalProfileTemplates = computed(() => systemStore.listProfileTemplatePresets())
 const currentWorldProfileTemplates = computed(() =>
@@ -1070,40 +1063,6 @@ const {
   formatAuditTimestamp: (value) => formatRelationshipAuditTimestamp(value),
   formatEntityTypeLabel: (entityType) => contactsEntityTypeLabel(entityType),
 })
-
-const openSelectedChatTarget = () => {
-  const profile = selectedProfile.value
-  if (!profile?.id || profile.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE) {
-    setUiNotice(
-      'warning',
-      t('这个档案不能作为 Chat 对象。', 'This profile cannot be used as a Chat target.'),
-    )
-    return
-  }
-
-  const existingContact = selectedRoleChatContact.value
-  if (!existingContact && !selectedProfileCanStartChat.value) {
-    setUiNotice(
-      'warning',
-      t('这个档案不能作为 Chat 对象。', 'This profile cannot be used as a Chat target.'),
-    )
-    return
-  }
-
-  const contact = existingContact || chatStore.bindRoleProfile(profile.id)
-  if (!contact?.id) {
-    setUiNotice(
-      'warning',
-      t('暂时无法开始聊天，请稍后重试。', 'Chat could not be started. Try again shortly.'),
-    )
-    return
-  }
-
-  router.push({
-    path: `/chat/${contact.id}`,
-    query: buildContactsChatSourceQuery(profile.id),
-  })
-}
 
 const goHome = () => {
   pushReturnTarget(router, route, '/home')
@@ -2087,6 +2046,112 @@ const openSelectedProfileAlbum = () => {
   router.push({ path: '/gallery', query: { person: String(profileId) } })
 }
 
+const selectedProfileAppearanceAssets = computed(() => {
+  const profileId = selectedProfile.value?.id
+  if (profileId == null) return []
+  const primaryAssetId = normalizeDraftAvatarImage(selectedProfile.value).galleryAssetId
+  return galleryStore.sortedAssets.filter((asset) => {
+    if (asset.id === primaryAssetId) return true
+    return (Array.isArray(asset.personIds) ? asset.personIds : []).some(
+      (id) => String(id) === String(profileId),
+    )
+  })
+})
+
+const selectedPrimaryAppearanceAssetId = computed(() => {
+  const image = normalizeDraftAvatarImage(selectedProfile.value || {})
+  return image.sourceType === 'gallery' ? image.galleryAssetId : ''
+})
+
+const openAppearanceSheet = () => {
+  openDetailSheet(CONTACTS_DETAIL_SHEETS.APPEARANCE)
+}
+
+const openAppearanceFilePicker = () => {
+  if (appearanceImportBusy.value || isSelectedProfileArchived.value) return
+  appearanceFileInput.value?.click()
+}
+
+const openSelectedProfileCamera = () => {
+  const profileId = selectedProfile.value?.id
+  if (profileId == null) return
+  router.push({ path: '/camera', query: { from: 'contacts', profileId: String(profileId) } })
+}
+
+const applyPrimaryAppearanceAsset = (assetId, { tagAssetIds = [assetId] } = {}) => {
+  const profile = selectedProfile.value
+  const primaryAsset = galleryStore.findAssetById(assetId)
+  if (!profile?.id || !primaryAsset || isSelectedProfileArchived.value) return false
+
+  const normalizedProfileId = String(profile.id)
+  const uniqueAssetIds = [...new Set(tagAssetIds.filter(Boolean))]
+  const previousPersonIds = new Map()
+  for (const id of uniqueAssetIds) {
+    const asset = galleryStore.findAssetById(id)
+    if (!asset) continue
+    previousPersonIds.set(id, [...(Array.isArray(asset.personIds) ? asset.personIds : [])])
+    const nextPersonIds = [...new Set([...previousPersonIds.get(id), normalizedProfileId])]
+    if (!galleryStore.setAssetPersons(id, nextPersonIds)) {
+      previousPersonIds.forEach((personIds, rollbackId) => {
+        galleryStore.setAssetPersons(rollbackId, personIds)
+      })
+      return false
+    }
+  }
+
+  const updated = chatStore.updateRoleProfile(profile.id, {
+    avatarImage: {
+      imageSourceType: 'gallery',
+      imageUrl: '',
+      imageGalleryAssetId: primaryAsset.id,
+      imageAlt: profile.name || '',
+    },
+    avatar: '',
+  })
+  if (!updated) {
+    previousPersonIds.forEach((personIds, rollbackId) => {
+      galleryStore.setAssetPersons(rollbackId, personIds)
+    })
+    return false
+  }
+  void ensureDraftAssetPreview(primaryAsset.id)
+  return true
+}
+
+const selectPrimaryAppearanceAsset = (assetId) => {
+  if (!applyPrimaryAppearanceAsset(assetId)) {
+    setUiNotice('error', t('主形象保存失败，原形象已保留。', 'Primary appearance failed to save. The previous appearance was kept.'))
+    return
+  }
+  setUiNotice('success', t('主形象已更新。', 'Primary appearance updated.'))
+}
+
+const importAppearanceFiles = async (event) => {
+  const input = event?.target
+  const files = Array.from(input?.files || [])
+  if (input) input.value = ''
+  if (files.length === 0 || !selectedProfile.value?.id || appearanceImportBusy.value) return
+
+  appearanceImportBusy.value = true
+  try {
+    const result = await galleryStore.importAssetsFromFiles(files, { category: 'reference' })
+    const assetIds = [...new Set([...(result?.importedIds || []), ...(result?.duplicateAssetIds || [])])]
+    if (assetIds.length === 0) {
+      setUiNotice('error', t('没有可用的图片被导入，原形象未改变。', 'No usable image was imported. The previous appearance was kept.'))
+      return
+    }
+    if (!applyPrimaryAppearanceAsset(assetIds[0], { tagAssetIds: assetIds })) {
+      setUiNotice('error', t('图片已进入相册，但主形象保存失败，原形象已保留。', 'The image entered Gallery, but the primary appearance failed to save. The previous appearance was kept.'))
+      return
+    }
+    setUiNotice('success', t('图片已导入人物相册并设为主形象。', 'Image imported to the person album and set as the primary appearance.'))
+  } catch {
+    setUiNotice('error', t('图片导入失败，原形象未改变。', 'Image import failed. The previous appearance was kept.'))
+  } finally {
+    appearanceImportBusy.value = false
+  }
+}
+
 const upgradeSelectedNpcToMainRole = async () => {
   const profile = selectedProfile.value
   if (!profile || profile.entityType !== CONTACTS_ENTITY_TYPES.NPC) return
@@ -2186,14 +2251,6 @@ const resolveAvatarImageUrl = (profile = {}) => {
 const fallbackAvatarUrl = (name = '') =>
   `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name || 'Contact')}`
 
-const draftAvatarPreviewUrl = computed(() =>
-  resolveAvatarImageUrl({
-    name: profileDraft.name,
-    avatar: profileDraft.avatarImageSourceType === 'url' ? profileDraft.avatarImageUrl : '',
-    avatarImage: buildDraftAvatarImage(),
-  }) || fallbackAvatarUrl(profileDraft.name),
-)
-
 const contactAvatarUrl = (contact = {}) => resolveAvatarImageUrl(contact) || fallbackAvatarUrl(contact.name)
 
 const { selectedProfileHeader } = useContactsProfileHeaderModel({
@@ -2207,7 +2264,6 @@ const { selectedProfileHeader } = useContactsProfileHeaderModel({
 watch(
   draftPreviewKeepAliveAssetIds,
   (assetIds) => {
-    if (!showProfileModal.value) return
     const activeSet = new Set(assetIds)
     assetIds.forEach((assetId) => {
       void ensureDraftAssetPreview(assetId)
@@ -2226,10 +2282,6 @@ const resetProfileDraft = () => {
   profileDraft.roleId = getNextRoleIdDraft()
   profileDraft.name = ''
   profileDraft.role = ''
-  profileDraft.avatarImageSourceType = 'none'
-  profileDraft.avatarImageUrl = ''
-  profileDraft.avatarImageGalleryAssetId = ''
-  profileDraft.bio = ''
   profileDraft.isMain = false
   profileDraft.knowledgePointIds = []
   profileDraft.assetPack = createEmptyAssetPack()
@@ -2253,11 +2305,6 @@ const openEditProfile = (profile) => {
   profileDraft.roleId = normalizeRoleId(profile.roleId, profile.id)
   profileDraft.name = profile.name || ''
   profileDraft.role = profile.role || ''
-  const avatarImage = normalizeDraftAvatarImage(profile)
-  profileDraft.avatarImageSourceType = avatarImage.sourceType
-  profileDraft.avatarImageUrl = avatarImage.url
-  profileDraft.avatarImageGalleryAssetId = avatarImage.galleryAssetId
-  profileDraft.bio = profile.bio || ''
   profileDraft.isMain = Boolean(profile.isMain)
   profileDraft.knowledgePointIds = Array.isArray(profile.knowledgePointIds)
     ? [...new Set(profile.knowledgePointIds)]
@@ -2353,10 +2400,7 @@ const saveProfile = () => {
     roleId,
     name,
     role: profileDraft.role,
-    avatarImage: buildDraftAvatarImage(),
-    avatar: profileDraft.avatarImageSourceType === 'url' ? profileDraft.avatarImageUrl : '',
     isMain: profileDraft.isMain,
-    bio: profileDraft.bio,
     knowledgePointIds: [...new Set(profileDraft.knowledgePointIds)],
     assetPack: cloneAssetPack(profileDraft.assetPack),
     assetFolderBindings: cloneAssetFolderBindings(profileDraft.assetFolderBindings),
@@ -2888,34 +2932,6 @@ const contactListStatusHint = (profile = {}) => {
   return knowledgeSummary || t('仅在通讯录', 'Contacts only')
 }
 
-const autoGenerateProfile = async () => {
-  if (!profileDraft.name.trim()) {
-    setUiNotice('warning', t('请至少输入一个名字。', 'Please enter at least one name.'))
-    return
-  }
-
-  loadingAI.value = true
-  const prompt = `我要创建一个名为“${profileDraft.name.trim()}”的角色。职业/身份倾向：${profileDraft.role || '自由发挥但需合理'}。请返回 JSON：{"role":"简短职业","bio":"详细性格描述"}，仅返回 JSON。`
-
-  try {
-    const text = await callAI({
-      messages: [{ role: 'user', content: prompt }],
-      systemPrompt: 'You are a character design helper. Return valid JSON only.',
-      settings: settings.value,
-    })
-    const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim()
-    const data = JSON.parse(cleanText)
-
-    if (typeof data.role === 'string') profileDraft.role = data.role
-    if (typeof data.bio === 'string') profileDraft.bio = data.bio
-    setUiNotice('success', t('AI 补全成功。', 'AI profile fill completed.'))
-  } catch (error) {
-    setUiNotice('error', `${t('生成失败', 'Generation failed')}: ${error?.message || ''}`)
-  } finally {
-    loadingAI.value = false
-  }
-}
-
 watch(
   [roleProfiles, () => route.query.profileId],
   ([profiles, routeProfileId]) => {
@@ -3025,7 +3041,7 @@ onBeforeUnmount(() => {
       <div class="contacts-modal-header flex justify-between mb-4">
         <button @click="closeProfileModal" class="text-blue-500">{{ t('取消', 'Cancel') }}</button>
         <span class="font-bold">
-          {{ profileModalMode === 'create' ? t('新建角色档案', 'Create Role Profile') : t('编辑角色档案', 'Edit Role Profile') }}
+          {{ profileModalMode === 'create' ? t('新建人物', 'Create person') : t('编辑基础信息', 'Edit basic information') }}
         </span>
         <button
           type="button"
@@ -3037,26 +3053,25 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
-      <div class="contacts-avatar-preview flex flex-col items-center mb-4 relative">
-        <div class="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center text-gray-400 text-3xl mb-2 overflow-hidden shadow-inner">
-          <img
-            v-if="draftAvatarPreviewUrl"
-            :src="draftAvatarPreviewUrl"
-            :alt="t('角色头像预览', 'Role avatar preview')"
-            class="w-full h-full object-cover"
-          />
-          <i v-else class="fas fa-camera"></i>
-        </div>
-        <span class="text-blue-500 text-xs">{{ t('可用默认头像、URL 或 Gallery 素材', 'Use default, URL, or Gallery avatar') }}</span>
-      </div>
-
       <div class="contacts-modal-scroll space-y-3 overflow-y-auto pb-6 no-scrollbar">
         <input
           data-testid="contacts-profile-role-id"
           v-model="profileDraft.roleId"
+          :readonly="profileModalMode === 'edit'"
+          :aria-describedby="profileModalMode === 'edit' ? 'contacts-role-id-lock-copy' : undefined"
           :placeholder="t('角色 ID（数字开头，可附加字母）', 'Role ID (starts with numbers, letters allowed)')"
           class="w-full border-b py-2 outline-none"
+          :class="{ 'contacts-readonly-id': profileModalMode === 'edit' }"
         />
+        <p
+          v-if="profileModalMode === 'edit'"
+          id="contacts-role-id-lock-copy"
+          class="contacts-role-id-lock-copy"
+          data-testid="contacts-role-id-lock-copy"
+        >
+          <i class="fas fa-lock" aria-hidden="true"></i>
+          {{ t('ID 创建后保持不变，用于 Chat、Wallet、World Hub、事件审计和后续跨模块引用。', 'The ID stays fixed after creation for Chat, Wallet, World Hub, event audit, and future cross-module references.') }}
+        </p>
 
         <input
           data-testid="contacts-profile-name"
@@ -3065,48 +3080,18 @@ onBeforeUnmount(() => {
           class="w-full border-b py-2 outline-none"
         />
 
-        <div class="rounded-xl border border-gray-200 p-3 space-y-2">
-          <p class="text-xs font-semibold text-gray-700">{{ t('头像来源', 'Avatar source') }}</p>
-          <ImageSourcePicker
-            v-model:source-type="profileDraft.avatarImageSourceType"
-            v-model:image-url="profileDraft.avatarImageUrl"
-            v-model:gallery-asset-id="profileDraft.avatarImageGalleryAssetId"
-            :gallery-assets="galleryImageAssets"
-            :source-options="[
-              { value: 'none', labelZh: '默认头像', labelEn: 'Default avatar' },
-              { value: 'url', labelZh: 'URL 头像', labelEn: 'URL avatar' },
-              { value: 'gallery', labelZh: 'Gallery 素材', labelEn: 'Gallery asset' },
-            ]"
-            url-placeholder-zh="https:// 头像图片地址"
-            url-placeholder-en="https:// avatar image URL"
-            gallery-placeholder-zh="选择 Gallery 头像素材"
-            gallery-placeholder-en="Choose Gallery avatar asset"
-            test-id-prefix="contacts-profile-avatar"
+        <label class="contacts-basic-identity-field">
+          <span>{{ t('一句话身份', 'Identity label') }}</span>
+          <input
+            v-model="profileDraft.role"
+            data-testid="contacts-profile-role"
+            :placeholder="t('例如：同学、经纪人、私人 AI 助手', 'For example: classmate, manager, private AI assistant')"
+            class="w-full border-b py-2 outline-none"
           />
-          <p class="text-[11px] text-gray-500">
-            {{ t('本地图片仍先进入相册，再在角色档案中引用。', 'Local images still enter through Gallery first, then are referenced by the role profile.') }}
-          </p>
-        </div>
-
-        <div class="flex gap-2">
-          <input v-model="profileDraft.role" :placeholder="t('职业 / 身份', 'Role / Identity')" class="flex-1 border-b py-2 outline-none" />
-          <button
-            @click="autoGenerateProfile"
-            class="bg-purple-100 text-purple-600 px-3 rounded-lg text-xs font-bold flex items-center gap-1"
-          >
-            <i class="fas fa-magic"></i>
-            {{ loadingAI ? t('生成中...', 'Generating...') : t('AI 补全人设', 'AI Fill') }}
-          </button>
-        </div>
-
-        <div class="bg-gray-50 p-2 rounded-lg">
-          <label class="text-[10px] text-gray-400 uppercase font-bold">{{ t('详细人设', 'Detailed Prompt') }}</label>
-          <textarea
-            v-model="profileDraft.bio"
-            class="w-full bg-transparent text-xs h-20 outline-none resize-none mt-1"
-            :placeholder="t('手动输入，或点击 AI 补全。', 'Type manually or use AI fill.')"
-          ></textarea>
-        </div>
+          <small>
+            {{ t('这里只用于联系人列表和人物页标题；完整人设请回到人物页导入或逐项填写。', 'This is only used in contact lists and profile headings. Import or fill the full persona from the person page.') }}
+          </small>
+        </label>
 
         <div class="flex items-center justify-between border-b py-2">
           <span>{{ t('类型', 'Type') }}</span>
@@ -3748,8 +3733,8 @@ onBeforeUnmount(() => {
         <p class="contacts-boundary-copy" data-testid="contacts-boundary-copy">
           {{
             t(
-              '这里是所有角色的家——不聊天也可以先建档；想聊天时点进档案就能开始。已经和 Chat 关联的资料，仍在 Chat 通讯录里维护。',
-              'Every role lives here — no chat needed. Open a profile to start chatting; anything already linked stays in Chat Directory.',
+              '这里是所有人物档案的家。人设、关系和历史在这里查看与维护；谁进入聊天以及聊天偏好，只在 Chat 联系人中管理。',
+              'Every person profile lives here. Persona, relationships, and history are reviewed here; who enters Chat and Chat-only preferences are managed only in Chat Contacts.',
             )
           }}
         </p>
@@ -3845,14 +3830,7 @@ onBeforeUnmount(() => {
           {{ isSelectedProfileArchived ? t('已归档', 'Archived') : t('通讯录', 'Contacts') }}
         </button>
         <span class="font-bold truncate">{{ selectedProfileHeader.name }}</span>
-        <button
-          v-if="!isSelectedProfileArchived"
-          type="button"
-          class="contacts-small-action"
-          @click="openEditProfile(selectedProfile)"
-        >
-          {{ t('编辑', 'Edit') }}
-        </button>
+        <span v-if="!isSelectedProfileArchived" aria-hidden="true"></span>
       </div>
 
       <div ref="profileScrollElement" class="contacts-profile-scroll">
@@ -3871,15 +3849,23 @@ onBeforeUnmount(() => {
           </div>
           <section class="contacts-profile-hero">
           <div class="contacts-hero-card">
-            <div class="contacts-hero-avatar">
+            <button
+              type="button"
+              class="contacts-hero-avatar"
+              data-testid="contacts-open-appearance"
+              :aria-label="t(`管理 ${selectedProfileHeader.name} 的形象`, `Manage ${selectedProfileHeader.name}'s appearance`)"
+              @click="openAppearanceSheet"
+            >
               <img
                 :src="selectedProfileHeader.avatarUrl"
                 :alt="selectedProfileHeader.name"
                 class="w-full h-full object-cover"
               />
-            </div>
+              <span class="contacts-hero-avatar__edit" aria-hidden="true"><i class="fas fa-camera"></i></span>
+            </button>
             <p class="contacts-hero-eyebrow">{{ selectedProfileHeader.eyebrow }}</p>
             <h2 class="contacts-hero-name">{{ selectedProfileHeader.name }}</h2>
+            <p class="contacts-hero-id" data-testid="contacts-role-id">ID {{ selectedProfileHeader.roleId }}</p>
             <p class="contacts-hero-meta">{{ selectedProfileHeader.metaText }}</p>
             <p v-if="selectedProfileHeader.bioText" class="contacts-hero-bio">
               {{ selectedProfileHeader.bioText }}
@@ -3913,34 +3899,7 @@ onBeforeUnmount(() => {
             </span>
           </button>
 
-          <div v-if="!isSelectedProfileArchived" class="contacts-profile-actions contacts-hero-actions">
-            <button
-              v-if="selectedRoleChatContact && selectedProfileEntityType !== CONTACTS_ENTITY_TYPES.SELF_PROFILE"
-              type="button"
-              class="contacts-primary-action"
-              data-testid="contacts-open-chat"
-              @click="openSelectedChatTarget"
-            >
-              {{ t('打开 Chat', 'Open Chat') }}
-            </button>
-            <button
-              v-else-if="selectedProfileCanStartChat"
-              type="button"
-              class="contacts-primary-action"
-              data-testid="contacts-start-chat"
-              @click="openSelectedChatTarget"
-            >
-              {{ t('开始聊天', 'Start Chat') }}
-            </button>
-            <button
-              type="button"
-              class="contacts-small-action"
-              @click="openEditProfile(selectedProfile)"
-            >
-              {{ t('编辑基本信息', 'Edit basics') }}
-            </button>
-          </div>
-          <div v-else class="contacts-profile-actions contacts-hero-actions">
+          <div v-if="isSelectedProfileArchived" class="contacts-profile-actions contacts-hero-actions">
             <button
               type="button"
               class="contacts-primary-action"
@@ -4083,19 +4042,6 @@ onBeforeUnmount(() => {
                   </span>
                   <i class="fas fa-chevron-right" aria-hidden="true"></i>
                 </button>
-                <button
-                  v-if="selectedProfilePhotoCount > 0"
-                  type="button"
-                  data-testid="contacts-open-gallery-album"
-                  @click="openSelectedProfileAlbum"
-                >
-                  <span class="contacts-person-link__icon"><i class="far fa-images" aria-hidden="true"></i></span>
-                  <span>
-                    <strong>{{ t('照片', 'Photos') }}</strong>
-                    <small>{{ t(`${selectedProfilePhotoCount} 张与 ${selectedProfileHeader.name} 有关的照片`, `${selectedProfilePhotoCount} photos of ${selectedProfileHeader.name}`) }}</small>
-                  </span>
-                  <i class="fas fa-chevron-right" aria-hidden="true"></i>
-                </button>
               </div>
             </section>
 
@@ -4107,6 +4053,19 @@ onBeforeUnmount(() => {
                 </div>
               </header>
               <div class="contacts-person-links">
+                <button
+                  v-if="!isSelectedProfileArchived"
+                  type="button"
+                  data-testid="contacts-manage-identity-bindings"
+                  @click="openEditProfile(selectedProfile)"
+                >
+                  <span class="contacts-person-link__icon"><i class="far fa-id-card" aria-hidden="true"></i></span>
+                  <span>
+                    <strong>{{ t('身份与绑定', 'Identity and bindings') }}</strong>
+                    <small>{{ t('修改姓名、稳定 ID、一句话身份、人物类型和高级绑定', 'Change name, stable ID, identity label, person type, and advanced bindings') }}</small>
+                  </span>
+                  <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                </button>
                 <button
                   v-if="selectedProfileHeader.isNpc && !isSelectedProfileArchived"
                   type="button"
@@ -4169,6 +4128,85 @@ onBeforeUnmount(() => {
             >
               {{ t('归档状态下仅供查看；恢复人物后才能编辑或更新这些内容。', 'Archived content is view-only. Restore the person before editing or updating it.') }}
             </div>
+
+          <section
+            v-if="activeDetailSheet === CONTACTS_DETAIL_SHEETS.APPEARANCE"
+            class="contacts-appearance-sheet"
+            data-testid="contacts-appearance-sheet"
+          >
+            <div class="contacts-appearance-primary">
+              <div class="contacts-appearance-primary__image">
+                <img :src="selectedProfileHeader.avatarUrl" :alt="selectedProfileHeader.name" />
+              </div>
+              <div>
+                <p class="contacts-person-section__eyebrow">{{ t('当前主形象', 'Primary appearance') }}</p>
+                <h3>{{ selectedProfileHeader.name }}</h3>
+                <p>{{ t('主形象会作为这个人物在通讯录中的面容。已确认的形象引用也可供后续创作流程选择，但本页不会自动生成图片。', 'The primary appearance is this person\'s face in Contacts. Confirmed references may be selected by future creative flows, but this page does not generate images.') }}</p>
+              </div>
+            </div>
+
+            <div v-if="!isSelectedProfileArchived" class="contacts-appearance-actions">
+              <input
+                ref="appearanceFileInput"
+                type="file"
+                accept="image/*"
+                multiple
+                class="sr-only"
+                data-testid="contacts-appearance-file-input"
+                :aria-label="t('导入人物形象图片', 'Import person appearance images')"
+                @change="importAppearanceFiles"
+              />
+              <button type="button" class="contacts-primary-action" data-testid="contacts-import-appearance" :disabled="appearanceImportBusy" @click="openAppearanceFilePicker">
+                <i class="fas fa-file-arrow-up" aria-hidden="true"></i>
+                {{ appearanceImportBusy ? t('导入中…', 'Importing…') : t('导入图片', 'Import images') }}
+              </button>
+              <button type="button" class="contacts-small-action" data-testid="contacts-open-appearance-camera" @click="openSelectedProfileCamera">
+                <i class="fas fa-camera" aria-hidden="true"></i>
+                {{ t('相机', 'Camera') }}
+              </button>
+              <button type="button" class="contacts-small-action" data-testid="contacts-open-appearance-gallery" @click="openSelectedProfileAlbum">
+                <i class="far fa-images" aria-hidden="true"></i>
+                {{ t('人物相册', 'Person album') }}
+              </button>
+            </div>
+
+            <div class="contacts-appearance-library">
+              <div class="contacts-appearance-library__head">
+                <div>
+                  <p class="contacts-person-section__eyebrow">{{ t('人物面容', 'Person images') }}</p>
+                  <h3>{{ t('从人物相册选择主形象', 'Choose a primary appearance') }}</h3>
+                </div>
+                <span>{{ selectedProfilePhotoCount }}</span>
+              </div>
+              <div v-if="selectedProfileAppearanceAssets.length > 0" class="contacts-appearance-grid">
+                <button
+                  v-for="asset in selectedProfileAppearanceAssets"
+                  :key="asset.id"
+                  type="button"
+                  class="contacts-appearance-option"
+                  :class="{ 'is-primary': asset.id === selectedPrimaryAppearanceAssetId }"
+                  :data-testid="`contacts-appearance-asset-${asset.id}`"
+                  :aria-pressed="asset.id === selectedPrimaryAppearanceAssetId"
+                  :disabled="isSelectedProfileArchived"
+                  @click="selectPrimaryAppearanceAsset(asset.id)"
+                >
+                  <img v-if="draftPreviewMap[asset.id]" :src="draftPreviewMap[asset.id]" :alt="asset.name" />
+                  <span v-else class="contacts-appearance-option__placeholder"><i class="far fa-image" aria-hidden="true"></i></span>
+                  <span class="contacts-appearance-option__label">
+                    <strong>{{ asset.name }}</strong>
+                    <small>{{ asset.id === selectedPrimaryAppearanceAssetId ? t('当前主形象', 'Current primary') : t('设为主形象', 'Set as primary') }}</small>
+                  </span>
+                </button>
+              </div>
+              <div v-else class="contacts-persona-empty" data-testid="contacts-appearance-empty">
+                <span class="contacts-persona-empty__icon" aria-hidden="true"><i class="far fa-images"></i></span>
+                <div>
+                  <h4>{{ t('还没有关联的人物图片', 'No person images yet') }}</h4>
+                  <p>{{ t('导入图片，或去相册把已有照片标记为这个人物。', 'Import images, or tag existing Gallery photos with this person.') }}</p>
+                </div>
+              </div>
+            </div>
+          </section>
 
           <section
             v-if="activeDetailSheet === CONTACTS_DETAIL_SHEETS.RELATIONSHIP"
@@ -7112,6 +7150,8 @@ onBeforeUnmount(() => {
 }
 
 .contacts-hero-avatar {
+  position: relative;
+  display: block;
   width: 88px;
   height: 88px;
   overflow: hidden;
@@ -7121,6 +7161,21 @@ onBeforeUnmount(() => {
   box-shadow:
     0 14px 28px rgba(38, 34, 27, 0.16),
     0 0 0 1px var(--contacts-border);
+}
+
+.contacts-hero-avatar__edit {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--contacts-accent);
+  color: #fff;
+  font-size: 10px;
 }
 
 .contacts-hero-eyebrow {
@@ -7147,6 +7202,151 @@ onBeforeUnmount(() => {
   color: var(--contacts-muted);
   font-size: 12px;
   font-weight: 700;
+}
+
+.contacts-hero-id {
+  margin: 7px 0 0;
+  padding: 5px 10px;
+  border: 1px solid var(--contacts-border);
+  border-radius: 6px;
+  background: var(--contacts-surface);
+  color: var(--contacts-text);
+  font-size: 12px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.contacts-appearance-sheet {
+  display: grid;
+  gap: 14px;
+}
+
+.contacts-appearance-primary,
+.contacts-appearance-library {
+  border: 1px solid var(--contacts-border);
+  border-radius: 8px;
+  background: var(--contacts-surface-strong);
+  box-shadow: var(--contacts-shadow);
+}
+
+.contacts-appearance-primary {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+}
+
+.contacts-appearance-primary__image {
+  width: 112px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--contacts-surface);
+}
+
+.contacts-appearance-primary__image img,
+.contacts-appearance-option img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.contacts-appearance-primary h3,
+.contacts-appearance-library h3 {
+  margin: 3px 0 0;
+  color: var(--contacts-text);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.contacts-appearance-primary p:last-child {
+  margin: 8px 0 0;
+  color: var(--contacts-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.contacts-appearance-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.contacts-appearance-library {
+  padding: 16px;
+}
+
+.contacts-appearance-library__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.contacts-appearance-library__head > span {
+  min-width: 28px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--contacts-accent-soft);
+  color: var(--contacts-accent-strong);
+  text-align: center;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.contacts-appearance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.contacts-appearance-option {
+  display: grid;
+  grid-template-rows: 132px auto;
+  overflow: hidden;
+  min-width: 0;
+  border: 1px solid var(--contacts-border);
+  border-radius: 8px;
+  background: var(--contacts-surface);
+  text-align: left;
+}
+
+.contacts-appearance-option.is-primary {
+  border-color: var(--contacts-accent);
+  box-shadow: 0 0 0 2px var(--contacts-accent-soft);
+}
+
+.contacts-appearance-option__placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--contacts-muted);
+  font-size: 24px;
+}
+
+.contacts-appearance-option__label {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 9px;
+}
+
+.contacts-appearance-option__label strong,
+.contacts-appearance-option__label small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contacts-appearance-option__label strong {
+  color: var(--contacts-text);
+  font-size: 11px;
+}
+
+.contacts-appearance-option__label small {
+  color: var(--contacts-muted);
+  font-size: 10px;
 }
 
 .contacts-hero-bio {
@@ -8853,6 +9053,48 @@ onBeforeUnmount(() => {
   align-items: stretch;
 }
 
+.contacts-basic-identity-field {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--contacts-border);
+  border-radius: 8px;
+  background: var(--contacts-surface);
+}
+
+.contacts-basic-identity-field > span {
+  color: var(--contacts-text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.contacts-basic-identity-field > small {
+  color: var(--contacts-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.contacts-readonly-id {
+  cursor: not-allowed;
+  color: var(--contacts-muted);
+  background: var(--contacts-surface);
+}
+
+.contacts-role-id-lock-copy {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: -4px 0 2px;
+  color: var(--contacts-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.contacts-role-id-lock-copy i {
+  margin-top: 2px;
+  color: var(--contacts-accent);
+}
+
 .contacts-modal-scroll input,
 .contacts-modal-scroll textarea,
 .contacts-modal-scroll select {
@@ -9004,6 +9246,27 @@ onBeforeUnmount(() => {
 
   .contacts-runtime-audit-grid {
     grid-template-columns: 1fr;
+  }
+
+  .contacts-appearance-primary {
+    grid-template-columns: 82px minmax(0, 1fr);
+    padding: 12px;
+  }
+
+  .contacts-appearance-primary__image {
+    width: 82px;
+  }
+
+  .contacts-appearance-actions > button {
+    flex: 1 1 120px;
+  }
+
+  .contacts-appearance-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .contacts-appearance-option {
+    grid-template-rows: minmax(120px, 32vw) auto;
   }
 
   .contacts-memory-health-header {

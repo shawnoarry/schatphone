@@ -14,6 +14,10 @@ Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 
 `联系人个人页 -> 导入人设 / 逐项填写 -> 粘贴或选择文本文件 -> 检查归类结果 -> 确认保存 -> 按类目阅读人物资料`
 
+人物识别与形象流程调整为：
+
+`联系人个人页 -> 直接识别稳定 ID -> 点击人物形象 -> 导入图片 / 选择人物相册图片 / 前往相机或相册 -> 确认主形象`
+
 这一轮不新增另一套人设文案，也不改变 Contacts、Chat、Relationship Runtime、Work Hub 或 Event Runtime 的数据归属。
 
 ## 2. 当前可见结果
@@ -57,6 +61,17 @@ Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 - 迁移只匹配稳定内置 ID、姓名、角色、简介、初始修订和空资料状态；
 - 只要用户已经编辑、保存、换过资料卡、增加扩展或产生新修订，就不会覆盖现有内容。
 
+### 2.5 稳定 ID 与人物形象
+
+- 稳定角色 ID 从基础编辑弹层前置到人物概览，作为类似电话号码或平台账号的首要识别信息；ID 只在创建人物时确定，创建后普通资料修订不可修改；列表、搜索、旧绑定和后续消费者仍复用同一个 `roleId`，不新增第二套身份编号；
+- 头像不再作为基础档案字段编辑，人物概览中的头像改为可下钻的“形象”入口；
+- 形象次级页展示当前主形象和 Gallery 中已标记为该人物的图片，可选择任一人物图片作为主形象；
+- 本地图片通过 Gallery Owner 导入并加上人物标签，Contacts 只在现有资料的 `avatarImage` 中保存确认引用，不复制图片字节或新建形象记录；
+- 形象页提供“相机”和“人物相册”入口。当前只建立入口和确认引用，不声称相机自动回填、面容识别或生图能力已经完成；
+- 主形象写入失败时保留旧人物资料，并撤回本次新增的人物标签；导入失败也不会改变旧形象；
+- 已确认形象可作为未来创作流程的候选引用，但当前页面不会自动发起图片生成；
+- “身份与绑定”下沉到档案管理，只负责姓名、只读稳定 ID、一句话身份、人物类型和高级绑定，不再包含头像或整段人设。未来如确需纠错，只能设计单独的跨 owner 迁移流程，不能恢复普通随意改号。
+
 ## 3. 用户回家后的验收路径
 
 打开：
@@ -66,36 +81,31 @@ Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 按下面顺序检查：
 
 1. 查看 Eva 首页是否像一张人物资料，而不是后台计数面板；
-2. 点击“逐项填写”，检查字段名称、帮助文字、读取范围和资料卡样式是否容易理解；
-3. 返回后点击“导入人设”，分别检查粘贴文字和导入 TXT、Markdown、JSON；
-4. 查看 Jackie，比较两个人物内容是否足以表现资料卡差异；
-5. 新建一个空人物，确认空状态是否能自然引导到两种填写方式；
-6. 重点记录内容密度、类目命名、按钮位置和仍显得像脚手架的区域。
+2. 确认稳定 ID 在人物概览直接可见，点击头像进入“形象”；
+3. 在形象页导入一张图片，确认它进入人物图片列表并成为主形象；再检查“相机”和“人物相册”入口；
+4. 点击“逐项填写”，检查字段名称、帮助文字、读取范围和资料卡样式是否容易理解；
+5. 返回后点击“导入人设”，分别检查粘贴文字和导入 TXT、Markdown、JSON；
+6. 查看 Jackie，比较两个人物内容是否足以表现资料卡差异；
+7. 新建一个空人物，确认空状态是否能自然引导到两种填写方式；
+8. 重点记录内容密度、类目命名、按钮位置和仍显得像脚手架的区域。
 
 如果本地预览提示只读，说明另一个 SchatPhone 页面持有当前存档写权。只读状态不影响视觉检查；需要实际保存时，关闭占用写权的页面后重新载入。
 
 ## 4. 已通过的验证
 
 - 2026-08-28 人设唯一入口与本地文件导入优化：新增 9 项导入解析测试，覆盖 TXT、MD、Markdown、JSON、无效 JSON、空文件、超限、不支持格式和读取失败；Contacts 资料视图针对性测试共 33 项通过；
-- 完整 `npm.cmd run test -- --dir tests`：342 个文件 / 2604 项全部通过；
-- 独立 `5175` 端口完成 desktop Chromium 与模拟 Pixel 5 验证：WorldBook/Contacts Persona 8 项通过，Contacts 手机界面 4 项通过；文件导入、双语/日夜既有矩阵、取消重开、AI 失败、WCAG A/AA 和零横向溢出保持通过；
-- `npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run governance:check` 与 `git diff --check` 通过；
-- `npm.cmd run lint`;
-- `npm.cmd run build`;
-- `npm.cmd run governance:check`;
-- 43 个 Contacts 人物资料、World-field model、Persona classifier 和 confirmation 针对性单元测试；
-- `e2e/contacts-phone-ui.spec.js`: desktop 和 mobile 共 4 项通过；
-- `e2e/visual-quality.spec.js`: default/Zen、desktop/mobile 共 20 项通过；
-- `e2e/worldbook-contacts-profile-fields.spec.js`: desktop Chromium 与模拟 Pixel 5 共 8 项通过，新增覆盖空类目摘要、整理态聚焦、草稿边界、取消重开、AI 失败、WCAG A/AA 和零横向溢出；
-- 375px 与 1280px 浏览器检查无横向溢出。
-
-正式 `npm.cmd run test -- --dir tests` 完成 341 个文件 / 2592 项测试，其中 340 个文件 / 2591 项通过；唯一失败是非 Contacts 的 `tests/music-store.test.js` ChKSz LRU 用例超过默认 5 秒上限。该文件随后使用 `--testTimeout=15000` 单独复跑，21/21 通过。Contacts focused tests、完整 E2E、lint、build、governance 和 diff checks 均通过。
+- 2026-08-28 稳定 ID 与人物形象优化：Contacts 资料视图和 Chat 边界聚焦测试 2 文件 / 35 项通过；独立端口完成 desktop Chromium 与模拟 Pixel 5 的 Contacts 全流程 4/4，覆盖前置 ID、形象下钻、本地图片导入、Gallery 人物标签、主形象、相机/相册入口、WCAG A/AA 和零横向溢出；未声称真机证据；
+- 完整 `npm.cmd run test -- --dir tests --maxWorkers=2 --testTimeout=15000`：342 个文件 / 2609 项全部通过；
+- 独立 `5187` 端口完成 desktop Chromium 与模拟 Pixel 5 的 `e2e/contacts-phone-ui.spec.js`：4/4 通过；
+- 既有 WorldBook/Contacts Persona desktop Chromium 与模拟 Pixel 5 矩阵：8/8 通过，覆盖文件导入、双语/日夜、取消重开、AI 失败、WCAG A/AA 和零横向溢出；
+- `npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run governance:check` 与最终 `git diff --check` 通过。
 
 ## 5. 当前仍未完成
 
 - 用户尚未共同验收，因此 `CONTACTS-V3-2C` 继续保持 `IN_PROGRESS`；
 - 当前不是 Contacts 全应用视觉重做完成声明；
 - 类目命名、输入控件节奏和人物专属新增区仍可以根据实际观感继续调整；本轮已收紧二级阅读页空类目密度、Persona 整理态焦点和唯一导入入口；
+- Gallery 人物标签目前由用户明确导入或手动标记，不包含自动面容识别；Camera 目前只提供入口，不声称拍摄结果已经自动回填指定人物；
 - 没有新增正式 AI 模型配置、事件触发、Work Hub 权限或下游消费者能力；
 - `CONTACTS-V3-5` 继续保持 gated。
 
@@ -103,8 +113,8 @@ Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 
 优先做用户指出的具体视觉和理解问题，不要重新设计底层资料结构。建议顺序：
 
-1. 根据 Eva、Jackie 和空人物三种状态记录问题；
-2. 先修首屏层级、类目命名和表单阅读节奏；
+1. 根据 Eva、Jackie 和空人物三种状态继续记录具体问题；
+2. 联合验收稳定 ID、形象下钻、人物相册标签和基础信息管理的边界；
 3. 再检验整段人设的真实归类结果与类目选择；
 4. 通过用户验收后，才把 `CONTACTS-V3-2C` 标记完成并讨论 `CONTACTS-V3-5`。
 

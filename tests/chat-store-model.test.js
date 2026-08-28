@@ -1156,8 +1156,9 @@ describe('chat store model', () => {
     expect(store.isRoleIdAvailable('100A')).toBe(false)
     expect(store.addRoleProfile({ roleId: '100A', name: 'Duplicate Role' })).toBe(null)
     expect(store.addRoleProfile({ roleId: 'alpha', name: 'Invalid Role' })).toBe(null)
-    expect(store.updateRoleProfile(created.id, { roleId: '200B' })).toBe(true)
-    expect(store.getRoleProfileByRoleId('200B')?.name).toBe('Role Id Tester')
+    expect(store.updateRoleProfile(created.id, { roleId: '200B' })).toBe(false)
+    expect(store.getRoleProfileByRoleId('100A')?.name).toBe('Role Id Tester')
+    expect(store.getRoleProfileByRoleId('200B')).toBe(null)
 
     const manual = store.listRoleDetailItems(created.id, 'preferences')
     expect(manual).toHaveLength(1)

@@ -133,6 +133,25 @@ describe('Contacts Profile Owner', () => {
     expect(profiles[0]).toEqual(before)
   })
 
+  test('keeps role IDs immutable after profile creation', () => {
+    const { owner, profiles } = createOwner([createProfile()])
+    const before = structuredClone(profiles[0])
+
+    expect(owner.reviseProfile(10, { roleId: '20' })).toMatchObject({
+      ok: false,
+      code: CONTACTS_PROFILE_OWNER_CODES.ROLE_ID_IMMUTABLE,
+      profileId: 10,
+      roleId: '10',
+      revision: 3,
+    })
+    expect(profiles[0]).toEqual(before)
+    expect(owner.reviseProfile(10, { roleId: '10', name: 'Renamed profile' })).toMatchObject({
+      ok: true,
+      code: CONTACTS_PROFILE_OWNER_CODES.PROFILE_REVISED,
+    })
+    expect(profiles[0]).toMatchObject({ roleId: '10', name: 'Renamed profile' })
+  })
+
   test('rejects duplicate numeric IDs atomically during snapshot replacement', () => {
     const { owner, profiles } = createOwner([createProfile()])
     const before = structuredClone(profiles)

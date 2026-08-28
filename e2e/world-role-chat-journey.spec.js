@@ -202,14 +202,18 @@ test('an explicitly empty custom-role state reaches Chat directly from Contacts'
   await page.getByTestId('contacts-profile-submit').click()
 
   await expect(page.getByTestId('contacts-role-detail')).toContainText(profileName)
-  await expect(page.getByTestId('contacts-start-chat')).toBeVisible()
-  await expect(page.getByTestId('contacts-start-chat')).toHaveText('Start Chat')
+  await expect(page.getByTestId('contacts-start-chat')).toHaveCount(0)
+  await expect(page.getByTestId('contacts-open-chat')).toHaveCount(0)
   await expectNoHorizontalOverflow(page)
   await expectNoCriticalAxeViolations(page)
 
-  await page.getByTestId('contacts-start-chat').click()
+  await navigateInsideUnlockedApp(page, '/chat-contacts')
+  await page.getByTestId('chat-directory-add-contact').click()
+  await expect(page.getByTestId('chat-directory-bind-modal')).toContainText(profileName)
+  await page.getByTestId('chat-directory-confirm-bind').click()
+  await page.locator('.chat-contact-row__identity').filter({ hasText: profileName }).click()
   await waitForAppRouteReady(page, '/chat/1')
-  await expect(page).toHaveURL(/#\/chat\/1\?source=contacts&profileId=1$/)
+  await expect(page).toHaveURL(/#\/chat\/1$/)
   await expect.poll(() => readPersistedJourneyCounts(page)).toMatchObject({
     roleProfiles: 1,
     roleContacts: 1,
@@ -223,9 +227,7 @@ test('an explicitly empty custom-role state reaches Chat directly from Contacts'
   await expect(page.getByTestId('chat-network-readiness')).toBeVisible()
   await page.getByTestId('chat-open-network-setup').click()
   await waitForAppRouteReady(page, '/network')
-  await expect(page).toHaveURL(
-    /#\/network\?source=chat&chatId=1&from=contacts&profileId=1$/,
-  )
+  await expect(page).toHaveURL(/#\/network\?source=chat&chatId=1$/)
 
   await page.getByTestId('network-api-url-input').fill(providerUrl)
   await page.getByTestId('network-api-key-input').fill(fakeCredential)
@@ -242,7 +244,7 @@ test('an explicitly empty custom-role state reaches Chat directly from Contacts'
 
   await page.getByTestId('network-continue-chat').click()
   await waitForAppRouteReady(page, '/chat/1')
-  await expect(page).toHaveURL(/#\/chat\/1\?source=contacts&profileId=1$/)
+  await expect(page).toHaveURL(/#\/chat\/1$/)
   await expect(page.getByTestId('chat-message-input')).toHaveValue(draftText)
 
   await page.getByTestId('chat-message-input').press('Enter')
@@ -255,9 +257,11 @@ test('an explicitly empty custom-role state reaches Chat directly from Contacts'
   await expectNoCriticalAxeViolations(page)
 
   await page.getByTestId('chat-thread-back').click()
-  await waitForAppRouteReady(page, '/contacts?profileId=1')
+  await waitForAppRouteReady(page, '/chat')
+  await navigateInsideUnlockedApp(page, '/contacts?profileId=1')
   await expect(page.getByTestId('contacts-role-detail')).toContainText(profileName)
-  await expect(page.getByTestId('contacts-open-chat')).toBeVisible()
+  await expect(page.getByTestId('contacts-open-chat')).toHaveCount(0)
+  await expect(page.getByTestId('contacts-start-chat')).toHaveCount(0)
   await expect.poll(() => readPersistedJourneyCounts(page)).toMatchObject({
     roleProfiles: 1,
     roleContacts: 1,

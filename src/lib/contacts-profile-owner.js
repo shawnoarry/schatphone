@@ -48,6 +48,7 @@ export const CONTACTS_PROFILE_OWNER_CODES = Object.freeze({
   DUPLICATE_PROFILE_ID: 'duplicate_profile_id',
   INVALID_ROLE_ID: 'invalid_role_id',
   ROLE_ID_CONFLICT: 'role_id_conflict',
+  ROLE_ID_IMMUTABLE: 'role_id_immutable',
   PROFILE_ID_RESERVED: 'profile_id_reserved',
   PROFILE_NOT_ARCHIVED: 'profile_not_archived',
   SELF_PROFILE_LIFECYCLE_FORBIDDEN: 'self_profile_lifecycle_forbidden',
@@ -461,10 +462,13 @@ export const createContactsProfileOwner = ({ profiles, lifecycleState = {}, now 
       if (!isValidRoleId(roleId)) {
         return failureReceipt(CONTACTS_PROFILE_OWNER_CODES.INVALID_ROLE_ID, { profileId: target.id })
       }
-      if (!isRoleIdAvailable(roleId, target.id)) {
-        return failureReceipt(CONTACTS_PROFILE_OWNER_CODES.ROLE_ID_CONFLICT, { profileId: target.id })
+      if (roleId !== target.roleId) {
+        return failureReceipt(CONTACTS_PROFILE_OWNER_CODES.ROLE_ID_IMMUTABLE, {
+          profileId: target.id,
+          revision: target.revision,
+          roleId: target.roleId,
+        })
       }
-      target.roleId = roleId
     }
 
     if (typeof updates.name === 'string' && updates.name.trim()) target.name = updates.name.trim()
