@@ -4,12 +4,14 @@ Updated: 2026-08-28
 
 ## 1. Handoff State
 
-- State: `PUSH_AUTHORIZED`
+- State: `PUSHED`
 - Task package: `map-calendar-reminders`
 - Risk lane: elevated, because this round changes user-visible Map behavior in a dirty integration worktree and includes an authorized remote push
 - Worktree: `D:\github\schatphone`
 - Target branch: `main`
 - Recorded base before this commit: `a2e4e68a589f31d5f061c032b1af39ef95b30ee7`
+- Integrated implementation commit: `0bca26c4a7257a2a46d2e1bda817472fdbd94f15`
+- Remote verification: `origin/main` contained the integrated implementation commit after push
 - Roadmap impact: none; the production EVE-2C trigger contract and roadmap status remain unchanged
 
 ## 2. User-Visible Result
