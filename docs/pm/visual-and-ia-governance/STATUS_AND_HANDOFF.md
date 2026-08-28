@@ -18,6 +18,8 @@ Status: `PARTIAL_DONE`
 
 2026-08-17 hosted-product-proof asset hardening: the Playwright evidence path now retrieves real project CDN bytes with bounded timeout/retry, completed-response caching, request-context-scoped in-flight de-duplication, settle-before-fail prewarm batches, and fail-closed route fulfillment. Food Delivery, Shopping, and Map proof specs use explicit approved packs where assets are mounted after interaction; lazy campaign media is scrolled into view before visual assertions. The scoped 34-test desktop + simulated Pixel 5 Chromium focus set passes with both two-worker and default four-worker execution. This remains local/simulated evidence only: hosted deployment, installed-PWA/relaunch, and physical-device acceptance remain separate release gates; no hosted or true-device claim is made here.
 
+2026-08-28 complete-backup evidence refresh: the Settings sensitive-backup Playwright path now verifies the current schema v5 package, Contacts lifecycle schema v1, Mini Scene schema v2, Chat identity restore/reopen, and full current-Store rollback after an interrupted restore across desktop Chromium and simulated Pixel 5. This remains local browser and emulated-viewport evidence only; installed-PWA/relaunch and physical-device backup proof remain open release gates.
+
 What is already landed:
 
 1. this package now exists as the place to separate structural IA issues from simple styling issues;

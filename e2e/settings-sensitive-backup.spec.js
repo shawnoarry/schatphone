@@ -204,6 +204,7 @@ const createRollbackSnapshotFromBackup = (backup) => ({
     moduleAvatarOverrides: backup.moduleAvatarOverrides,
     moduleIdentity: backup.moduleIdentity,
     roleProfiles: backup.roleProfiles,
+    contactsLifecycle: backup.contactsLifecycle,
     contacts: backup.contacts,
     chatHistory: backup.chatHistory,
     conversations: backup.conversations,
@@ -211,6 +212,10 @@ const createRollbackSnapshotFromBackup = (backup) => ({
   },
   map: backup.map,
   calendar: backup.calendar,
+  miniScene: backup.miniScene,
+  agendaJourney: backup.calendar?.agendaJourney,
+  activitySession: backup.calendar?.activitySession,
+  scheduleOrchestrator: backup.calendar?.scheduleOrchestrator,
   reminders: backup.reminders,
   gallery: backup.gallery,
   files: backup.files,
@@ -304,10 +309,19 @@ test('Settings warns before exporting a complete backup and preserves the config
   ).toBe(true)
   expect(exported.backupMeta).toMatchObject({
     magic: 'schatphone-complete-backup',
-    schemaVersion: 3,
+    schemaVersion: 5,
     exportMode: 'metadata_with_asset_package',
   })
   expect(exported.backupMeta.manifest.sectionCount).toBeGreaterThan(20)
+  expect(exported.contactsLifecycle).toMatchObject({
+    schemaVersion: 1,
+    profileIdHighWaterMark: expect.any(Number),
+    tombstones: [],
+  })
+  expect(exported.miniScene).toMatchObject({
+    schemaVersion: 2,
+    artifacts: [],
+  })
   expect(exported.backupMeta.galleryAssetPackage).toMatchObject({
     requested: true,
     included: true,
