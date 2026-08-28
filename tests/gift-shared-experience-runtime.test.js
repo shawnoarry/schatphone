@@ -13,6 +13,7 @@ import { useCalendarStore } from '../src/stores/calendar'
 import { useChatStore } from '../src/stores/chat'
 import { PHONE_CALL_DIRECTION, usePhoneStore } from '../src/stores/phone'
 import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
+import { useRemindersStore } from '../src/stores/reminders'
 import { useShoppingStore } from '../src/stores/shopping'
 import { useWalletStore } from '../src/stores/wallet'
 
@@ -175,5 +176,80 @@ describe('gift shared experience runtime', () => {
       trust: 53,
       intimacy: 24,
     })
+
+    const backup = {
+      calendar: calendarStore.createBackupSnapshot(),
+      chat: chatStore.createBackupSnapshot(),
+      phone: phoneStore.createBackupSnapshot(),
+      relationshipRuntime: relationshipRuntimeStore.createBackupSnapshot(),
+      reminders: useRemindersStore().createBackupSnapshot(),
+      shopping: shoppingStore.createBackupSnapshot(),
+      wallet: walletStore.createBackupSnapshot(),
+    }
+
+    localStorage.clear()
+    setActivePinia(createPinia())
+    const restoredCalendar = useCalendarStore()
+    const restoredChat = useChatStore()
+    const restoredPhone = usePhoneStore()
+    const restoredRelationship = useRelationshipRuntimeStore()
+    const restoredReminders = useRemindersStore()
+    const restoredShopping = useShoppingStore()
+    const restoredWallet = useWalletStore()
+
+    expect(restoredCalendar.restoreFromBackup(backup.calendar)).toBe(true)
+    expect(restoredChat.restoreFromBackup(backup.chat)).toBe(true)
+    expect(restoredPhone.restoreFromBackup(backup.phone)).toBe(true)
+    expect(restoredRelationship.restoreFromBackup(backup.relationshipRuntime)).toBe(true)
+    expect(restoredReminders.restoreFromBackup(backup.reminders)).toBe(true)
+    expect(restoredShopping.restoreFromBackup(backup.shopping)).toBe(true)
+    expect(restoredWallet.restoreFromBackup(backup.wallet)).toBe(true)
+    expect(restoredCalendar.saveNow()).toMatchObject({ ok: true })
+    expect(restoredChat.saveNow()).toMatchObject({ ok: true })
+    expect(restoredPhone.saveNow()).toMatchObject({ ok: true })
+    expect(restoredRelationship.saveNow()).toMatchObject({ ok: true })
+    restoredReminders.saveNow()
+    expect(restoredShopping.saveNow()).toMatchObject({ ok: true })
+    expect(restoredWallet.saveNow()).toMatchObject({ ok: true })
+
+    setActivePinia(createPinia())
+    const reopenedCalendar = useCalendarStore()
+    const reopenedChat = useChatStore()
+    const reopenedPhone = usePhoneStore()
+    const reopenedRelationship = useRelationshipRuntimeStore()
+    const reopenedReminders = useRemindersStore()
+    const reopenedShopping = useShoppingStore()
+    const reopenedWallet = useWalletStore()
+    const reopenedOrder = reopenedShopping.orders.find((item) => item.id === order.id)
+    const reopenedExperience = buildGiftSharedExperienceV1({
+      order: reopenedOrder,
+      walletTransactions: reopenedWallet.transactions,
+      reminderCues: reopenedReminders.shoppingDeliveryCues,
+      calendarEvents: reopenedCalendar.events,
+      phoneCalls: reopenedPhone.calls,
+      chatMessages: reopenedChat.getMessagesByContactId(serviceContact.id),
+    })
+
+    expect(reopenedExperience.progress.map((item) => item.kind)).toEqual([
+      'gift_reserved',
+      'gift_delivered',
+      'recipient_feedback_received',
+    ])
+    expect(new Set(reopenedExperience.ownerRecordRefs.map((ref) => ref.ownerModule))).toEqual(
+      new Set(['shopping', 'wallet', 'reminders', 'chat', 'phone']),
+    )
+    expect(
+      reopenedRelationship.summarizeEntityForTarget(target, { memoryLimit: 10 }).memorySummaries,
+    ).toEqual([
+      expect.objectContaining({
+        memoryKey: reopenedExperience.roleMemory.memoryKey,
+        supportingCount: 4,
+      }),
+    ])
+    expect(
+      reopenedRelationship.events.every(
+        (event) => event.sharedExperienceId === reopenedOrder.sharedExperienceId,
+      ),
+    ).toBe(true)
   })
 })

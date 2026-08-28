@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import {
   RELATIONSHIP_MEMORY_REVIEW_STATES,
+  RELATIONSHIP_RUNTIME_STORAGE_VERSION,
   useRelationshipRuntimeStore,
 } from '../src/stores/relationshipRuntime'
 import { writePersistedState } from '../src/lib/persistence'
@@ -1166,6 +1167,87 @@ describe('relationship runtime store', () => {
     const store = useRelationshipRuntimeStore()
     expect(store.events).toHaveLength(501)
     expect(store.createBackupSnapshot().events).toHaveLength(501)
+  })
+
+  test('reports rejected and ungrouped legacy rows without inventing relationship links', () => {
+    writePersistedState(
+      'store:relationship-runtime',
+      {
+        settings: {},
+        entities: [
+          { entityKey: 'role:505', profileId: 505, kind: 'role', displayName: 'Legacy report' },
+        ],
+        events: [
+          {
+            id: 'legacy_grouped_event',
+            entityKey: 'role:505',
+            sourceModule: 'relationship_shopping_gift',
+            sourceId: 'legacy_order_505',
+            memoryKey: 'legacy_gift_505',
+            sharedExperienceId: 'gift:legacy_order_505',
+            summary: 'Explicitly grouped legacy gift.',
+            status: 'applied',
+            effectApplied: true,
+            createdAt: 3,
+          },
+          {
+            id: 'legacy_ungrouped_event',
+            entityKey: 'role:505',
+            sourceModule: 'relationship_phone_call',
+            sourceId: 'legacy_call_505',
+            summary: 'Legacy row without an explicit memory key.',
+            status: 'applied',
+            effectApplied: false,
+            createdAt: 2,
+          },
+          {
+            id: 'legacy_rejected_event',
+            sourceModule: 'relationship_phone_call',
+            sourceId: 'legacy_call_invalid',
+            summary: 'Legacy row without a target.',
+            createdAt: 1,
+          },
+        ],
+      },
+      { version: 2 },
+    )
+
+    setActivePinia(createPinia())
+    const store = useRelationshipRuntimeStore()
+
+    expect(RELATIONSHIP_RUNTIME_STORAGE_VERSION).toBe(3)
+    expect(store.events).toHaveLength(2)
+    expect(store.findEventBySource('relationship_phone_call', 'legacy_call_505')).toMatchObject({
+      memoryKey: '',
+      sharedExperienceId: '',
+    })
+    expect(store.restoreReport).toEqual({
+      inputEntityCount: 1,
+      restoredEntityCount: 1,
+      rejectedEntityCount: 0,
+      inputEventCount: 3,
+      restoredEventCount: 2,
+      rejectedEventCount: 1,
+      groupedEventCount: 1,
+      ungroupedEventCount: 1,
+      rejectedEvents: [
+        expect.objectContaining({
+          eventId: 'legacy_rejected_event',
+          reason: 'invalid_relationship_target',
+        }),
+      ],
+      ungroupedEvents: [
+        expect.objectContaining({
+          eventId: 'legacy_ungrouped_event',
+          sourceId: 'legacy_call_505',
+          sharedExperienceId: '',
+          reason: 'missing_memory_key',
+        }),
+      ],
+      issuesTruncated: false,
+    })
+    expect(store.listMemoryGroupsForTarget({ profileId: 505 })).toHaveLength(1)
+    expect(store.createBackupSnapshot().events).toHaveLength(2)
   })
 
   test('restores the previous full history when the expanded save fails', () => {

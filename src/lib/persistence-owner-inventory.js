@@ -461,8 +461,8 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   },
   {
     storageKey: 'store:relationship-runtime',
-    schemaVersion: 2,
-    legacySchemaVersions: [1],
+    schemaVersion: 3,
+    legacySchemaVersions: [1, 2],
     labelZh: '关系运行时',
     labelEn: 'Relationship runtime',
     sourceFile: 'src/stores/relationshipRuntime.js',

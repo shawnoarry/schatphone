@@ -6,10 +6,11 @@ import { projectMemoryConsolidationPressure } from '../lib/memory-consolidation-
 import { normalizeSharedExperienceId } from '../lib/shared-experience-contract'
 
 export const RELATIONSHIP_RUNTIME_STORAGE_KEY = 'store:relationship-runtime'
-export const RELATIONSHIP_RUNTIME_STORAGE_VERSION = 2
+export const RELATIONSHIP_RUNTIME_STORAGE_VERSION = 3
 
 export const RELATIONSHIP_EVENT_PAGE_SIZE = 50
 export const RELATIONSHIP_MEMORY_PAGE_SIZE = 50
+export const RELATIONSHIP_RESTORE_ISSUE_LIMIT = 100
 export const RELATIONSHIP_PROMPT_READING_LIMITS = Object.freeze({
   relevantMemoryItems: 3,
   relevantMemoryCharacters: 720,
@@ -306,6 +307,71 @@ const normalizeRelationshipEvent = (rawEvent = {}, index = 0) => {
   }
 }
 
+const createEmptyRelationshipRestoreReport = () => ({
+  inputEntityCount: 0,
+  restoredEntityCount: 0,
+  rejectedEntityCount: 0,
+  inputEventCount: 0,
+  restoredEventCount: 0,
+  rejectedEventCount: 0,
+  groupedEventCount: 0,
+  ungroupedEventCount: 0,
+  rejectedEvents: [],
+  ungroupedEvents: [],
+  issuesTruncated: false,
+})
+
+const buildRelationshipRestoreIssue = (source = {}, event = null, index = 0, reason = '') => ({
+  index,
+  eventId: normalizeText(event?.id || source?.id, `relationship_event_input_${index}`, 120),
+  entityKey: normalizeText(event?.entityKey || source?.entityKey, '', 120),
+  sourceModule: normalizeText(event?.sourceModule || source?.sourceModule, '', 60),
+  sourceId: normalizeText(event?.sourceId || source?.sourceId, '', 140),
+  sharedExperienceId: normalizeSharedExperienceId(
+    event?.sharedExperienceId || source?.sharedExperienceId,
+  ),
+  reason,
+})
+
+const normalizeRelationshipEventsWithReport = (rawEvents = []) => {
+  const sourceEvents = Array.isArray(rawEvents) ? rawEvents : []
+  const normalizedEvents = []
+  const rejectedEvents = []
+  const ungroupedEvents = []
+
+  sourceEvents.forEach((source, index) => {
+    const event = normalizeRelationshipEvent(source, index)
+    if (!event) {
+      rejectedEvents.push(
+        buildRelationshipRestoreIssue(source, null, index, 'invalid_relationship_target'),
+      )
+      return
+    }
+    normalizedEvents.push(event)
+    if (!event.memoryKey) {
+      ungroupedEvents.push(
+        buildRelationshipRestoreIssue(source, event, index, 'missing_memory_key'),
+      )
+    }
+  })
+
+  return {
+    events: normalizedEvents.sort((left, right) => right.createdAt - left.createdAt),
+    report: {
+      inputEventCount: sourceEvents.length,
+      restoredEventCount: normalizedEvents.length,
+      rejectedEventCount: rejectedEvents.length,
+      groupedEventCount: normalizedEvents.length - ungroupedEvents.length,
+      ungroupedEventCount: ungroupedEvents.length,
+      rejectedEvents: rejectedEvents.slice(0, RELATIONSHIP_RESTORE_ISSUE_LIMIT),
+      ungroupedEvents: ungroupedEvents.slice(0, RELATIONSHIP_RESTORE_ISSUE_LIMIT),
+      issuesTruncated:
+        rejectedEvents.length > RELATIONSHIP_RESTORE_ISSUE_LIMIT ||
+        ungroupedEvents.length > RELATIONSHIP_RESTORE_ISSUE_LIMIT,
+    },
+  }
+}
+
 const createDefaultSettings = () => ({
   enabled: true,
   autoApplyLowImpact: true,
@@ -531,13 +597,13 @@ const cloneRelationshipEvent = (event) => ({
   relationshipGate: cloneRelationshipGate(event.relationshipGate),
 })
 
-// Version 1 already stored the same logical records, but the old writer could
-// silently keep only the newest 500 events. Migration preserves every record
-// present in that payload; it cannot reconstruct rows that an older version had
-// already discarded.
+// Versions 1 and 2 stored the same logical rows. V3 adds a rebuildable restore
+// report for rejected or ungrouped legacy rows without adding guessed links.
+// Migration preserves every surviving row; it cannot reconstruct rows already
+// discarded by an older fixed-count writer.
 export const migrateRelationshipRuntimeStorage = ({ version, data } = {}) => {
   const storedVersion = Number(version)
-  if (storedVersion === 1 || storedVersion === RELATIONSHIP_RUNTIME_STORAGE_VERSION) {
+  if ([1, 2, RELATIONSHIP_RUNTIME_STORAGE_VERSION].includes(storedVersion)) {
     return data && typeof data === 'object' ? data : null
   }
   return null
@@ -614,6 +680,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
   const entities = ref([])
   const events = ref([])
   const memoryReviews = ref([])
+  const restoreReport = ref(createEmptyRelationshipRestoreReport())
   const hasFinishedStorageHydration = ref(false)
   let skipNextTransactionalWatchedWrite = false
 
@@ -1545,15 +1612,22 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
         ? rawSource.relationshipMemoryReviews
         : null
 
-    settings.value = normalizeSettings(rawSource.settings)
-    entities.value = (rawEntities || [])
+    const sourceEntities = rawEntities || []
+    const normalizedEntities = sourceEntities
       .map(normalizeEntity)
       .filter(Boolean)
-    events.value = (rawEvents || [])
-      .map(normalizeRelationshipEvent)
-      .filter(Boolean)
-      .sort((a, b) => b.createdAt - a.createdAt)
+    const normalizedEventResult = normalizeRelationshipEventsWithReport(rawEvents || [])
+
+    settings.value = normalizeSettings(rawSource.settings)
+    entities.value = normalizedEntities
+    events.value = normalizedEventResult.events
     memoryReviews.value = normalizeMemoryReviewEntries(rawMemoryReviews || [])
+    restoreReport.value = {
+      ...normalizedEventResult.report,
+      inputEntityCount: sourceEntities.length,
+      restoredEntityCount: normalizedEntities.length,
+      rejectedEntityCount: sourceEntities.length - normalizedEntities.length,
+    }
     pruneMemoryReviews()
     return true
   }
@@ -1630,6 +1704,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     entities.value = []
     events.value = []
     memoryReviews.value = []
+    restoreReport.value = createEmptyRelationshipRestoreReport()
   }
 
   const hydratedFromLocal = hydrateFromStorage()
@@ -1660,6 +1735,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     entities,
     events,
     memoryReviews,
+    restoreReport,
     entityCount,
     pendingEventCount,
     hasFinishedStorageHydration,
