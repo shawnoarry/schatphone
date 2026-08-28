@@ -2757,6 +2757,35 @@ const selectedProfileReadableGroups = computed(() =>
     .filter((group) => group.filledRows.length > 0),
 )
 
+const selectedProfileEmptyWorldFieldGroups = computed(() =>
+  selectedProfileWorldFieldGroups.value.filter(
+    (group) => !Array.isArray(group.filledRows) || group.filledRows.length === 0,
+  ),
+)
+
+const selectedProfileEmptyWorldFieldCount = computed(() =>
+  selectedProfileEmptyWorldFieldGroups.value.reduce(
+    (count, group) => count + (Array.isArray(group.rows) ? group.rows.length : 0),
+    0,
+  ),
+)
+
+const selectedProfileEmptyWorldFieldLabels = computed(() =>
+  selectedProfileEmptyWorldFieldGroups.value
+    .map((group) => group.label)
+    .filter(Boolean)
+    .slice(0, 3)
+    .join(t('、', ', ')),
+)
+
+const selectedProfileEmptyWorldFieldSummary = computed(() => {
+  const count = selectedProfileEmptyWorldFieldCount.value
+  return t(
+    `${selectedProfileEmptyWorldFieldLabels.value}：还有 ${count} 项资料可补充。`,
+    `${selectedProfileEmptyWorldFieldLabels.value}: ${count} ${count === 1 ? 'detail' : 'details'} to add.`,
+  )
+})
+
 const selectedProfileHasReadableDetails = computed(
   () => selectedProfileReadableGroups.value.length > 0,
 )
@@ -4505,8 +4534,8 @@ onBeforeUnmount(() => {
                     <p>
                       {{
                         t(
-                          '粘贴整段文字，我们会按类目整理。检查无误后再保存。',
-                          'Paste a full description and we will organize it into categories. Review it before saving.',
+                          '粘贴整段文字，只整理复核草稿，不会直接修改人物资料。',
+                          'Paste a full description to create a review draft only. The profile will not change directly.',
                         )
                       }}
                     </p>
@@ -4993,69 +5022,98 @@ onBeforeUnmount(() => {
               </p>
             </div>
 
-            <div
-              v-if="!isProfileTemplateEditorOpen && selectedProfileWorldFieldGroups.length > 0"
-              class="contacts-world-field-categories"
-              data-testid="contacts-world-profile-category-list"
-            >
-              <section
-                v-for="group in selectedProfileWorldFieldGroups"
-                :key="group.key"
-                class="contacts-world-field-category"
-                :class="group.isCustom ? 'contacts-world-field-category--custom' : ''"
-                :data-testid="`contacts-world-field-category-${group.key}`"
+            <div v-if="!isProfileTemplateEditorOpen && !isPersonaClassificationOpen">
+              <div
+                v-if="selectedProfileReadableGroups.length > 0"
+                class="contacts-world-field-categories"
+                data-testid="contacts-world-profile-category-list"
               >
-                <header class="contacts-world-field-category__head">
-                  <div>
-                    <h4>{{ group.label }}</h4>
-                    <p v-if="group.description">{{ group.description }}</p>
-                  </div>
-                  <span v-if="group.isCustom" class="contacts-source-chip contacts-source-chip-custom">
-                    {{ t('保留资料', 'Preserved') }}
-                  </span>
-                  <span
-                    v-else-if="group.isPersonExtension"
-                    class="contacts-source-chip contacts-source-chip-custom"
-                  >
-                    {{ t('人物专属', 'Person only') }}
-                  </span>
-                </header>
-                <div v-if="group.filledRows.length > 0" class="contacts-world-field-list">
-                  <div
-                    v-for="row in group.filledRows"
-                    :key="row.key"
-                    class="contacts-detail-item"
-                    :data-testid="`contacts-world-field-${row.key}`"
-                  >
-                    <div>
-                      <p class="font-medium">{{ row.title }}</p>
-                      <p class="text-sm text-gray-600">{{ row.displayValue }}</p>
-                      <p v-if="row.description" class="mt-1 text-[11px] leading-4 text-gray-500">
-                        {{ row.description }}
-                      </p>
-                    </div>
-                    <span
-                      class="contacts-source-chip"
-                      :class="row.isTemplateField ? '' : 'contacts-source-chip-custom'"
-                    >
-                      {{ row.badgeLabel }}
-                    </span>
-                  </div>
-                </div>
-                <p v-else class="contacts-world-field-category__empty">{{ group.emptyText }}</p>
-                <p
-                  v-if="group.promptText"
-                  class="contacts-world-field-category__prompt"
-                  :data-testid="`contacts-world-field-category-prompt-${group.key}`"
+                <section
+                  v-for="group in selectedProfileReadableGroups"
+                  :key="group.key"
+                  class="contacts-world-field-category"
+                  :class="group.isCustom ? 'contacts-world-field-category--custom' : ''"
+                  :data-testid="`contacts-world-field-category-${group.key}`"
                 >
-                  <i class="fas fa-lightbulb" aria-hidden="true"></i>
-                  <span>{{ group.promptText }}</span>
-                </p>
+                  <header class="contacts-world-field-category__head">
+                    <div>
+                      <h4>{{ group.label }}</h4>
+                      <p v-if="group.description">{{ group.description }}</p>
+                    </div>
+                    <span v-if="group.isCustom" class="contacts-source-chip contacts-source-chip-custom">
+                      {{ t('保留资料', 'Preserved') }}
+                    </span>
+                    <span
+                      v-else-if="group.isPersonExtension"
+                      class="contacts-source-chip contacts-source-chip-custom"
+                    >
+                      {{ t('人物专属', 'Person only') }}
+                    </span>
+                  </header>
+                  <div class="contacts-world-field-list">
+                    <div
+                      v-for="row in group.filledRows"
+                      :key="row.key"
+                      class="contacts-detail-item"
+                      :data-testid="`contacts-world-field-${row.key}`"
+                    >
+                      <div>
+                        <p class="font-medium">{{ row.title }}</p>
+                        <p class="text-sm text-gray-600">{{ row.displayValue }}</p>
+                        <p v-if="row.description" class="mt-1 text-[11px] leading-4 text-gray-500">
+                          {{ row.description }}
+                        </p>
+                      </div>
+                      <span
+                        class="contacts-source-chip"
+                        :class="row.isTemplateField ? '' : 'contacts-source-chip-custom'"
+                      >
+                        {{ row.badgeLabel }}
+                      </span>
+                    </div>
+                  </div>
+                  <p
+                    v-if="group.promptText"
+                    class="contacts-world-field-category__prompt"
+                    :data-testid="`contacts-world-field-category-prompt-${group.key}`"
+                  >
+                    <i class="fas fa-lightbulb" aria-hidden="true"></i>
+                    <span>{{ group.promptText }}</span>
+                  </p>
+                </section>
+              </div>
+
+              <section
+                v-if="selectedProfileEmptyWorldFieldGroups.length > 0"
+                class="contacts-world-field-pending"
+                data-testid="contacts-world-profile-pending-summary"
+              >
+                <span class="contacts-world-field-pending__icon" aria-hidden="true">
+                  <i class="far fa-pen-to-square"></i>
+                </span>
+                <div>
+                  <h4>{{ t('待补充资料', 'Details to add') }}</h4>
+                  <p>{{ selectedProfileEmptyWorldFieldSummary }}</p>
+                </div>
+                <button
+                  v-if="!isSelectedProfileArchived"
+                  type="button"
+                  class="contacts-text-action"
+                  data-testid="contacts-world-profile-continue-filling"
+                  @click="openProfileTemplateEditor"
+                >
+                  {{ t('继续填写', 'Continue filling') }}
+                  <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                </button>
               </section>
+
+              <p
+                v-if="selectedProfileWorldFieldGroups.length === 0"
+                class="contacts-empty-detail"
+              >
+                {{ t('还没有选择人物资料卡。可以粘贴人设，或逐项填写。', 'No profile style has been selected yet. Paste a persona or fill it in item by item.') }}
+              </p>
             </div>
-            <p v-else-if="!isProfileTemplateEditorOpen" class="contacts-empty-detail">
-              {{ t('还没有选择或填写人物资料卡。点击“编辑资料卡”开始。', 'No profile card has been selected or filled yet. Choose Edit profile card to begin.') }}
-            </p>
 
             <div
               v-if="isProfileTemplateEditorOpen"
@@ -7361,6 +7419,41 @@ onBeforeUnmount(() => {
   margin-top: 2px;
 }
 
+.contacts-world-field-pending {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  border: 1px dashed rgba(66, 111, 143, 0.24);
+  border-radius: 8px;
+  background: rgba(66, 111, 143, 0.06);
+  padding: 10px;
+}
+
+.contacts-world-field-pending__icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(66, 111, 143, 0.12);
+  color: var(--contacts-accent-strong);
+}
+
+.contacts-world-field-pending h4 {
+  color: var(--contacts-text);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.contacts-world-field-pending p {
+  margin-top: 2px;
+  color: var(--contacts-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
 .contacts-world-field-editor {
   border-top: 1px solid rgba(66, 111, 143, 0.14);
   padding-top: 14px;
@@ -8789,6 +8882,15 @@ onBeforeUnmount(() => {
   .contacts-persona-classification__actions .contacts-primary-action {
     width: 100%;
     min-height: 44px;
+  }
+
+  .contacts-world-field-pending {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .contacts-world-field-pending .contacts-text-action {
+    grid-column: 1 / -1;
+    justify-self: stretch;
   }
 
   .contacts-persona-review__summary {

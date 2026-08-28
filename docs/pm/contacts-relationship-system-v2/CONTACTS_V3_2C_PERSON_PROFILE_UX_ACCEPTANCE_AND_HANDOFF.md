@@ -33,6 +33,7 @@ Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 - 字段类型标签和 WorldBook、Runtime、修订等内部词不再占据主流程；
 - 更换样式时的保留说明收进按需展开区域；
 - 仍可增加人物专属资料，也可以明确选择让同世界其他人物使用同一资料项。
+- 二级阅读页只展开已有确认值的类目；整类尚未填写的内容合并为一条“待补充资料”摘要，可直接继续填写，不再用多张空卡拉长手机页面。
 
 ### 2.3 粘贴整段人设
 
@@ -43,6 +44,8 @@ Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 - 每项必须选择“保存这项”或“不保存”，最后才可确认保存；
 - 完整原文继续保留在“查看原始人设”中；
 - 通用资料卡不绑定具体世界时，也可以完成确认保存。
+- 打开人设整理后，既有资料列表暂时收起，让粘贴、复核和逐项决定保持单一焦点；关闭或取消后原阅读列表完整恢复。
+- 入口明确说明只生成复核草稿，不会直接修改人物资料。
 
 ### 2.4 Eva 与 Jackie 样例
 
@@ -72,18 +75,19 @@ Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 - `npm.cmd run lint`;
 - `npm.cmd run build`;
 - `npm.cmd run governance:check`;
-- 73 个 Contacts、Persona Confirmation 和 Chat fixture 针对性单元测试；
+- 43 个 Contacts 人物资料、World-field model、Persona classifier 和 confirmation 针对性单元测试；
 - `e2e/contacts-phone-ui.spec.js`: desktop 和 mobile 共 4 项通过；
 - `e2e/visual-quality.spec.js`: default/Zen、desktop/mobile 共 20 项通过；
+- `e2e/worldbook-contacts-profile-fields.spec.js`: desktop Chromium 与模拟 Pixel 5 共 8 项通过，新增覆盖空类目摘要、整理态聚焦、草稿边界、取消重开、AI 失败、WCAG A/AA 和零横向溢出；
 - 375px 与 1280px 浏览器检查无横向溢出。
 
-完整 `npm.cmd run test` 没有作为本轮验收依据：工作区存在与本任务无关的 `.codex/tmp` SDK 测试发现污染。本轮使用明确文件列表的 73 项测试覆盖改动行为，没有删除或改写那些用户文件。
+正式 `npm.cmd run test -- --dir tests` 完成 341 个文件 / 2592 项测试，其中 340 个文件 / 2591 项通过；唯一失败是非 Contacts 的 `tests/music-store.test.js` ChKSz LRU 用例超过默认 5 秒上限。该文件随后使用 `--testTimeout=15000` 单独复跑，21/21 通过。Contacts focused tests、完整 E2E、lint、build、governance 和 diff checks 均通过。
 
 ## 5. 当前仍未完成
 
 - 用户尚未共同验收，因此 `CONTACTS-V3-2C` 继续保持 `IN_PROGRESS`；
 - 当前不是 Contacts 全应用视觉重做完成声明；
-- 类目命名、内容密度、输入控件节奏和人物专属新增区仍可以根据实际观感继续调整；
+- 类目命名、输入控件节奏和人物专属新增区仍可以根据实际观感继续调整；本轮已收紧二级阅读页空类目密度和 Persona 整理态焦点；
 - 没有新增正式 AI 模型配置、事件触发、Work Hub 权限或下游消费者能力；
 - `CONTACTS-V3-5` 继续保持 gated。
 

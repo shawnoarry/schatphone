@@ -66,7 +66,10 @@ const personaSystemSnapshot = {
         scope: 'world',
         worldId: 'default_world',
         version: 4,
-        categories: [{ id: 'identity', label: 'Identity', order: 0 }],
+        categories: [
+          { id: 'identity', label: 'Identity', order: 0 },
+          { id: 'personality', label: 'Personality', order: 1 },
+        ],
         fields: [
           {
             id: 'occupation',
@@ -81,6 +84,13 @@ const personaSystemSnapshot = {
             label: 'Agency',
             type: 'organization_reference',
             order: 1,
+          },
+          {
+            id: 'life_habit',
+            categoryId: 'personality',
+            label: 'Personality and habits',
+            type: 'tag_list',
+            order: 2,
           },
         ],
       },
@@ -223,7 +233,7 @@ test('WorldBook profile template can be filled as concrete Contacts values', asy
 
   await expect(page.getByTestId('contacts-world-profile-fields-editor')).toHaveCount(0)
   await expect(page.getByTestId('contacts-world-profile-fields-section')).toContainText(
-    'No profile card has been selected or filled yet.',
+    'No profile style has been selected yet.',
   )
   await page.getByTestId('contacts-edit-world-profile-fields').click()
   await expect(page.getByTestId('contacts-world-profile-fields-editor')).toBeVisible()
@@ -456,7 +466,12 @@ test('Contacts persona review confirms one revision and fails closed on desktop 
   await page.getByTestId('contacts-open-world-fields-sheet').click()
   const beforeProfile = await readPersistedPersonaProfile(page)
 
+  await expect(page.getByTestId('contacts-world-profile-pending-summary')).toBeVisible()
+  await expect(page.getByTestId('contacts-world-field-category-personality')).toHaveCount(0)
+
   await page.getByTestId('contacts-open-persona-classification').click()
+  await expect(page.getByTestId('contacts-world-profile-category-list')).toHaveCount(0)
+  await expect(page.getByTestId('contacts-world-profile-pending-summary')).toHaveCount(0)
   await expect(page.getByTestId('contacts-persona-classification-panel')).toContainText(
     isMobile ? '只整理复核草稿' : 'review draft only',
   )
@@ -477,7 +492,7 @@ test('Contacts persona review confirms one revision and fails closed on desktop 
     'Agency: Galaxy Entertainment',
   )
   await expect(page.getByTestId('contacts-persona-classification-panel')).toContainText(
-    isMobile ? '接受' : 'Accept',
+    isMobile ? '保存这项' : 'Save this item',
   )
   const accessibility = await new AxeBuilder({ page })
     .include('[data-testid="contacts-persona-classification-panel"]')
@@ -488,6 +503,8 @@ test('Contacts persona review confirms one revision and fails closed on desktop 
 
   await page.getByTestId('contacts-close-persona-classification').click()
   await expect(page.getByTestId('contacts-persona-classification-panel')).toHaveCount(0)
+  await expect(page.getByTestId('contacts-world-profile-category-list')).toBeVisible()
+  await expect(page.getByTestId('contacts-world-profile-pending-summary')).toBeVisible()
   expect(await readPersistedPersonaProfile(page)).toBe(beforeProfile)
 
   await page.getByTestId('contacts-open-persona-classification').click()

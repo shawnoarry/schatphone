@@ -146,7 +146,9 @@ describe('Contacts world field model interface', () => {
     expect(model.selectedProfileTemplateFields.value.map((field) => field.id)).toEqual(['agency', 'tags'])
     expect(model.fieldMatchesSelectedProfileEntity(currentTemplate.fields[0])).toBe(true)
     expect(model.fieldMatchesSelectedProfileEntity(currentTemplate.fields[2])).toBe(false)
-    expect(model.selectedWorldFieldIntroText.value).toBe('From template: Current stage profile')
+    expect(model.selectedWorldFieldIntroText.value).toBe(
+      'Record identity, personality, habits, and your relationship in clear groups.',
+    )
     expect(model.selectedProfileWorldFieldRows.value.map((row) => ({
       key: row.key,
       title: row.title,
@@ -366,7 +368,7 @@ describe('Contacts world field model interface', () => {
     expect(model.selectedProfileWorldFieldRows.value).toEqual([])
     expect(model.selectedProfileTemplateAdaptationDisplay.value.needsAttention).toBe(false)
     expect(model.selectedWorldFieldIntroText.value).toBe(
-      'Fill concrete role, self-profile, or NPC values defined by WorldBook templates.',
+      'Choose a profile style, then paste a persona or fill it in item by item.',
     )
     expect(formatProfileValue({ value: ['one', 'two'] })).toBe('one, two')
     expect(

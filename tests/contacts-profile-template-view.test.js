@@ -1228,6 +1228,86 @@ describe('Contacts profile template entity UI', () => {
     wrapper.unmount()
   })
 
+  test('summarizes fully empty profile categories and focuses persona classification', async () => {
+    const systemStore = useSystemStore()
+    const template = systemStore.upsertProfileTemplate({
+      id: 'world_template_profile_reading_rhythm',
+      title: 'Profile reading rhythm',
+      scope: PROFILE_TEMPLATE_SCOPES.WORLD,
+      worldId: 'default_world',
+      version: 1,
+      categories: [
+        { id: 'identity', label: 'Identity' },
+        { id: 'organization', label: 'Organization' },
+      ],
+      fields: [
+        {
+          id: 'occupation',
+          categoryId: 'identity',
+          label: 'Occupation',
+          type: PROFILE_TEMPLATE_FIELD_TYPES.SHORT_TEXT,
+        },
+        {
+          id: 'agency',
+          categoryId: 'organization',
+          label: 'Agency',
+          type: PROFILE_TEMPLATE_FIELD_TYPES.ORGANIZATION_REFERENCE,
+        },
+        {
+          id: 'team_role',
+          categoryId: 'organization',
+          label: 'Team role',
+          type: PROFILE_TEMPLATE_FIELD_TYPES.SHORT_TEXT,
+        },
+      ],
+    })
+    const chatStore = useChatStore()
+    const profile = chatStore.addRoleProfile({
+      roleId: '1252',
+      name: 'Profile rhythm role',
+      entityType: CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+      templateLink: {
+        primaryWorldId: 'default_world',
+        profileTemplateId: template.id,
+        profileTemplateVersion: template.version,
+      },
+      profileValues: [
+        { fieldId: 'occupation', value: 'Producer', visibilityLevel: 'familiar' },
+      ],
+    })
+
+    const wrapper = await mountContactsView()
+    await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
+    await flushUi()
+    await wrapper.get('[data-testid="contacts-open-world-fields-sheet"]').trigger('click')
+    await flushUi()
+
+    expect(wrapper.get('[data-testid="contacts-world-field-category-identity"]').text()).toContain(
+      'Producer',
+    )
+    expect(wrapper.find('[data-testid="contacts-world-field-category-organization"]').exists()).toBe(
+      false,
+    )
+    const pending = wrapper.get('[data-testid="contacts-world-profile-pending-summary"]')
+    expect(pending.text()).toContain('Details to add')
+    expect(pending.text()).toContain('Organization: 2 details to add')
+
+    await wrapper.get('[data-testid="contacts-open-persona-classification"]').trigger('click')
+    await flushUi()
+
+    expect(wrapper.get('[data-testid="contacts-persona-classification-panel"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="contacts-world-profile-category-list"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="contacts-world-profile-pending-summary"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="contacts-close-persona-classification"]').trigger('click')
+    await flushUi()
+
+    expect(wrapper.get('[data-testid="contacts-world-profile-category-list"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="contacts-world-profile-pending-summary"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
   test('presents the selected role as a role hub with chat state, entity type, and memory source summary', async () => {
     const chatStore = useChatStore()
     const relationshipRuntimeStore = useRelationshipRuntimeStore()
