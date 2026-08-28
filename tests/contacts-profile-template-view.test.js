@@ -292,7 +292,7 @@ describe('Contacts profile template entity UI', () => {
 
     const select = wrapper.get('[data-testid="contacts-profile-template-select"]')
     expect(select.element.value).toBe('preset_basic_modern')
-    expect(select.text()).toContain('Universal · Basic Modern Profile')
+    expect(select.text()).toContain('Universal · Everyday profile')
 
     await wrapper.get('[data-testid="contacts-profile-template-value-identity"]').setValue('Solo trainee')
     await wrapper.get('[data-testid="contacts-save-world-profile-fields"]').trigger('click')
@@ -359,14 +359,15 @@ describe('Contacts profile template entity UI', () => {
     await editWorldProfileFields(wrapper)
 
     expect(wrapper.get('[data-testid="contacts-profile-template-select"]').element.value).toBe(template.id)
-    expect(wrapper.get('[data-testid="contacts-profile-template-field-public_persona"]').text()).toContain('Choice')
+    expect(wrapper.get('[data-testid="contacts-profile-template-field-public_persona"]').text()).toContain('Who can read this')
+    expect(wrapper.get('[data-testid="contacts-profile-template-field-public_persona"]').text()).not.toContain('Choice')
     expect(wrapper.get('[data-testid="contacts-profile-template-value-public_persona"]').element.tagName).toBe('SELECT')
     expect(wrapper.get('[data-testid="contacts-profile-template-value-private_risk"]').element.tagName).toBe('TEXTAREA')
     expect(wrapper.get('[data-testid="contacts-profile-template-helper-scene_tags"]').text()).toContain(
       'commas',
     )
     expect(wrapper.get('[data-testid="contacts-profile-template-helper-related_person"]').text()).toContain(
-      'person or role ID',
+      'name or role number',
     )
 
     await wrapper.get('[data-testid="contacts-profile-template-value-public_persona"]').setValue('Idol')
@@ -866,7 +867,7 @@ describe('Contacts profile template entity UI', () => {
 
     expect(callAI).toHaveBeenCalledTimes(1)
     expect(wrapper.get('[data-testid="contacts-persona-classification-summary"]').text()).toContain(
-      'Matched 1',
+      'Ready to fill 1',
     )
     expect(wrapper.get('[data-testid="contacts-persona-matched-values"]').text()).toContain(
       'Galaxy Entertainment',
@@ -882,9 +883,10 @@ describe('Contacts profile template entity UI', () => {
     expect(wrapper.get('[data-testid="contacts-persona-source-retained"]').text()).toContain(
       'Agency: Galaxy Entertainment',
     )
+    expect(wrapper.get('[data-testid="contacts-persona-category-persona-item-new-2"]').element.value).toBe('identity')
     expect(
       wrapper.get('[data-testid="contacts-persona-classification-panel"]').text(),
-    ).toContain('Accept')
+    ).toContain('Save this item')
     expect(wrapper.get('[data-testid="contacts-save-persona-confirmation"]').attributes('disabled')).toBeDefined()
     expect(JSON.stringify(chatStore.getRoleProfileById(profile.id))).toBe(beforeProfile)
 
@@ -1149,6 +1151,79 @@ describe('Contacts profile template entity UI', () => {
     await flushUi()
 
     expect(wrapper.get('[data-testid="contacts-profile-modal"]').text()).toContain('Create Role Profile')
+
+    wrapper.unmount()
+  })
+
+  test('shows understandable persona entry actions on an empty person overview', async () => {
+    const chatStore = useChatStore()
+    const profile = chatStore.addRoleProfile({
+      roleId: '1250',
+      name: 'Empty persona role',
+      entityType: CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+    })
+
+    const wrapper = await mountContactsView()
+    await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
+    await flushUi()
+
+    const overview = wrapper.get('[data-testid="contacts-person-profile-summary"]')
+    expect(overview.text()).toContain('No persona added for Empty persona role yet')
+    expect(overview.text()).toContain('Paste a persona')
+    expect(overview.text()).toContain('Fill item by item')
+    expect(wrapper.text()).not.toContain('No cross-module relationship facts')
+
+    await wrapper.get('[data-testid="contacts-persona-fill-from-overview"]').trigger('click')
+    await flushUi()
+
+    expect(wrapper.get('[data-testid="contacts-detail-sheet-world-fields"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="contacts-world-profile-fields-editor"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  test('renders confirmed persona fields as readable groups on the person overview', async () => {
+    const systemStore = useSystemStore()
+    const template = systemStore.upsertProfileTemplate({
+      id: 'world_template_readable_persona_overview',
+      title: 'Readable persona',
+      scope: PROFILE_TEMPLATE_SCOPES.WORLD,
+      worldId: 'default_world',
+      version: 1,
+      categories: [{ id: 'identity', label: 'Identity' }],
+      fields: [
+        {
+          id: 'occupation',
+          categoryId: 'identity',
+          label: 'Occupation',
+          type: PROFILE_TEMPLATE_FIELD_TYPES.SHORT_TEXT,
+        },
+      ],
+    })
+    const chatStore = useChatStore()
+    const profile = chatStore.addRoleProfile({
+      roleId: '1251',
+      name: 'Readable persona role',
+      entityType: CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+      templateLink: {
+        primaryWorldId: 'default_world',
+        profileTemplateId: template.id,
+        profileTemplateVersion: template.version,
+      },
+      profileValues: [
+        { fieldId: 'occupation', value: 'Stage director', visibilityLevel: 'familiar' },
+      ],
+    })
+
+    const wrapper = await mountContactsView()
+    await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
+    await flushUi()
+
+    const groups = wrapper.get('[data-testid="contacts-persona-readable-groups"]')
+    expect(groups.text()).toContain('Identity')
+    expect(groups.text()).toContain('Occupation')
+    expect(groups.text()).toContain('Stage director')
+    expect(wrapper.find('[data-testid="contacts-persona-empty-state"]').exists()).toBe(false)
 
     wrapper.unmount()
   })

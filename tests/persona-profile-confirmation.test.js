@@ -5,6 +5,7 @@ import {
 } from '../src/lib/persona-profile-confirmation'
 import { createPersonaReviewRows } from '../src/lib/persona-profile-classifier'
 import {
+  PROFILE_TEMPLATE_SCOPES,
   PROFILE_TEMPLATE_FIELD_TYPES,
   PROFILE_VALUE_SOURCE_KINDS,
 } from '../src/lib/profile-template-schema'
@@ -12,7 +13,11 @@ import {
 const template = {
   id: 'template_persona',
   version: 4,
-  categories: [{ id: 'identity', label: 'Identity' }],
+  scope: PROFILE_TEMPLATE_SCOPES.WORLD,
+  categories: [
+    { id: 'identity', label: 'Identity' },
+    { id: 'relationship', label: 'Relationship' },
+  ],
   fields: [
     {
       id: 'occupation',
@@ -82,9 +87,11 @@ const acceptedRows = () => createPersonaReviewRows(draft).map((row) => ({
 
 describe('persona profile confirmation', () => {
   test('builds one owner update with manual-compatible values and a person extension', () => {
+    const rows = acceptedRows()
+    rows[1].categoryId = 'relationship'
     const result = buildPersonaProfileConfirmation({
       draft,
-      reviewRows: acceptedRows(),
+      reviewRows: rows,
       profile,
       template,
       worldId: 'world_a',
@@ -112,8 +119,26 @@ describe('persona profile confirmation', () => {
       }),
     ]))
     expect(result.updates.profileExtensions.fields).toEqual([
-      expect.objectContaining({ label: 'Private motto', purposes: [] }),
+      expect.objectContaining({ label: 'Private motto', categoryId: 'relationship', purposes: [] }),
     ])
+  })
+
+  test('supports confirmation for a universal profile style without a world-bound link', () => {
+    const universalTemplate = { ...template, scope: PROFILE_TEMPLATE_SCOPES.GLOBAL_PRESET }
+    const universalProfile = {
+      ...profile,
+      templateLink: { ...profile.templateLink, primaryWorldId: '' },
+    }
+    const result = buildPersonaProfileConfirmation({
+      draft,
+      reviewRows: acceptedRows(),
+      profile: universalProfile,
+      template: universalTemplate,
+      worldId: 'world_a',
+      now: 1000,
+    })
+
+    expect(result).toMatchObject({ ok: true, expectedWorldId: '' })
   })
 
   test('supports edit and ignore without retaining an ignored candidate', () => {

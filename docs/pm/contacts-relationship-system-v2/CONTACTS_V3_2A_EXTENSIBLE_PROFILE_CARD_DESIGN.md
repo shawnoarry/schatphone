@@ -1,8 +1,8 @@
 # Contacts V3-2A Extensible Profile Card Design / 可扩展人设资料卡设计
 
-Updated: 2026-08-27
+Updated: 2026-08-28
 
-Status: `IMPLEMENTED 2026-08-27 / CARD-1_DONE / ROLE-1_DONE / CARD-2_DONE / CARD-3_DONE / CARD-4_DONE / CARD-5_DONE / CARD-6_DONE / PERSONA-1_DONE / PERSONA-2_DONE / CONTACTS-V3-3_DONE`
+Status: `STRUCTURE_AND_CONFIRMATION_DONE 2026-08-27 / CARD-1_THROUGH_CARD-6_DONE / PERSONA-1_DONE / PERSONA-2_DONE / CONTACTS-V3-3_DONE / CONTACTS-V3-2C_PERSON_PROFILE_UX_IN_PROGRESS`
 
 Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 
@@ -15,6 +15,25 @@ Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 完整链路：
 
 `世界观内容 -> 建议资料卡 -> 用户增删改并确认 -> 人物填写或整段文字归类 -> 用户复核 -> Contacts 保存统一资料 -> 各功能按用途读取`
+
+### 1.1 当前实现校正
+
+上面的数据链路和保存行为已经存在，但不能因此把“联系人资料卡已经对用户完成”当作事实。
+
+当前实现的真实状态是：
+
+- 动态类目、字段、人物专属扩展、整段描述归类、逐项复核和回滚安全保存已经实现；
+- 联系人个人页已经形成以人物为先的可阅读首页，直接提供“粘贴人设”和“逐项填写”；
+- 二级编辑页以“资料卡样式 -> 按类目填写 -> 保存”为主路径，字段有可见名称和“谁可以读取”，模板变更说明按需展开；
+- 整段人设整理结果使用用户语言展示，新增资料项可选择类目，完整原文继续保留；
+- 未编辑的内置 Eva、Jackie 会得到三项代表性通用资料，已经填写或修改的人物不会被覆盖；
+- 当前仍需由用户共同检验内容密度、类目命名和整体视觉，不把这一轮等同于完整联系人视觉重做。
+
+因此下一段用户流程由 `CONTACTS-V3-2C PERSON_PROFILE_UX` 承接：
+
+`联系人个人页 -> 直接粘贴人设或逐项填写 -> 复核/编辑 -> 按类目阅读已确认资料 -> 深层档案管理`
+
+本切片不新增 Store 或存档结构，也不提前开放 Event Runtime、Work Hub 或其他消费者权限。
 
 ## 2. 资料卡的三层结构
 

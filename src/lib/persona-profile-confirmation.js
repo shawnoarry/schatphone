@@ -1,5 +1,6 @@
 import {
   CONTACTS_ENTITY_TYPE_KEYS,
+  PROFILE_TEMPLATE_SCOPES,
   PROFILE_TEMPLATE_FIELD_TYPES,
   PROFILE_VALUE_SOURCE_KINDS,
   PROFILE_VISIBILITY_LEVELS,
@@ -72,7 +73,10 @@ const validateDraftRef = ({ draft, profile, template, worldId }) => {
     return 'template_mismatch'
   }
   if (Number(ref.templateVersion) !== currentTemplateVersion) return 'stale_template_version'
-  if (!worldIdsMatch(profile.templateLink?.primaryWorldId, currentWorldId)) {
+  if (
+    template?.scope === PROFILE_TEMPLATE_SCOPES.WORLD &&
+    !worldIdsMatch(profile.templateLink?.primaryWorldId, currentWorldId)
+  ) {
     return 'profile_world_mismatch'
   }
   if (normalizeText(profile.templateLink?.profileTemplateId, 80) !== currentTemplateId) {

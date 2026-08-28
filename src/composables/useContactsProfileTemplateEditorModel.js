@@ -28,15 +28,27 @@ export const profileTemplateFieldPlaceholder = (field = {}, t = defaultT) => {
     return t('\u7528\u9017\u53f7\u5206\u9694\u591a\u4e2a\u6807\u7b7e', 'Separate tags with commas')
   }
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.PERSON_REFERENCE) {
-    return t('\u586b\u5199\u76f8\u5173\u4eba\u7269\u6216\u89d2\u8272 ID', 'Enter related person or role ID')
+    return t('\u586b\u5199\u76f8\u5173\u4eba\u7269\u7684\u59d3\u540d', 'Enter the related person\u2019s name')
   }
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.ORGANIZATION_REFERENCE) {
-    return t('\u586b\u5199\u7ec4\u7ec7\u3001\u516c\u53f8\u3001\u5b66\u6821\u6216\u56e2\u961f ID', 'Enter an organization, company, school, or team ID')
+    return t('\u586b\u5199\u516c\u53f8\u3001\u5b66\u6821\u3001\u56e2\u961f\u6216\u5176\u4ed6\u7ec4\u7ec7', 'Enter a company, school, team, or organization')
   }
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.DATE) {
     return t('\u9009\u62e9\u65e5\u671f', 'Choose a date')
   }
-  return t('\u586b\u5199\u8fd9\u4e2a\u89d2\u8272\u7684\u5177\u4f53\u503c', 'Enter this profile value')
+  return t('\u586b\u5199\u8fd9\u4e2a\u4eba\u7269\u7684\u5177\u4f53\u8d44\u6599', 'Enter this person\u2019s details')
+}
+
+export const profileTemplateFieldLabel = (field = {}, t = defaultT) => {
+  const knownLabels = {
+    identity: t('\u8eab\u4efd', 'Identity'),
+    relationship_setting: t('\u5173\u7cfb\u8bbe\u5b9a', 'Relationship'),
+    life_habit: t('\u6027\u683c\u4e0e\u4e60\u60ef', 'Personality and habits'),
+    secondary_gender: t('\u7b2c\u4e8c\u6027\u522b', 'Secondary gender'),
+    pheromone: t('\u4fe1\u606f\u7d20', 'Pheromone'),
+    bond_mark: t('\u7ed3\u5408\u6807\u8bb0', 'Bond mark'),
+  }
+  return knownLabels[field?.id] || field?.label || field?.id || t('\u4eba\u7269\u8d44\u6599', 'Profile detail')
 }
 
 export const profileTemplateFieldTypeLabel = (field = {}, t = defaultT) => {
@@ -70,26 +82,26 @@ export const profileTemplateFieldHelper = (field = {}, t = defaultT) => {
   }
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.PERSON_REFERENCE) {
     return t(
-      '\u586b\u5199\u76f8\u5173\u4eba\u7269\u59d3\u540d\u6216\u89d2\u8272 ID\uff1b\u6b63\u5f0f\u9009\u62e9\u5668\u540e\u7eed\u518d\u63a5\u5165\u3002',
-      'Enter a related person or role ID; a picker can be added later.',
+      '\u586b\u5199\u76f8\u5173\u4eba\u7269\u7684\u59d3\u540d\u6216\u89d2\u8272\u7f16\u53f7\uff0c\u4fbf\u4e8e\u5efa\u7acb\u5173\u8054\u3002',
+      'Enter a related person\u2019s name or role number to link them.',
     )
   }
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.ORGANIZATION_REFERENCE) {
     return t(
-      '\u4fdd\u5b58\u7a33\u5b9a\u7684\u7ec4\u7ec7\u5f15\u7528\u3002\u7528\u6237\u81ea\u5df1\u7684\u7ec4\u7ec7\u8d44\u6599\u53ea\u7528\u4e8e\u5339\u914d Work Hub\uff0c\u4e0d\u4f1a\u81ea\u52a8\u6388\u4e88\u5de5\u4f5c\u533a\u6743\u9650\u3002',
-      'Save a stable organization reference. A Self Profile match can suggest a Work Hub, but cannot grant workspace access.',
+      '\u586b\u5199\u516c\u53f8\u3001\u5b66\u6821\u3001\u56e2\u961f\u6216\u5176\u4ed6\u7ec4\u7ec7\u3002',
+      'Enter a company, school, team, or other organization.',
     )
   }
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.DATE) {
     return t(
-      '\u9002\u5408\u751f\u65e5\u3001\u5165\u5b66\u65e5\u6216\u5176\u4ed6\u7a33\u5b9a\u4eba\u7269\u65e5\u671f\uff0c\u4e0d\u7528\u4e8e\u4fdd\u5b58\u65e5\u5386\u884c\u7a0b\u3002',
-      'Use this for stable profile dates such as a birthday or enrollment date, not Calendar schedules.',
+      '\u9002\u5408\u751f\u65e5\u3001\u5165\u5b66\u65e5\u7b49\u4e0d\u4f1a\u9891\u7e41\u53d8\u5316\u7684\u65e5\u671f\u3002',
+      'Use this for dates that rarely change, such as a birthday or enrollment date.',
     )
   }
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.BOOLEAN) {
     return t(
-      '\u7528\u660e\u786e\u7684\u662f\u6216\u5426\u4fdd\u5b58\u7a33\u5b9a\u4eba\u7269\u7279\u5f81\uff0c\u4e0d\u4f1a\u56e0\u6b64\u81ea\u52a8\u89e6\u53d1\u4e8b\u4ef6\u3002',
-      'Save a stable yes/no profile trait. This alone does not trigger an event.',
+      '\u9009\u62e9\u662f\u6216\u5426\u3002',
+      'Choose yes or no.',
     )
   }
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.LONG_TEXT) {
@@ -100,10 +112,10 @@ export const profileTemplateFieldHelper = (field = {}, t = defaultT) => {
   }
   if (field.type === PROFILE_TEMPLATE_FIELD_TYPES.SINGLE_SELECT) {
     return field.options?.length > 0
-      ? t('\u4ece\u5f53\u524d\u4e16\u754c\u6a21\u677f\u7ed9\u51fa\u7684\u9009\u9879\u4e2d\u9009\u62e9\u4e00\u4e2a\u3002', 'Choose one option from this world template.')
-      : t('\u5f53\u524d\u6a21\u677f\u6ca1\u6709\u56fa\u5b9a\u9009\u9879\uff0c\u53ef\u5148\u586b\u5199\u81ea\u5b9a\u4e49\u503c\u3002', 'No fixed options yet; enter a custom value for this world.')
+      ? t('\u4ece\u5df2\u6709\u9009\u9879\u4e2d\u9009\u62e9\u4e00\u4e2a\u3002', 'Choose one of the available options.')
+      : t('\u586b\u5199\u9002\u5408\u8fd9\u4e2a\u4eba\u7269\u7684\u5185\u5bb9\u3002', 'Enter the value that fits this person.')
   }
-  return t('\u586b\u5199\u8fd9\u4e2a\u4eba\u7269\u5728\u5f53\u524d\u4e16\u754c\u91cc\u7684\u5177\u4f53\u503c\u3002', 'Enter this person\u2019s concrete value in the current world.')
+  return t('\u586b\u5199\u8fd9\u4e2a\u4eba\u7269\u7684\u5177\u4f53\u8d44\u6599\u3002', 'Enter this person\u2019s details.')
 }
 
 export const profileTemplateDraftTagList = (field = {}, draft = {}) => {
@@ -117,6 +129,7 @@ export const profileTemplateDraftTagList = (field = {}, draft = {}) => {
 
 export const buildProfileTemplateEditorFieldRow = (field = {}, draft = {}, t = defaultT) => ({
   ...field,
+  label: profileTemplateFieldLabel(field, t),
   key: field.id,
   iconClass: profileTemplateFieldIconClass(field),
   typeLabel: profileTemplateFieldTypeLabel(field, t),

@@ -776,7 +776,6 @@ const {
   selectedProfileFields,
   selectedProfileValueMap,
   selectedProfileWorldFieldGroups,
-  selectedProfileWorldFieldRows,
   selectedWorldFieldIntroText,
 } = useContactsWorldFieldModel({
   selectedProfile,
@@ -1202,6 +1201,27 @@ const openWorldFieldsSheet = () => {
   cancelProfileTemplateEditor()
   resetPersonaClassification()
   openDetailSheet(CONTACTS_DETAIL_SHEETS.WORLD_FIELDS)
+}
+
+const openPersonaFromOverview = () => {
+  openWorldFieldsSheet()
+  if (!selectedProfileTemplate.value?.id) {
+    openProfileTemplateEditor()
+    setUiNotice(
+      'info',
+      t(
+        '先为这个人物选择一张资料卡，保存后就能粘贴整段人设并自动归类。',
+        'Choose and save a profile card first, then you can paste a full persona for classification.',
+      ),
+    )
+    return
+  }
+  openPersonaClassification()
+}
+
+const openProfileEditorFromOverview = () => {
+  openWorldFieldsSheet()
+  openProfileTemplateEditor()
 }
 
 const selectMemoryGroup = (memory) => {
@@ -2666,7 +2686,7 @@ const profileRelationshipSummary = (profile) => {
 
 const profileRelationshipLatestSummary = (profile) => {
   const snapshot = profileRelationshipSnapshot(profile)
-  if (!snapshot?.exists) return t('暂无跨模块关系事件', 'No cross-module relationship facts yet')
+  if (!snapshot?.exists) return t('还没有共同经历', 'No shared moments yet')
   const memorySummary =
     relationshipMemoryReviewSummaryText(snapshot.primaryMemory) ||
     snapshot.primaryMemory?.recallSummary ||
@@ -2726,42 +2746,20 @@ const {
   formatEntityTypeLabel: contactsEntityTypeLabel,
 })
 
-const selectedProfileStatusChips = computed(() => {
-  if (!selectedProfile.value) return []
-  return [
-    {
-      key: 'chat',
-      label: selectedChatSocialSnapshot.value.label || selectedRoleHubCards.value.find((card) => card.key === 'chat')?.value || '',
-    },
-    {
-      key: 'relationship',
-      label: relationshipStageLabel(selectedRelationshipSnapshot.value?.relationshipStage),
-    },
-    {
-      key: 'memory',
-      label: t(
-        `记忆 ${selectedRoleHubStats.value.memoryCount}`,
-        `${selectedRoleHubStats.value.memoryCount} memories`,
-      ),
-    },
-    {
-      key: 'world',
-      label: t(
-        `人物资料 ${selectedRoleHubStats.value.worldFieldCount} 项`,
-        `${selectedRoleHubStats.value.worldFieldCount} profile details`,
-      ),
-    },
-  ].filter((chip) => chip.label)
-})
+const selectedProfileReadableGroups = computed(() =>
+  selectedProfileWorldFieldGroups.value
+    .map((group) => ({
+      ...group,
+      filledRows: Array.isArray(group.filledRows)
+        ? group.filledRows.filter((row) => row.displayValue)
+        : [],
+    }))
+    .filter((group) => group.filledRows.length > 0),
+)
 
-const selectedWorldFieldPreviewText = computed(() => {
-  const filledRows = selectedProfileWorldFieldRows.value.filter((row) => row.displayValue)
-  if (!filledRows.length) return t('还没有填写世界字段。', 'No world profile fields filled yet.')
-  return filledRows
-    .slice(0, 2)
-    .map((row) => `${row.title}: ${row.displayValue}`)
-    .join(' · ')
-})
+const selectedProfileHasReadableDetails = computed(
+  () => selectedProfileReadableGroups.value.length > 0,
+)
 
 const selectedMemoryPreviewText = computed(() => {
   const primary =
@@ -3771,7 +3769,7 @@ onBeforeUnmount(() => {
       </div>
 
       <div ref="profileScrollElement" class="contacts-profile-scroll">
-        <div v-if="!isContactsDetailSheetOpen" class="contacts-profile-overview space-y-3">
+        <div v-if="!isContactsDetailSheetOpen" class="contacts-profile-overview">
           <div
             v-if="isSelectedProfileArchived"
             class="contacts-archived-banner"
@@ -3784,7 +3782,7 @@ onBeforeUnmount(() => {
               <small>{{ t('档案和历史仍保留；当前页面只读，Wallet 收款已暂停。', 'Profile and history are preserved. This page is read-only, and Wallet payments are suspended.') }}</small>
             </span>
           </div>
-          <section class="contacts-detail-section contacts-profile-hero">
+          <section class="contacts-profile-hero">
           <div class="contacts-hero-card">
             <div class="contacts-hero-avatar">
               <img
@@ -3852,7 +3850,7 @@ onBeforeUnmount(() => {
               class="contacts-small-action"
               @click="openEditProfile(selectedProfile)"
             >
-              {{ t('编辑档案', 'Edit profile') }}
+              {{ t('编辑基本信息', 'Edit basics') }}
             </button>
           </div>
           <div v-else class="contacts-profile-actions contacts-hero-actions">
@@ -3865,107 +3863,190 @@ onBeforeUnmount(() => {
               {{ t('恢复人物', 'Restore person') }}
             </button>
           </div>
-          <div v-if="selectedProfileStatusChips.length" class="contacts-profile-chips">
-            <span
-              v-for="chip in selectedProfileStatusChips"
-              :key="chip.key"
-              class="contacts-source-chip"
-            >
-              {{ chip.label }}
-            </span>
-          </div>
-          <div v-if="selectedProfileHeader.isNpc && !isSelectedProfileArchived" class="mt-3 space-y-2">
-            <button
-              type="button"
-              class="contacts-primary-action"
-              data-testid="contacts-upgrade-npc"
-              @click="upgradeSelectedNpcToMainRole"
-            >
-              {{ t('升级为主要角色', 'Upgrade to main role') }}
-            </button>
-            <p class="text-xs text-gray-500">
-              {{ selectedProfileHeader.upgradeHint }}
-            </p>
-          </div>
           </section>
 
-          <div class="contacts-scan-grid">
-          <button
-            type="button"
-            class="contacts-scan-card"
-            data-testid="contacts-open-relationship-sheet"
-            @click="openDetailSheet(CONTACTS_DETAIL_SHEETS.RELATIONSHIP)"
-          >
-            <p class="contacts-role-hub-label">{{ t('关系', 'Relationship') }}</p>
-            <p class="contacts-role-hub-value">{{ relationshipStageLabel(selectedRelationshipSnapshot?.relationshipStage) }}</p>
-            <p class="contacts-role-hub-detail">{{ selectedRelationshipPreviewText }}</p>
-          </button>
-          <button
-            type="button"
-            class="contacts-scan-card"
-            data-testid="contacts-open-world-fields-sheet"
-            @click="openWorldFieldsSheet"
-          >
-            <p class="contacts-role-hub-label">{{ t('人物资料', 'Profile card') }}</p>
-            <p class="contacts-role-hub-value">{{ selectedRoleHubStats.worldFieldCount }}</p>
-            <p class="contacts-role-hub-detail">{{ selectedWorldFieldPreviewText }}</p>
-          </button>
-          <button
-            type="button"
-            class="contacts-scan-card"
-            data-testid="contacts-open-memories-sheet"
-            @click="openDetailSheet(CONTACTS_DETAIL_SHEETS.MEMORIES)"
-          >
-            <p class="contacts-role-hub-label">{{ t('记忆', 'Memories') }}</p>
-            <p class="contacts-role-hub-value">{{ selectedMemoryHealthSummary.statusLabel }}</p>
-            <p class="contacts-role-hub-detail">{{ selectedMemoryPreviewText }}</p>
-          </button>
-          <button
-            type="button"
-            class="contacts-scan-card"
-            data-testid="contacts-open-details-sheet"
-            @click="openDetailSheet(CONTACTS_DETAIL_SHEETS.DETAILS)"
-          >
-            <p class="contacts-role-hub-label">{{ t('人物细节', 'Character details') }}</p>
-            <p class="contacts-role-hub-value">{{ selectedRoleHubStats.manual + selectedRoleHubStats.eventAttached }}</p>
-            <p class="contacts-role-hub-detail">{{ selectedDetailPreviewText }}</p>
-          </button>
-          <button
-            type="button"
-            class="contacts-scan-card"
-            data-testid="contacts-open-activity-sheet"
-            @click="openDetailSheet(CONTACTS_DETAIL_SHEETS.ACTIVITY)"
-          >
-            <p class="contacts-role-hub-label">{{ t('关联活动', 'Linked activity') }}</p>
-            <p class="contacts-role-hub-value">{{ selectedLinkedActivitySummary.eventAttachedCount }}</p>
-            <p class="contacts-role-hub-detail">{{ selectedLinkedActivitySummary.sourceText }}</p>
-          </button>
-          <button
-            type="button"
-            class="contacts-scan-card"
-            data-testid="contacts-open-gallery-album"
-            @click="openSelectedProfileAlbum"
-          >
-            <p class="contacts-role-hub-label">{{ t('相册', 'Photos') }}</p>
-            <p class="contacts-role-hub-value">{{ selectedProfilePhotoCount }} {{ t('张', 'photos') }}</p>
-            <p class="contacts-role-hub-detail">{{ t('在相册中标记为该角色的照片。', 'Photos tagged as this role in Gallery.') }}</p>
-          </button>
-          <button
-            type="button"
-            class="contacts-scan-card contacts-scan-card-danger"
-            data-testid="contacts-open-danger-sheet"
-            @click="openDetailSheet(CONTACTS_DETAIL_SHEETS.DANGER)"
-          >
-            <p class="contacts-role-hub-label">{{ t('管理', 'Manage') }}</p>
-            <p class="contacts-role-hub-value">
-              {{
-                isSelectedProfileArchived
-                  ? t('恢复或永久删除', 'Restore or delete')
-                  : t('重置或归档', 'Reset or archive')
-              }}
-            </p>
-            <p class="contacts-role-hub-detail">{{ t('危险操作单独放在这里。', 'Destructive actions stay here.') }}</p>
-          </button>
+          <div class="contacts-person-sections">
+            <section class="contacts-person-section" data-testid="contacts-person-profile-summary">
+              <header class="contacts-person-section__head">
+                <div>
+                  <p class="contacts-person-section__eyebrow">{{ t('关于这个人', 'About this person') }}</p>
+                  <h3>{{ t('人物设定', 'Persona') }}</h3>
+                </div>
+                <button
+                  v-if="!isSelectedProfileArchived"
+                  type="button"
+                  class="contacts-text-action"
+                  data-testid="contacts-open-world-fields-sheet"
+                  @click="openWorldFieldsSheet"
+                >
+                  {{ selectedProfileHasReadableDetails ? t('查看与编辑', 'View and edit') : t('更多方式', 'More options') }}
+                  <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                </button>
+              </header>
+
+              <div
+                v-if="selectedProfileHasReadableDetails"
+                class="contacts-persona-groups"
+                data-testid="contacts-persona-readable-groups"
+              >
+                <section
+                  v-for="group in selectedProfileReadableGroups"
+                  :key="group.key"
+                  class="contacts-persona-group"
+                >
+                  <h4>{{ group.label }}</h4>
+                  <dl>
+                    <div v-for="row in group.filledRows" :key="row.key">
+                      <dt>{{ row.title }}</dt>
+                      <dd>{{ row.displayValue }}</dd>
+                    </div>
+                  </dl>
+                </section>
+              </div>
+
+              <div
+                v-else
+                class="contacts-persona-empty"
+                data-testid="contacts-persona-empty-state"
+              >
+                <span class="contacts-persona-empty__icon" aria-hidden="true">
+                  <i class="far fa-address-card"></i>
+                </span>
+                <div>
+                  <h4>{{ t(`还没有为 ${selectedProfileHeader.name} 补充人物设定`, `No persona added for ${selectedProfileHeader.name} yet`) }}</h4>
+                  <p>{{ t('可以粘贴现成的人设，也可以像填写资料卡一样逐项补充。', 'Paste an existing persona or fill in the profile one item at a time.') }}</p>
+                </div>
+              </div>
+
+              <div v-if="!isSelectedProfileArchived" class="contacts-persona-actions">
+                <button
+                  type="button"
+                  class="contacts-primary-action"
+                  data-testid="contacts-persona-paste-from-overview"
+                  @click="openPersonaFromOverview"
+                >
+                  <i class="fas fa-align-left" aria-hidden="true"></i>
+                  {{ t('粘贴一段人设', 'Paste a persona') }}
+                </button>
+                <button
+                  type="button"
+                  class="contacts-small-action"
+                  data-testid="contacts-persona-fill-from-overview"
+                  @click="openProfileEditorFromOverview"
+                >
+                  <i class="fas fa-list-check" aria-hidden="true"></i>
+                  {{ t('逐项填写', 'Fill item by item') }}
+                </button>
+              </div>
+            </section>
+
+            <section class="contacts-person-section">
+              <header class="contacts-person-section__head">
+                <div>
+                  <p class="contacts-person-section__eyebrow">{{ t('你们之间', 'Between you') }}</p>
+                  <h3>{{ t('关系与共同经历', 'Relationship and shared moments') }}</h3>
+                </div>
+              </header>
+              <div class="contacts-person-links">
+                <button
+                  type="button"
+                  data-testid="contacts-open-relationship-sheet"
+                  @click="openDetailSheet(CONTACTS_DETAIL_SHEETS.RELATIONSHIP)"
+                >
+                  <span class="contacts-person-link__icon"><i class="far fa-heart" aria-hidden="true"></i></span>
+                  <span>
+                    <strong>{{ relationshipStageLabel(selectedRelationshipSnapshot?.relationshipStage) }}</strong>
+                    <small>{{ selectedRelationshipPreviewText }}</small>
+                  </span>
+                  <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                </button>
+                <button
+                  type="button"
+                  data-testid="contacts-open-memories-sheet"
+                  @click="openDetailSheet(CONTACTS_DETAIL_SHEETS.MEMORIES)"
+                >
+                  <span class="contacts-person-link__icon"><i class="far fa-bookmark" aria-hidden="true"></i></span>
+                  <span>
+                    <strong>{{ t('共同经历', 'Shared moments') }}</strong>
+                    <small>{{ selectedMemoryPreviewText }}</small>
+                  </span>
+                  <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                </button>
+                <button
+                  type="button"
+                  data-testid="contacts-open-details-sheet"
+                  @click="openDetailSheet(CONTACTS_DETAIL_SHEETS.DETAILS)"
+                >
+                  <span class="contacts-person-link__icon"><i class="far fa-note-sticky" aria-hidden="true"></i></span>
+                  <span>
+                    <strong>{{ t('相处细节', 'Personal details') }}</strong>
+                    <small>{{ selectedDetailPreviewText }}</small>
+                  </span>
+                  <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                </button>
+                <button
+                  type="button"
+                  data-testid="contacts-open-activity-sheet"
+                  @click="openDetailSheet(CONTACTS_DETAIL_SHEETS.ACTIVITY)"
+                >
+                  <span class="contacts-person-link__icon"><i class="far fa-calendar-check" aria-hidden="true"></i></span>
+                  <span>
+                    <strong>{{ t('最近发生的事', 'Recent activity') }}</strong>
+                    <small>{{ selectedLinkedActivitySummary.sourceText }}</small>
+                  </span>
+                  <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                </button>
+                <button
+                  v-if="selectedProfilePhotoCount > 0"
+                  type="button"
+                  data-testid="contacts-open-gallery-album"
+                  @click="openSelectedProfileAlbum"
+                >
+                  <span class="contacts-person-link__icon"><i class="far fa-images" aria-hidden="true"></i></span>
+                  <span>
+                    <strong>{{ t('照片', 'Photos') }}</strong>
+                    <small>{{ t(`${selectedProfilePhotoCount} 张与 ${selectedProfileHeader.name} 有关的照片`, `${selectedProfilePhotoCount} photos of ${selectedProfileHeader.name}`) }}</small>
+                  </span>
+                  <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                </button>
+              </div>
+            </section>
+
+            <section class="contacts-person-section contacts-person-section--management">
+              <header class="contacts-person-section__head">
+                <div>
+                  <p class="contacts-person-section__eyebrow">{{ t('更多', 'More') }}</p>
+                  <h3>{{ t('档案管理', 'Profile management') }}</h3>
+                </div>
+              </header>
+              <div class="contacts-person-links">
+                <button
+                  v-if="selectedProfileHeader.isNpc && !isSelectedProfileArchived"
+                  type="button"
+                  data-testid="contacts-upgrade-npc"
+                  @click="upgradeSelectedNpcToMainRole"
+                >
+                  <span class="contacts-person-link__icon"><i class="fas fa-arrow-up-right-dots" aria-hidden="true"></i></span>
+                  <span>
+                    <strong>{{ t('设为主要角色', 'Make a main role') }}</strong>
+                    <small>{{ selectedProfileHeader.upgradeHint }}</small>
+                  </span>
+                  <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                </button>
+                <button
+                  type="button"
+                  data-testid="contacts-open-danger-sheet"
+                  @click="openDetailSheet(CONTACTS_DETAIL_SHEETS.DANGER)"
+                >
+                  <span class="contacts-person-link__icon"><i class="fas fa-box-archive" aria-hidden="true"></i></span>
+                  <span>
+                    <strong>{{ t('管理这份档案', 'Manage this profile') }}</strong>
+                    <small>{{ isSelectedProfileArchived ? t('恢复人物或处理已归档资料', 'Restore this person or manage archived data') : t('归档人物、重置关系或处理资料', 'Archive this person, reset the relationship, or manage data') }}</small>
+                  </span>
+                  <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                </button>
+              </div>
+            </section>
           </div>
         </div>
 
@@ -4379,10 +4460,12 @@ onBeforeUnmount(() => {
           >
             <div class="flex items-start justify-between gap-3">
               <div>
-                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  {{ t('人物资料', 'Profile card') }}
+                <p class="contacts-profile-sheet__eyebrow">
+                  {{ t('人物设定', 'Persona') }}
                 </p>
-                <h3 class="font-semibold">{{ t('世界资料卡', 'World profile') }}</h3>
+                <h3 class="contacts-profile-sheet__title">
+                  {{ t(`${selectedProfile?.name || ''} 的资料`, `${selectedProfile?.name || ''}'s profile`) }}
+                </h3>
                 <p class="mt-1 text-[11px] leading-4 text-gray-500">
                   {{ selectedWorldFieldIntroText }}
                 </p>
@@ -4396,7 +4479,7 @@ onBeforeUnmount(() => {
                   @click="openPersonaClassification"
                 >
                   <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
-                  {{ t('归类人物描述', 'Classify persona') }}
+                  {{ t('粘贴人设', 'Paste persona') }}
                 </button>
                 <button
                   type="button"
@@ -4404,7 +4487,7 @@ onBeforeUnmount(() => {
                   data-testid="contacts-edit-world-profile-fields"
                   @click="openProfileTemplateEditor"
                 >
-                  {{ t('编辑资料卡', 'Edit profile card') }}
+                  {{ t('逐项填写', 'Fill item by item') }}
                 </button>
               </div>
             </div>
@@ -4418,12 +4501,12 @@ onBeforeUnmount(() => {
                 <div class="contacts-persona-classification__title">
                   <i class="fas fa-align-left" aria-hidden="true"></i>
                   <div>
-                    <h4>{{ t('整段描述归类草稿', 'Persona classification draft') }}</h4>
+                    <h4>{{ t(`整理 ${selectedProfile?.name || ''} 的人设`, `Organize ${selectedProfile?.name || ''}'s persona`) }}</h4>
                     <p>
                       {{
                         t(
-                          'AI 只整理复核草稿，不会修改资料卡、模板或人物修订。',
-                          'AI creates a review draft only. It does not change the profile card, template, or profile revision.',
+                          '粘贴整段文字，我们会按类目整理。检查无误后再保存。',
+                          'Paste a full description and we will organize it into categories. Review it before saving.',
                         )
                       }}
                     </p>
@@ -4441,7 +4524,7 @@ onBeforeUnmount(() => {
               </header>
 
               <label class="contacts-persona-source" for="contacts-persona-source">
-                <span>{{ t('人物原始描述', 'Original persona description') }}</span>
+                <span>{{ t('粘贴人物设定', 'Paste the persona') }}</span>
                 <textarea
                   id="contacts-persona-source"
                   v-model="personaClassificationSource"
@@ -4488,10 +4571,10 @@ onBeforeUnmount(() => {
                   ></i>
                   {{
                     personaClassificationBusy
-                      ? t('正在归类...', 'Classifying...')
-                      : personaClassificationDraft
-                        ? t('重新归类', 'Classify again')
-                        : t('生成复核草稿', 'Create review draft')
+                        ? t('正在整理...', 'Organizing...')
+                        : personaClassificationDraft
+                          ? t('重新整理', 'Organize again')
+                          : t('开始整理', 'Organize persona')
                   }}
                 </button>
               </div>
@@ -4505,15 +4588,15 @@ onBeforeUnmount(() => {
                   class="contacts-persona-review__summary"
                   data-testid="contacts-persona-classification-summary"
                 >
-                  <span>{{ t('匹配', 'Matched') }} {{ personaClassificationSummary.matched }}</span>
+                  <span>{{ t('可以直接填写', 'Ready to fill') }} {{ personaClassificationSummary.matched }}</span>
                   <span
-                    >{{ t('建议', 'Suggested') }} {{ personaClassificationSummary.suggested }}</span
+                    >{{ t('建议新增', 'Suggested additions') }} {{ personaClassificationSummary.suggested }}</span
                   >
                   <span
-                    >{{ t('冲突', 'Conflicts') }} {{ personaClassificationSummary.conflicts }}</span
+                    >{{ t('需要你选择', 'Needs your choice') }} {{ personaClassificationSummary.conflicts }}</span
                   >
                   <span
-                    >{{ t('未归类', 'Unclassified') }}
+                    >{{ t('暂时保留原文', 'Kept as text') }}
                     {{ personaClassificationSummary.unclassified }}</span
                   >
                 </div>
@@ -4524,12 +4607,12 @@ onBeforeUnmount(() => {
                 >
                   <header>
                     <div>
-                      <h5>{{ t('匹配现有字段', 'Matched fields') }}</h5>
+                      <h5>{{ t('可以直接填写', 'Ready to fill') }}</h5>
                       <p>
                         {{
                           t(
-                            '候选值已经找到现有资料卡位置。',
-                            'Candidates with an existing profile-card destination.',
+                            '这些内容已经找到合适的位置。',
+                            'These details already have a suitable place.',
                           )
                         }}
                       </p>
@@ -4584,12 +4667,12 @@ onBeforeUnmount(() => {
                 >
                   <header>
                     <div>
-                      <h5>{{ t('新字段建议', 'Suggested new fields') }}</h5>
+                      <h5>{{ t('建议新增', 'Suggested additions') }}</h5>
                       <p>
                         {{
                           t(
-                            '有价值，但当前资料卡没有合适字段。',
-                            'Useful details without a safe existing field.',
+                            '这些内容值得保留，可以为这个人物新增资料项。',
+                            'These details are worth keeping as new profile items.',
                           )
                         }}
                       </p>
@@ -4608,10 +4691,9 @@ onBeforeUnmount(() => {
                     >
                       <div class="contacts-persona-review-item__head">
                         <div>
-                          <span>{{ item.categoryLabel || t('待选类目', 'Category pending') }}</span>
+                          <span>{{ item.categoryLabel || t('待选择类目', 'Choose a category') }}</span>
                           <h6>{{ item.label }}</h6>
                         </div>
-                        <em>{{ item.type }}</em>
                       </div>
                       <p class="contacts-persona-review-item__value">
                         {{ formatPersonaClassificationValue(item.value) }}
@@ -4635,12 +4717,12 @@ onBeforeUnmount(() => {
                 >
                   <header>
                     <div>
-                      <h5>{{ t('需要人工判断的冲突', 'Conflicts for review') }}</h5>
+                      <h5>{{ t('需要你选择', 'Needs your choice') }}</h5>
                       <p>
                         {{
                           t(
-                            '已确认值不会被候选内容覆盖。',
-                            'Confirmed values are never overwritten by candidates.',
+                            '这里已有内容，请决定是否采用新的说法。',
+                            'There is already a value here. Decide whether to use the new wording.',
                           )
                         }}
                       </p>
@@ -4692,12 +4774,12 @@ onBeforeUnmount(() => {
                 >
                   <header>
                     <div>
-                      <h5>{{ t('未归类原文', 'Unclassified source') }}</h5>
+                      <h5>{{ t('暂时保留原文', 'Kept as original text') }}</h5>
                       <p>
                         {{
                           t(
-                            '无法安全放置的内容原样保留。',
-                            'Text without a safe destination is retained.',
+                            '还不确定放在哪里的内容不会丢失。',
+                            'Details without a clear place are kept safely.',
                           )
                         }}
                       </p>
@@ -4731,12 +4813,12 @@ onBeforeUnmount(() => {
                 >
                   <header>
                     <div>
-                      <h5>{{ t('逐项复核并保存', 'Review and save each item') }}</h5>
+                      <h5>{{ t('检查整理结果', 'Review the organized profile') }}</h5>
                       <p>
                         {{
                           t(
-                            '每项都必须接受或忽略；接受前可以修改字段名、内容和可见范围。',
-                            'Every item must be accepted or ignored. You can edit its label, value, and visibility first.',
+                            '逐项确认要不要保存，也可以先修改名称、内容和谁能读取。',
+                            'Choose what to save. You can edit the name, content, and who can read it first.',
                           )
                         }}
                       </p>
@@ -4752,18 +4834,34 @@ onBeforeUnmount(() => {
                       :data-testid="`contacts-persona-review-${row.itemId}`"
                     >
                       <div class="contacts-persona-confirmation__item-head">
-                        <span>{{ row.kind }}</span>
+                        <span>{{ row.fieldId ? t('已有资料项', 'Existing profile item') : t('新增资料项', 'New profile item') }}</span>
                         <strong v-if="row.existingValue">
                           {{ t('当前值', 'Current') }}: {{ formatPersonaClassificationValue(row.existingValue) }}
                         </strong>
                       </div>
                       <label v-if="!row.fieldId">
-                        <span>{{ t('字段名', 'Field label') }}</span>
+                        <span>{{ t('资料名称', 'Profile item name') }}</span>
                         <input
                           v-model="row.label"
                           :data-testid="`contacts-persona-label-${row.itemId}`"
                           :disabled="personaConfirmationBusy"
                         />
+                      </label>
+                      <label v-if="!row.fieldId">
+                        <span>{{ t('放在哪个类目', 'Category') }}</span>
+                        <select
+                          v-model="row.categoryId"
+                          :data-testid="`contacts-persona-category-${row.itemId}`"
+                          :disabled="personaConfirmationBusy"
+                        >
+                          <option
+                            v-for="category in selectedProfileTemplateCategories"
+                            :key="`${row.itemId}-${category.id}`"
+                            :value="category.id"
+                          >
+                            {{ category.label }}
+                          </option>
+                        </select>
                       </label>
                       <label>
                         <span>{{ t('确认内容', 'Confirmed value') }}</span>
@@ -4774,7 +4872,7 @@ onBeforeUnmount(() => {
                         ></textarea>
                       </label>
                       <label>
-                        <span>{{ t('可见范围', 'Visibility') }}</span>
+                        <span>{{ t('谁可以读取', 'Who can read this') }}</span>
                         <select
                           v-model="row.visibilityLevel"
                           :data-testid="`contacts-persona-visibility-${row.itemId}`"
@@ -4798,7 +4896,7 @@ onBeforeUnmount(() => {
                           :disabled="personaConfirmationBusy"
                           @click="setPersonaReviewDecision(row.itemId, PERSONA_REVIEW_DECISIONS.ACCEPT)"
                         >
-                          {{ t('接受', 'Accept') }}
+                          {{ t('保存这项', 'Save this item') }}
                         </button>
                         <button
                           type="button"
@@ -4807,7 +4905,7 @@ onBeforeUnmount(() => {
                           :disabled="personaConfirmationBusy"
                           @click="setPersonaReviewDecision(row.itemId, PERSONA_REVIEW_DECISIONS.IGNORE)"
                         >
-                          {{ t('忽略', 'Ignore') }}
+                          {{ t('不保存', 'Do not save') }}
                         </button>
                       </div>
                     </article>
@@ -4821,7 +4919,7 @@ onBeforeUnmount(() => {
                               `还有 ${personaPendingReviewCount} 项待处理`,
                               `${personaPendingReviewCount} items still need a decision`,
                             )
-                          : t('全部项目已复核', 'All items reviewed')
+                          : t('全部内容已检查', 'Everything has been reviewed')
                       }}
                     </span>
                     <button
@@ -4834,19 +4932,19 @@ onBeforeUnmount(() => {
                       {{
                         personaConfirmationBusy
                           ? t('正在保存…', 'Saving...')
-                          : t('保存一个资料版本', 'Save one profile revision')
+                          : t('确认并保存人物资料', 'Confirm and save profile')
                       }}
                     </button>
                   </div>
                 </section>
 
-                <section
+                <details
                   class="contacts-persona-source-retained"
                   data-testid="contacts-persona-source-retained"
                 >
-                  <h5>{{ t('保留的完整原文', 'Retained original source') }}</h5>
+                  <summary>{{ t('查看原始人设', 'View original persona') }}</summary>
                   <p>{{ personaClassificationDraft.sourceText }}</p>
-                </section>
+                </details>
               </div>
             </section>
 
@@ -4966,12 +5064,12 @@ onBeforeUnmount(() => {
             >
               <div class="contacts-world-field-editor__head">
                 <div>
-                  <p>{{ t('选择世界模板', 'Choose world template') }}</p>
+                  <p>{{ t(`编辑 ${selectedProfile?.name || ''} 的资料`, `Edit ${selectedProfile?.name || ''}'s profile`) }}</p>
                   <span>
                     {{
                       t(
-                        '模板来自世界书；这里保存的是当前人物自己的具体值。',
-                        'Templates come from WorldBook; this saves this person’s concrete values.',
+                        '选择资料卡样式，然后按类目填写。以后更换样式，已填写内容仍会保留。',
+                        'Choose a profile style, then fill it in by category. Existing details remain if you change styles later.',
                       )
                     }}
                   </span>
@@ -4986,27 +5084,31 @@ onBeforeUnmount(() => {
                 </button>
               </div>
 
-              <select
-                v-model="profileTemplateDraft.templateId"
-                class="contacts-world-field-select"
-                data-testid="contacts-profile-template-select"
-                @change="setProfileTemplateDraftTemplate(profileTemplateDraft.templateId)"
-              >
-                <option value="">{{ t('选择模板', 'Choose template') }}</option>
-                <option
-                  v-for="template in contactsProfileTemplateOptions"
-                  :key="template.id"
-                  :value="template.id"
+              <label class="contacts-profile-style-picker">
+                <span>{{ t('资料卡样式', 'Profile style') }}</span>
+                <select
+                  v-model="profileTemplateDraft.templateId"
+                  class="contacts-world-field-select"
+                  data-testid="contacts-profile-template-select"
+                  @change="setProfileTemplateDraftTemplate(profileTemplateDraft.templateId)"
                 >
-                  {{ formatContactsProfileTemplateOption(template) }} · v{{ template.version }}
-                </option>
-              </select>
+                  <option value="">{{ t('选择资料卡样式', 'Choose a profile style') }}</option>
+                  <option
+                    v-for="template in contactsProfileTemplateOptions"
+                    :key="template.id"
+                    :value="template.id"
+                  >
+                    {{ formatContactsProfileTemplateOption(template) }}
+                  </option>
+                </select>
+              </label>
 
-              <div
+              <details
                 v-if="profileTemplateDraft.templateId"
                 class="contacts-template-change-review"
                 data-testid="contacts-template-change-review"
               >
+                <summary>{{ t('更换样式时会保留什么', 'What stays when the style changes') }}</summary>
                 <div class="contacts-template-change-review__head">
                   <i class="fas fa-clipboard-check" aria-hidden="true"></i>
                   <div>
@@ -5036,7 +5138,7 @@ onBeforeUnmount(() => {
                     <small>{{ row.fieldId }}</small>
                   </span>
                 </div>
-              </div>
+              </details>
 
               <div v-if="contactsProfileTemplateOptions.length === 0" class="contacts-empty-detail">
                 <p>
@@ -5081,7 +5183,6 @@ onBeforeUnmount(() => {
                            <small v-if="field.required">{{ t('必填', 'Required') }}</small>
                            <small v-else-if="field.isPersonExtension">{{ t('人物专属', 'Person only') }}</small>
                         </span>
-                        <strong class="contacts-world-field-type-chip">{{ field.typeLabel }}</strong>
                       </span>
                       <p
                         class="contacts-world-field-control__helper"
@@ -5129,6 +5230,7 @@ onBeforeUnmount(() => {
                           {{ tagPreviewEmptyText }}
                         </em>
                       </div>
+                      <span class="contacts-world-field-visibility-label">{{ t('谁可以读取', 'Who can read this') }}</span>
                       <select
                         v-model="profileTemplateDraft.visibility[field.id]"
                         :data-testid="`contacts-profile-template-visibility-${field.id}`"
@@ -5165,7 +5267,7 @@ onBeforeUnmount(() => {
                   {{ t('添加资料', 'Add profile detail') }}
                 </button>
                 <span class="text-[11px] leading-4 text-gray-500">
-                  {{ t('可以只给当前人物，也可以主动加入当前世界模板。', 'Keep it person-only or explicitly add it to the current-world template.') }}
+                  {{ t('需要时可以为这个人物增加新的资料项。', 'Add a new profile item when this person needs one.') }}
                 </span>
               </div>
 
@@ -5327,12 +5429,12 @@ onBeforeUnmount(() => {
                       data-testid="contacts-profile-extension-scope-world"
                     />
                     <span>
-                      <strong class="block text-sm">{{ t('加入当前世界模板', 'Add to current-world template') }}</strong>
+                      <strong class="block text-sm">{{ t('同世界的其他人物也可以使用', 'Also use for other people in this world') }}</strong>
                       <small class="text-[11px] leading-4 text-gray-500">
                         {{
                           canSaveProfileExtensionToWorldTemplate
-                            ? t('会生成模板新版本；其他人物仍通过模板复核接收。', 'Creates a new template version; other profiles still receive it through template review.')
-                            : t('需要先选择一个当前世界模板。', 'Choose a current-world template first.')
+                            ? t('以后为其他人物填写资料时，也会出现这一项。', 'This item will also appear when editing other people.')
+                            : t('请先选择当前世界的资料卡样式。', 'Choose a profile style for the current world first.')
                         }}
                       </small>
                     </span>
@@ -6597,42 +6699,233 @@ onBeforeUnmount(() => {
   margin: 0 auto;
 }
 
-.contacts-profile-actions,
-.contacts-profile-chips,
-.contacts-scan-grid {
+.contacts-profile-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 12px;
 }
 
-.contacts-scan-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.contacts-scan-card {
-  width: 100%;
+.contacts-person-sections {
+  overflow: hidden;
   border: 1px solid var(--contacts-border);
-  border-radius: 14px;
+  border-radius: 16px;
   background: var(--contacts-surface-strong);
   box-shadow: var(--contacts-shadow);
-  padding: 14px;
+}
+
+.contacts-person-section {
+  padding: 20px 16px;
+}
+
+.contacts-person-section + .contacts-person-section {
+  border-top: 1px solid var(--contacts-border);
+}
+
+.contacts-person-section--management {
+  background: color-mix(in srgb, var(--contacts-surface-strong) 88%, var(--contacts-warm-soft));
+}
+
+.contacts-person-section__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.contacts-person-section__eyebrow,
+.contacts-person-section__head h3,
+.contacts-persona-group h4,
+.contacts-persona-empty h4,
+.contacts-persona-empty p {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.contacts-person-section__eyebrow {
+  color: var(--contacts-accent);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.contacts-person-section__head h3 {
+  margin-top: 2px;
+  color: var(--contacts-text);
+  font-size: 16px;
+  font-weight: 820;
+  line-height: 1.3;
+}
+
+.contacts-text-action {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: -8px -8px -8px 0;
+  padding: 8px;
+  color: var(--contacts-accent-strong);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.contacts-text-action i {
+  color: var(--contacts-soft);
+  font-size: 9px;
+}
+
+.contacts-persona-groups {
+  display: grid;
+  gap: 18px;
+}
+
+.contacts-persona-group h4 {
+  color: var(--contacts-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.contacts-persona-group dl {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0 0;
+}
+
+.contacts-persona-group dl > div {
+  display: grid;
+  grid-template-columns: minmax(84px, 0.32fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.contacts-persona-group dt,
+.contacts-persona-group dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  letter-spacing: 0;
+}
+
+.contacts-persona-group dt {
+  color: var(--contacts-muted);
+  font-size: 12px;
+}
+
+.contacts-persona-group dd {
+  color: var(--contacts-text);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.contacts-persona-empty {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding: 14px 0 2px;
+}
+
+.contacts-persona-empty__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--contacts-accent-soft);
+  color: var(--contacts-accent-strong);
+  font-size: 17px;
+}
+
+.contacts-persona-empty h4 {
+  color: var(--contacts-text);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.contacts-persona-empty p {
+  margin-top: 4px;
+  color: var(--contacts-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.contacts-persona-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.contacts-persona-actions button {
+  min-height: 44px;
+}
+
+.contacts-persona-actions i {
+  margin-right: 6px;
+}
+
+.contacts-person-links {
+  margin: 0 -8px -8px;
+}
+
+.contacts-person-links > button {
+  width: 100%;
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 10px;
+  color: var(--contacts-text);
   text-align: left;
-  transition:
-    transform var(--system-motion-fast),
-    border-color var(--system-motion-fast);
+  transition: background-color var(--system-motion-fast);
 }
 
-.contacts-scan-card:active {
-  transform: scale(0.98);
-  border-color: color-mix(in srgb, var(--contacts-accent) 36%, var(--contacts-border));
+.contacts-person-links > button:active {
+  background: var(--contacts-accent-soft);
 }
 
-.contacts-scan-card-danger {
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(255, 244, 240, 0.86)),
-    var(--contacts-surface-strong);
+.contacts-person-link__icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--contacts-warm-soft);
+  color: var(--contacts-warm);
+  font-size: 13px;
+}
+
+.contacts-person-links > button > span:nth-child(2) {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.contacts-person-links strong,
+.contacts-person-links small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: 0;
+}
+
+.contacts-person-links strong {
+  color: var(--contacts-text);
+  font-size: 13px;
+  font-weight: 780;
+}
+
+.contacts-person-links small {
+  color: var(--contacts-muted);
+  font-size: 11px;
+}
+
+.contacts-person-links > button > i {
+  color: var(--contacts-soft);
+  font-size: 9px;
+  text-align: right;
 }
 
 .contacts-detail-sheet-header {
@@ -6973,6 +7266,21 @@ onBeforeUnmount(() => {
     var(--contacts-surface-strong);
 }
 
+.contacts-profile-sheet__eyebrow {
+  margin: 0;
+  color: var(--contacts-warm);
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.contacts-profile-sheet__title {
+  margin: 2px 0 0;
+  color: var(--contacts-text);
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
 .contacts-world-field-list,
 .contacts-world-field-form,
 .contacts-world-field-editor {
@@ -7054,10 +7362,8 @@ onBeforeUnmount(() => {
 }
 
 .contacts-world-field-editor {
-  border: 1px solid rgba(66, 111, 143, 0.16);
-  border-radius: 14px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.74);
+  border-top: 1px solid rgba(66, 111, 143, 0.14);
+  padding-top: 14px;
 }
 
 .contacts-world-profile-actions {
@@ -7391,6 +7697,22 @@ onBeforeUnmount(() => {
   white-space: pre-wrap;
 }
 
+.contacts-persona-source-retained summary,
+.contacts-template-change-review > summary {
+  min-height: 44px;
+  color: var(--contacts-text);
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 44px;
+  cursor: pointer;
+}
+
+.contacts-persona-source-retained[open] summary,
+.contacts-template-change-review[open] > summary {
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(49, 64, 86, 0.08);
+}
+
 .contacts-persona-confirmation {
   display: grid;
   gap: 10px;
@@ -7637,6 +7959,18 @@ onBeforeUnmount(() => {
   margin: 0;
 }
 
+.contacts-profile-style-picker {
+  display: grid;
+  gap: 6px;
+}
+
+.contacts-profile-style-picker > span,
+.contacts-world-field-visibility-label {
+  color: var(--contacts-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
 .contacts-world-field-editor__head p {
   color: var(--contacts-text);
   font-size: 13px;
@@ -7663,6 +7997,14 @@ onBeforeUnmount(() => {
   padding: 8px 10px;
   font-size: 12px;
   outline: none;
+}
+
+.contacts-world-field-select,
+.contacts-world-field-control input,
+.contacts-world-field-control select,
+.contacts-persona-confirmation__item input,
+.contacts-persona-confirmation__item select {
+  min-height: 44px;
 }
 
 .contacts-world-field-control {
@@ -7775,11 +8117,17 @@ onBeforeUnmount(() => {
 
 .contacts-small-action,
 .contacts-primary-action {
-  min-height: 34px;
+  min-height: 44px;
   border-radius: 12px;
   padding: 7px 11px;
   font-size: 12px;
   font-weight: 700;
+}
+
+.contacts-small-action:active,
+.contacts-primary-action:active,
+.contacts-persona-confirmation__decisions button:active {
+  transform: translateY(1px);
 }
 
 .contacts-small-action {

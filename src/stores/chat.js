@@ -186,6 +186,66 @@ const DEFAULT_ROLE_PROFILES = [
   },
 ]
 
+const BUILT_IN_PROFILE_PERSONA_FIXTURES = Object.freeze({
+  1: Object.freeze({
+    roleId: '1',
+    name: 'Eva',
+    role: '私人 AI 助手',
+    bio: '你是一个高智能、温和体贴的 AI 助手，名字叫 Eva。你会优先考虑用户(V)的安全，表达清晰简洁。',
+    profileValues: Object.freeze([
+      Object.freeze({ fieldId: 'identity', value: 'V 的私人 AI 助手', visibilityLevel: 'public', sourceKind: 'manual' }),
+      Object.freeze({ fieldId: 'relationship_setting', value: '长期陪伴 V，优先关注 V 的安全，也会主动整理重要安排。', visibilityLevel: 'familiar', sourceKind: 'manual' }),
+      Object.freeze({ fieldId: 'life_habit', value: Object.freeze(['先确认风险', '表达清晰简洁', '主动整理安排']), visibilityLevel: 'familiar', sourceKind: 'manual' }),
+    ]),
+  }),
+  2: Object.freeze({
+    roleId: '2',
+    name: 'Jackie',
+    role: '雇佣兵搭档',
+    bio: '你是 Jackie Welles，重情重义、性格豪爽，梦想成为夜之城的传奇。你非常信任 V。',
+    profileValues: Object.freeze([
+      Object.freeze({ fieldId: 'identity', value: '夜之城雇佣兵，V 的搭档', visibilityLevel: 'public', sourceKind: 'manual' }),
+      Object.freeze({ fieldId: 'relationship_setting', value: '把 V 当作值得托付后背的兄弟，愿意共同承担高风险委托。', visibilityLevel: 'familiar', sourceKind: 'manual' }),
+      Object.freeze({ fieldId: 'life_habit', value: Object.freeze(['重情重义', '喜欢来生酒吧', '梦想成为传奇']), visibilityLevel: 'familiar', sourceKind: 'manual' }),
+    ]),
+  }),
+})
+
+const hasProfileExtensions = (extensions = {}) =>
+  (Array.isArray(extensions?.categories) && extensions.categories.length > 0) ||
+  (Array.isArray(extensions?.fields) && extensions.fields.length > 0)
+
+const enrichUntouchedBuiltInPersonaProfiles = (profiles = []) =>
+  (Array.isArray(profiles) ? profiles : []).map((profile) => {
+    const fixture = BUILT_IN_PROFILE_PERSONA_FIXTURES[Number(profile?.id)]
+    if (
+      !fixture ||
+      String(profile?.roleId || profile?.id) !== fixture.roleId ||
+      profile?.name !== fixture.name ||
+      profile?.role !== fixture.role ||
+      profile?.bio !== fixture.bio ||
+      Number(profile?.revision || 1) !== 1 ||
+      profile?.templateLink?.profileTemplateId ||
+      (Array.isArray(profile?.profileValues) && profile.profileValues.length > 0) ||
+      hasProfileExtensions(profile?.profileExtensions)
+    ) {
+      return profile
+    }
+    return {
+      ...profile,
+      templateLink: {
+        ...(profile?.templateLink || {}),
+        primaryWorldId: '',
+        profileTemplateId: 'preset_basic_modern',
+        profileTemplateVersion: 1,
+      },
+      profileValues: fixture.profileValues.map((value) => ({
+        ...value,
+        value: Array.isArray(value.value) ? [...value.value] : value.value,
+      })),
+    }
+  })
+
 const DEFAULT_CONTACTS = [
   {
     id: 1,
@@ -2820,11 +2880,12 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   const hydrateFromLegacyShape = (legacyContacts, legacyHistory) => {
-    const normalizedContacts = Array.isArray(legacyContacts)
+    const hasLegacyContacts = Array.isArray(legacyContacts) && legacyContacts !== DEFAULT_CONTACTS
+    const normalizedContacts = hasLegacyContacts
       ? legacyContacts.map((item, index) => normalizeContact(item, index))
       : DEFAULT_CONTACTS.map((item, index) => normalizeContact(item, index))
 
-    const sourceProfiles = Array.isArray(legacyContacts)
+    const sourceProfiles = hasLegacyContacts
       ? normalizedContacts
           .filter((contact) => (contact.kind || 'role') === 'role')
           .map((contact) => ({
@@ -2836,7 +2897,10 @@ export const useChatStore = defineStore('chat', () => {
             isMain: contact.isMain,
           }))
       : DEFAULT_ROLE_PROFILES
-    const replacement = profileOwner.replaceAllProfiles(sourceProfiles, { lifecycleState: {} })
+    const replacement = profileOwner.replaceAllProfiles(
+      enrichUntouchedBuiltInPersonaProfiles(sourceProfiles),
+      { lifecycleState: {} },
+    )
     if (!replacement.ok) return false
 
     applyModuleAvatarOverrides(DEFAULT_CHAT_MODULE_AVATAR_OVERRIDES)
@@ -2903,7 +2967,7 @@ export const useChatStore = defineStore('chat', () => {
             bio: contact.bio,
             isMain: contact.isMain,
           }))
-    const replacement = profileOwner.replaceAllProfiles(sourceProfiles, {
+    const replacement = profileOwner.replaceAllProfiles(enrichUntouchedBuiltInPersonaProfiles(sourceProfiles), {
       lifecycleState: hasLifecycleState ? persisted.contactsLifecycle : {},
     })
     if (!replacement.ok) return false

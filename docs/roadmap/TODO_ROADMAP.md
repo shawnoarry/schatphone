@@ -920,7 +920,7 @@ Secondary packages:
 
 ### 4.17 Contacts V3 Identity And Role Core
 
-Status: `P0 SCOPED_BASELINE_DONE / CONTACTS-V3-0 DONE 2026-08-27 / CONTACTS-V3-1 DONE 2026-08-27 / CONTACTS-V3-2A DONE 2026-08-27 / PERSONA-1 DONE 2026-08-27 / CONTACTS-V3-2B PERSONA-2 DONE 2026-08-27 / CONTACTS-V3-3 DONE 2026-08-27 / CONTACTS-V3-4 DECISION_FREEZE_COMPLETE / V3-4A DONE 2026-08-28 / V3-4B DONE 2026-08-28 / V3-4C DONE 2026-08-28 / V3-5 GATED`
+Status: `P0 SCOPED_BASELINE_DONE / CONTACTS-V3-0 DONE 2026-08-27 / CONTACTS-V3-1 DONE 2026-08-27 / CONTACTS-V3-2A STRUCTURE_DONE 2026-08-27 / PERSONA-1 DONE 2026-08-27 / CONTACTS-V3-2B PERSONA-2 DONE 2026-08-27 / CONTACTS-V3-2C PERSON_PROFILE_UX IN_PROGRESS / CONTACTS-V3-3 DONE 2026-08-27 / CONTACTS-V3-4 DECISION_FREEZE_COMPLETE / V3-4A DONE 2026-08-28 / V3-4B DONE 2026-08-28 / V3-4C DONE 2026-08-28 / V3-5 GATED`
 
 Goal:
 
@@ -940,12 +940,13 @@ Delivery order:
 
 1. `CONTACTS-V3-0 DONE 2026-08-27`: architecture and decision freeze, ownership map, migration inventory, per-world Self Profile decision, compatibility/rollback contract, first implementation file set;
 2. `CONTACTS-V3-1 DONE 2026-08-27`: Contacts Profile Owner foundation behind the current persisted shape, with Chat compatibility methods and backup shape preserved;
-3. `CONTACTS-V3-2A DONE 2026-08-27`: category carrier, four-person-type baseline, additive purposes and input types, manual WorldBook editing, read-first dynamic person card, person-specific extensions, current-world proposals, and review-only whole-description classification preserve legacy templates, old NPC classifications, stable IDs, values, and backup compatibility;
+3. `CONTACTS-V3-2A STRUCTURE DONE 2026-08-27`: category carrier, four-person-type baseline, additive purposes and input types, manual WorldBook editing, person-specific extensions, current-world proposals, and review-only whole-description classification preserve legacy templates, old NPC classifications, stable IDs, values, and backup compatibility. The user-facing individual-person overview and discoverable form entry are not complete;
 4. `CONTACTS-V3-2B / PERSONA-2 DONE 2026-08-27`: every row is accepted/edited or ignored, exact revisions are revalidated, and one Contacts Profile Owner write creates one confirmed revision with complete write-failure rollback;
 5. `CONTACTS-V3-3 DONE 2026-08-27`: formal Chat reads `chat_context`, Player Context reads three stable `event_eligibility` fields, and Work Hub reads `work_hub_matching` clues through bounded fail-closed projections; no full profile, event, or organization authority is copied or created;
 6. `CONTACTS-V3-4 DECISION FREEZE COMPLETE / V3-4A DONE 2026-08-28`: the contract separates reversible archive from permanent delete; the current foundation persists lifecycle/high-water/tombstone reservations, archives/restores non-Self profiles with rollback, upgrades complete backup to v5, and fails closed across archived-person Chat/projection/matching/new-target paths without rewriting permanent delete;
 7. `CONTACTS-V3-4B DONE 2026-08-28 / V3-4C DONE 2026-08-28`: the internal archive-first permanent-delete coordinator inventories impact, preserves/unlinks history, commits minimal tombstones, reserves IDs, and rolls every participating owner back on failure. The Contacts UI now adds one archived-people manager, read-only archived detail, rollback-safe Wallet payee suspension/restore, grouped impact, explicit unknown-reference retention, typed visible role-ID confirmation, and replaces the legacy active-person direct-delete entry with archive;
-8. `CONTACTS-V3-5`: consumer adoption without Contacts V2, Chat history, relationship, or backup regressions.
+8. `CONTACTS-V3-2C PERSON_PROFILE_UX IN PROGRESS`: the person-first readable overview, direct persona/manual form entry, grouped confirmed fields, user-language second-level editor/review, category choice for proposed fields, and untouched Eva/Jackie representative fixtures are landed locally for joint product review. Existing Chat, relationship, memory, lifecycle, backup, and save behavior remains preserved; do not claim the full Contacts visual redesign complete before user acceptance;
+9. `CONTACTS-V3-5`: consumer adoption without Contacts V2, Chat history, relationship, or backup regressions. It remains gated until the profile authoring and reading flow is understandable to users.
 
 First acceptance gate:
 
@@ -995,7 +996,7 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 ## 6. Current Execution Queue
 
 1. `P0 DONE 2026-08-28 / CMG-00 THROUGH CMG-10 AND DCF-01 THROUGH DCF-06 COMPLETE`: `CMG-10` is integrated at `98f1250`. Legacy relationship recovery now reports rejected and ungrouped rows without guessed links; combined complete-backup recovery preserves 501 relationship rows, 241 Event Instances, and 125 retained Mini Scenes through persistence and reopen; the restored gift journey remains one shared experience. The continuity-governance sequence is closed, and product-preview release proof becomes the next project-level gate.
-2. `P0 CONTACTS_V3_IDENTITY_AND_ROLE_CORE / CONTACTS-V3-0 THROUGH V3-3 DONE / V3-4A THROUGH V3-4C DONE 2026-08-28 / V3-5 GATED`: profile cards, Persona Confirmation, bounded Chat/Event/Work Hub projections, rollback-safe archive/restore, archive-first permanent deletion, archived Wallet suspension/restore, and the bounded user-facing lifecycle flow are integrated at `3126c1c`. Event/work-chain promotion and broader consumer adoption remain stopped.
+2. `P0 CONTACTS_V3_IDENTITY_AND_ROLE_CORE / CONTACTS-V3-0 THROUGH V3-3 FOUNDATION DONE / V3-4A THROUGH V3-4C DONE 2026-08-28 / V3-2C PERSON_PROFILE_UX IN_PROGRESS / V3-5 GATED`: profile-card structure, Persona Confirmation, bounded projections, and lifecycle safety are integrated. The individual-person page and discoverable authoring flow are now the active productization slice; Event/work-chain promotion and broader consumer adoption remain stopped.
 3. `P0 DONE 2026-07-22`: 4.9 first successful Chat activation loop.
 4. `P0 DONE 2026-08-09`: 4.9 current-save write/conflict safety and the release-local complete backup/recovery boundary; broader Repository migration, capacity reporting, and personal R2 remain separately reviewable architecture slices.
 5. `P1 PARTIAL_DONE`: 4.10 Camera and shared image-generation first slice is complete; the personal Gallery image-bed Adapter is accepted as an explicit separately promoted follow-up, while Gallery People curation and source-module callers remain separate.

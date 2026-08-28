@@ -207,6 +207,32 @@ test('Contacts opens as a phone contact list on mobile', async ({ page }) => {
   await expect(page.getByTestId('contacts-recent-2')).toContainText('Main contact')
   await page.getByTestId('contacts-recent-2').click()
   await expect(page.getByTestId('contacts-role-detail')).toContainText('Main contact')
+  await expect(page.getByTestId('contacts-person-profile-summary')).toContainText('Persona')
+  await expect(page.getByTestId('contacts-persona-paste-from-overview')).toBeVisible()
+  await expect(page.getByTestId('contacts-persona-fill-from-overview')).toBeVisible()
+
+  await page.getByTestId('contacts-persona-fill-from-overview').click()
+  await expect(page.getByTestId('contacts-world-profile-fields-editor')).toContainText(
+    'Edit Main contact\'s profile',
+  )
+  await expect(page.getByTestId('contacts-world-profile-fields-editor')).toContainText(
+    'Profile style',
+  )
+  await expect(page.getByTestId('contacts-world-profile-fields-editor')).toContainText(
+    'Who can read this',
+  )
+  await expect(page.locator('.contacts-world-field-type-chip')).toHaveCount(0)
+  await page.getByTestId('contacts-cancel-world-profile-fields').click()
+  await page.getByTestId('contacts-open-persona-classification').click()
+  await expect(page.getByTestId('contacts-persona-classification-panel')).toContainText(
+    'Organize Main contact\'s persona',
+  )
+  await expect(page.getByTestId('contacts-persona-classification-panel')).toContainText(
+    'Review it before saving',
+  )
+  await page.getByTestId('contacts-close-persona-classification').click()
+  await page.getByTestId('contacts-detail-sheet-back').click()
+
   await page.getByTestId('contacts-open-memories-sheet').click()
   await expect(page.getByTestId('contacts-open-relationship-sheet')).toHaveCount(0)
   await expect(page.getByTestId('contacts-detail-sheet-memories')).toBeVisible()

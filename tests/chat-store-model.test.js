@@ -26,6 +26,54 @@ describe('chat store model', () => {
     expect(messages[0].status).toBe('sent')
     expect(Array.isArray(messages[0].blocks)).toBe(true)
     expect(messages[0].blocks[0]?.type).toBe('text')
+    expect(store.getRoleProfileById(1)).toMatchObject({
+      templateLink: {
+        profileTemplateId: 'preset_basic_modern',
+        profileTemplateVersion: 1,
+      },
+    })
+    expect(store.getRoleProfileById(1).profileValues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ fieldId: 'identity', value: 'V 的私人 AI 助手' }),
+        expect.objectContaining({ fieldId: 'relationship_setting' }),
+        expect.objectContaining({ fieldId: 'life_habit' }),
+      ]),
+    )
+  })
+
+  test('enriches only untouched built-in persona fixtures during restore', () => {
+    const store = useChatStore()
+    const snapshot = store.createBackupSnapshot()
+    snapshot.roleProfiles = snapshot.roleProfiles.map((profile) => {
+      if (profile.id === 1) {
+        return {
+          ...profile,
+          revision: 1,
+          templateLink: {},
+          profileValues: [],
+          profileExtensions: { categories: [], fields: [] },
+        }
+      }
+      if (profile.id === 2) {
+        return {
+          ...profile,
+          revision: 2,
+          templateLink: {},
+          profileValues: [
+            { fieldId: 'identity', value: 'User-authored Jackie', visibilityLevel: 'hidden' },
+          ],
+        }
+      }
+      return profile
+    })
+
+    expect(store.restoreFromBackup(snapshot)).toBe(true)
+    expect(store.getRoleProfileById(1).profileValues).toEqual(
+      expect.arrayContaining([expect.objectContaining({ fieldId: 'identity', value: 'V 的私人 AI 助手' })]),
+    )
+    expect(store.getRoleProfileById(2).profileValues).toEqual([
+      expect.objectContaining({ fieldId: 'identity', value: 'User-authored Jackie' }),
+    ])
   })
 
   test('keeps stable role receiving accounts through Chat backup restore', () => {

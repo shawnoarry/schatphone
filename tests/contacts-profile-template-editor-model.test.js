@@ -237,8 +237,8 @@ describe('Contacts profile-template editor model interface', () => {
         controlKind: 'input',
         iconClass: 'fas fa-pen',
         typeLabel: 'Text',
-        helper: 'Enter this person\u2019s concrete value in the current world.',
-        placeholder: 'Enter this profile value',
+        helper: 'Enter this person\u2019s details.',
+        placeholder: 'Enter this person\u2019s details',
         tagPreview: [],
         hasTagPreview: false,
       },
@@ -248,7 +248,7 @@ describe('Contacts profile-template editor model interface', () => {
         iconClass: 'fas fa-align-left',
         typeLabel: 'Notes',
         helper: 'Use this for longer private context, relationship background, or world-specific notes.',
-        placeholder: 'Enter this profile value',
+        placeholder: 'Enter this person\u2019s details',
         tagPreview: [],
         hasTagPreview: false,
       },
@@ -257,8 +257,8 @@ describe('Contacts profile-template editor model interface', () => {
         controlKind: 'select',
         iconClass: 'fas fa-list-ul',
         typeLabel: 'Choice',
-        helper: 'Choose one option from this world template.',
-        placeholder: 'Enter this profile value',
+        helper: 'Choose one of the available options.',
+        placeholder: 'Enter this person\u2019s details',
         tagPreview: [],
         hasTagPreview: false,
       },
@@ -277,8 +277,8 @@ describe('Contacts profile-template editor model interface', () => {
         controlKind: 'input',
         iconClass: 'fas fa-user-tag',
         typeLabel: 'Person',
-        helper: 'Enter a related person or role ID; a picker can be added later.',
-        placeholder: 'Enter related person or role ID',
+        helper: 'Enter a related person\u2019s name or role number to link them.',
+        placeholder: 'Enter the related person\u2019s name',
         tagPreview: [],
         hasTagPreview: false,
       },
@@ -322,7 +322,7 @@ describe('Contacts profile-template editor model interface', () => {
     expect(profileTemplateDraftTagList(template.fields[3], draft)).toEqual(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'])
     expect(buildProfileTemplateEditorFieldRow({ id: 'empty_choice', type: PROFILE_TEMPLATE_FIELD_TYPES.SINGLE_SELECT }, draft, t)).toMatchObject({
       controlKind: 'input',
-      helper: 'No fixed options yet; enter a custom value for this world.',
+      helper: 'Enter the value that fits this person.',
     })
   })
 
@@ -363,8 +363,8 @@ describe('Contacts profile-template editor model interface', () => {
       inputType: 'text',
       typeLabel: 'Organization',
       iconClass: 'fas fa-building',
-      placeholder: 'Enter an organization, company, school, or team ID',
+      placeholder: 'Enter a company, school, team, or organization',
     })
-    expect(organization.helper).toContain('cannot grant workspace access')
+    expect(organization.helper).toBe('Enter a company, school, team, or other organization.')
   })
 })

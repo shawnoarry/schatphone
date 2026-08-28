@@ -50,10 +50,16 @@ export const createProfileTemplateVisibilityOptions = (t = defaultT) => [
 ]
 
 export const formatContactsProfileTemplateOption = (template = {}, t = defaultT) => {
-  if (template.scope === PROFILE_TEMPLATE_SCOPES.WORLD) {
-    return t(`\u5f53\u524d\u4e16\u754c \u00b7 ${template.title}`, `Current world \u00b7 ${template.title}`)
+  const knownTitles = {
+    preset_basic_modern: t('\u901a\u7528\u4eba\u7269\u8d44\u6599', 'Everyday profile'),
+    preset_abo: t('ABO \u4eba\u7269\u8d44\u6599', 'ABO profile'),
+    preset_xianxia: t('\u4ed9\u4fa0\u4eba\u7269\u8d44\u6599', 'Xianxia profile'),
   }
-  return t(`\u901a\u7528 \u00b7 ${template.title}`, `Universal \u00b7 ${template.title}`)
+  const title = knownTitles[template?.id] || template.title
+  if (template.scope === PROFILE_TEMPLATE_SCOPES.WORLD) {
+    return t(`\u5f53\u524d\u4e16\u754c \u00b7 ${title}`, `Current world \u00b7 ${title}`)
+  }
+  return t(`\u901a\u7528 \u00b7 ${title}`, `Universal \u00b7 ${title}`)
 }
 
 export const fieldMatchesProfileEntity = (field = {}, entityType = '') => {
@@ -76,10 +82,12 @@ export const profileVisibilityLevelLabel = (level = '', options = [], t = defaul
 
 export const buildProfileValueLabel = (value, templateFields = [], t = defaultT) => {
   if (!value?.fieldId) return t('\u81ea\u5b9a\u4e49\u5b57\u6bb5', 'Custom field')
-  const matchedField = templateFields.find((field) => field.id === value.fieldId)
-  if (matchedField?.label) return matchedField.label
+  if (value.fieldId === 'identity') return t('\u8eab\u4efd', 'Identity')
   if (value.fieldId === 'pheromone') return t('\u4fe1\u606f\u7d20', 'Pheromone')
   if (value.fieldId === 'relationship_setting') return t('\u5173\u7cfb\u8bbe\u5b9a', 'Relationship setting')
+  if (value.fieldId === 'life_habit') return t('\u6027\u683c\u4e0e\u4e60\u60ef', 'Personality and habits')
+  const matchedField = templateFields.find((field) => field.id === value.fieldId)
+  if (matchedField?.label) return matchedField.label
   return value.fieldId
 }
 
@@ -264,7 +272,7 @@ export function useContactsWorldFieldModel({
         key: field.id,
         field,
         value: selectedProfileValueMap.value.get(field.id) || null,
-        title: field.label || field.id,
+        title: profileValueLabel({ fieldId: field.id }),
         description: field.description || '',
         isTemplateField: templateFieldIds.has(field.id),
         isPersonExtension: selectedProfilePersonFieldIds.value.has(field.id),
@@ -340,12 +348,12 @@ export function useContactsWorldFieldModel({
   const selectedWorldFieldIntroText = computed(() =>
     selectedProfileTemplate.value
       ? t(
-          `\u6765\u81ea\u6a21\u677f\uff1a${selectedProfileTemplate.value.title}`,
-          `From template: ${selectedProfileTemplate.value.title}`,
+          '\u6309\u7c7b\u76ee\u8bb0\u5f55\u8eab\u4efd\u3001\u6027\u683c\u3001\u4e60\u60ef\u548c\u4f60\u4eec\u7684\u5173\u7cfb\u3002',
+          'Record identity, personality, habits, and your relationship in clear groups.',
         )
       : t(
-          '\u8fd9\u91cc\u586b\u5199\u7531\u4e16\u754c\u4e66\u6a21\u677f\u5b9a\u4e49\u7684\u89d2\u8272\u3001\u7528\u6237\u6863\u6848\u6216 NPC \u4e13\u5c5e\u8d44\u6599\u3002',
-          'Fill concrete role, self-profile, or NPC values defined by WorldBook templates.',
+          '\u4e3a\u8fd9\u4e2a\u4eba\u7269\u9009\u62e9\u4e00\u5f20\u8d44\u6599\u5361\uff0c\u7136\u540e\u7c98\u8d34\u4eba\u8bbe\u6216\u9010\u9879\u586b\u5199\u3002',
+          'Choose a profile style, then paste a persona or fill it in item by item.',
         ),
   )
 
