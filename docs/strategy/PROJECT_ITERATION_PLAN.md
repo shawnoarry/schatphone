@@ -2,7 +2,7 @@
 
 Updated: 2026-08-28
 
-Integrated baseline: `3126c1c`
+Integrated baseline: `98f1250`
 
 This is long-range sequencing guidance. It is not an implementation board and cannot override `docs/roadmap/TODO_ROADMAP.md`.
 
@@ -16,11 +16,11 @@ The project has already passed prototype viability, basic cross-module integrati
 
 ## 2. Current Sequence
 
-### Phase A: Continuity Closure
+### Phase A: Continuity Closure / Complete
 
-- execute `CMG-10` migration/recovery proof after integrated `CMG-08` and `CMG-09`;
-- preserve canonical history without unbounded prompt/list cost;
-- prove failure, reopen, backup/restore, and migration behavior.
+- `CMG-00` through `CMG-10` are complete at current acceptance;
+- canonical history remains separate from bounded prompt/list projections;
+- migration diagnostics, failure rollback, reopen, combined backup/restore, and gift continuity are proven without guessed links.
 
 ### Phase B: Product Preview Proof
 

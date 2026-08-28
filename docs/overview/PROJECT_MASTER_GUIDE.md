@@ -2,7 +2,7 @@
 
 Updated: 2026-08-28
 
-Integrated baseline: `3126c1c`
+Integrated baseline: `98f1250`
 
 Working tree: excluded local tool caches and QA/visual artifacts remain outside integrated capability and measurement claims.
 
@@ -299,9 +299,9 @@ Largest current files:
 
 ## 9. Current Execution Direction
 
-1. complete `CMG-10` migration/recovery proof after integrated `CMG-09` reading-cost closure;
-2. keep production Mini Scene trigger integration separately gated to a named accepted event family;
-3. close installed-PWA/relaunch, backup round trip, external protection, and named true-device evidence;
+1. close installed-PWA/relaunch, backup round trip, external protection, and named true-device evidence;
+2. preserve completed `CMG-00` through `CMG-10` continuity behavior while fixing only release-proof failures;
+3. keep production Mini Scene trigger integration separately gated to a named accepted event family;
 4. run World Pack true-device validation only where it overlaps the release matrix;
 5. keep hotspot decomposition, incremental typing, remote backup, production push, and secondary-module expansion on hold unless explicitly promoted.
 

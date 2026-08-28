@@ -25,6 +25,8 @@ Roadmap 4.9 now has a release-local implementation of the core recovery boundary
 
 The broader target in this contract remains intentionally incomplete: independent canonical-inventory-to-registry closure, predictive source/package/staging/destination capacity reporting, a cross-owner Repository root-generation switch, platform-confirmed local-save durability, the complete legacy unavailable-media presentation path, and personal R2/Worker transport. `src/lib/persistence.js` also remains `localStorage` primary with an IndexedDB mirror for non-Book owners. These follow-ups require separate architecture slices and must not be inferred from the release-local v3 milestone.
 
+`CMG-10 DONE 2026-08-28` adds focused continuity evidence without broadening that target: one current complete package jointly verifies and restores 501 Relationship Runtime rows, 241 Event Instances, and 125 retained/archived Mini Scenes, then persists and reopens them. Relationship Runtime V3 reports rejected and ungrouped V1/V2 legacy rows without inventing links, and the restored gift journey remains one explicit shared experience. This evidence cannot recover rows already discarded by older capped writers.
+
 ## 1. User Outcome
 
 The user must be able to create a backup, keep several independently usable versions, inspect whether a version is usable, and restore one without risking the current save before validation succeeds.

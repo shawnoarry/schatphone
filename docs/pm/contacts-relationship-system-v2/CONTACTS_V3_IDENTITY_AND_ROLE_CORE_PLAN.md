@@ -326,7 +326,7 @@ Contacts V3 identity foundation is not complete until:
 
 ## 11. Next Implementation Slice
 
-`CONTACTS-V3-2A`, Persona Confirmation, the approved `CONTACTS-V3-3` purpose-specific projections, and V3-4A/V3-4B/V3-4C lifecycle slices are complete. V3-5 consumer adoption remains gated; the live repository queue returns to `CMG-09`.
+`CONTACTS-V3-2A`, Persona Confirmation, the approved `CONTACTS-V3-3` purpose-specific projections, and V3-4A/V3-4B/V3-4C lifecycle slices are complete. V3-5 consumer adoption remains gated; the CMG sequence is complete through `CMG-10`, and no later consumer adoption is authorized by that closure.
 
 `CARD-3` added manual category/field editing to the existing WorldBook profile-template management flow. `CARD-4` renders the confirmed structure inside the existing Contacts person page, and `CARD-5` now lets the same page add person-specific categories or fields through Contacts-owned `profileExtensions`. Draft cancellation changes neither the person nor the template; person-only structure remains isolated; only explicit promotion writes one current-world template version; other people keep their previous template/version and receive no automatic values. These slices reuse the existing template IDs/versions, Contacts values, visibility rules, adaptation review, AI draft helpers, system-managed IDs, storage, and backup path; they do not create a parallel template format, silently save AI output, rewrite confirmed Self Profile values, infer old NPC importance, migrate consumers, promote Work Hub, or create a new event family.
 

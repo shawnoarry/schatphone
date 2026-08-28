@@ -2,13 +2,13 @@
 
 Updated: 2026-08-28
 
-Integrated alignment baseline: `3126c1c`.
+Integrated alignment baseline: `98f1250`.
 
 This is the current handoff for architecture cleanup, state ownership, persistence, security, and release-quality work.
 
 ## 1. Current Status
 
-Status: `IN_PROGRESS / CMG-08_DONE 2026-08-27 / CMG-09_DONE 2026-08-28 / CMG-10_NEXT`
+Status: `CMG_SEQUENCE_DONE / CMG-00 THROUGH CMG-10 DONE 2026-08-28`
 
 Roadmap owner: 4.5 Architecture, Security, And Documentation Maintenance.
 
@@ -21,8 +21,9 @@ Current active architecture slice:
 - same-container tabs use a fail-closed writer boundary: after the safe wait times out, the later page remains a read-only preview with retry and refresh-current-save actions; cooperative release triggers the same bounded retry automatically, while force takeover and last-write-wins remain excluded;
 - persistent-storage permission is never requested on first launch; the first qualifying high-volume durable action asks in context, while Settings exposes current status and explicit retry;
 - authoritative Chat/role/relationship/memory/user-document records and still-referenced assets cannot be silently or irreversibly deleted; cold archival must remain reversible. A complete Mini Scene is optional presentation history: explicit user deletion may remove the retained presentation, but never the canonical event result, approved role memory, diary/timeline projection, or owner audit evidence;
-- roadmap 4.5-CMG governs the confirmed shared-experience, role-memory, Event Instance, Mini Scene, and persistence-result defects through fixed IDs. `CMG-00` through `CMG-09` and `DCF-01` through `DCF-06` are complete; `CMG-10` is now dependency-unblocked but remains a separate slice;
+- roadmap 4.5-CMG governs the confirmed shared-experience, role-memory, Event Instance, Mini Scene, and persistence-result defects through fixed IDs. `CMG-00` through `CMG-10` and `DCF-01` through `DCF-06` are complete at current acceptance;
 - `CMG-09 DONE 2026-08-28` at `3126c1c` preserves storage shapes and every owner record while indexing Relationship Runtime memories by person and Mini Scene retained history by state. Contacts/World Hub clone only the requested page. Chat consumes one current relationship, at most 3 relevant role memories / 720 characters, and at most 2 non-archived shared-experience summaries / 480 characters, deduplicated by stable experience ID; raw source modules/IDs, supporting-record counts, and recent relationship-event rows do not enter the prompt;
+- `CMG-10 DONE 2026-08-28` at `98f1250` upgrades Relationship Runtime to V3 with a rebuildable restore report for rejected and ungrouped legacy rows. Missing memory or experience links are never inferred. One verified complete backup jointly restores 501 relationship events, 241 Event Instances, and 125 retained Mini Scenes, persists them, and reopens them; the gift journey also survives owner-snapshot recovery as one shared experience. Earlier rows already discarded by old capped writers remain unrecoverable;
 - any canonical content formally published, confirmed, applied, or admitted into an owning module's history is durable when it can be revisited, referenced, or affect continuity, regardless of user/AI/system origin. A generated presentation remains temporary until the user explicitly chooses to retain the complete Mini Scene;
 - full AI prompts, raw provider responses, transport payloads, uncommitted drafts, and rebuildable projections remain non-authoritative; canonical committed content, authoritative state/facts, cross-module references, and minimum provenance are durable;
 - text AI callers now share a transient stable-prefix/dynamic-context envelope: Chat and Event Text Composer consume it without transferring fact ownership, official OpenAI requests receive conservative cache hints, unmanaged providers keep their prior shape, and only managed official-OpenAI token usage can report a cache hit; cache routing identities are opaque rather than readable role identifiers;
@@ -382,19 +383,19 @@ Current execution record:
 | Field | Value |
 | --- | --- |
 | Plan baseline | `DCF-04 DONE 2026-08-22` at `26534bd`; `DCF-06 DONE 2026-08-22` at `ec31855`; both commits are based on synchronized Calendar-evidence baseline `1d41869`. Earlier CMG/DCF completion evidence remains in the completion log below. |
-| Next dependency-safe items | `CMG-10` is dependency-unblocked after `CMG-09` integration; Contacts V3-5 and visual work remain separate. |
-| Active item | `CMG-09 / BOUNDED_CONTINUITY_READING / DONE 2026-08-28` |
+| Next dependency-safe items | The CMG sequence is complete. Product-preview release proof is the next project-level gate; Contacts V3-5, Work Hub event promotion, and visual work remain separate. |
+| Active item | `CMG-10 / MIGRATION_AND_RECOVERY_CLOSURE / DONE 2026-08-28` |
 | Integration controller PC | current local Codex task |
 | PC-A physical machine / role | current PC / shared-`main` implementation, validation, and documentation alignment |
 | PC-B physical machine / role | none for this slice |
-| Source branch, base, and worktree | `main`; integrated commit `3126c1c`; `D:\github\schatphone` existing checkout, no separate worktree |
+| Source branch, base, and worktree | `main`; integrated behavior commit `98f1250`; `D:\github\schatphone` existing checkout, no separate worktree |
 | Existing dirty/untracked inventory | Only excluded visual/QA artifacts, tool caches, and `tmp/**` remain untracked; none may be reset or cleaned. |
-| Risk lane | Elevated shared-checkout risk plus prompt-content regression, hidden whole-history scans, accidental storage-shape change, and attribution of Contacts-owned edits in shared files. |
-| Reserved paths | The CMG-09 hunks in `src/stores/relationshipRuntime.js` and `src/stores/miniScene.js`; `tests/continuity-reading-cost.test.js`; focused updates in `tests/relationship-runtime-store.test.js` and `tests/chat-worldbook-binding-visibility.test.js`; and matching roadmap/package/Chat/architecture status text. Contacts lifecycle, profile binding cleanup, visual work, `.codex/**`, and `tmp/**` are excluded. |
-| Acceptance | Preserve all owner history and storage formats; page Contacts/World Hub reads without cloning unrelated rows; emit one current relationship plus at most 3 relevant memories / 720 characters and 2 non-archived stable-ID-deduplicated shared experiences / 480 characters; exclude raw source metadata, supporting counts, and recent relationship rows from Chat prompts. |
-| Validation | Focused CMG-09 coverage passes 6 files / 56 tests; real shared-experience consumer coverage passes 5 files / 38 tests; corrected Chat/Runtime focus passes 4 files / 42 tests; full Vitest passes 340 files / 2571 tests; lint, the 706-module production build, governance 19/19, and `git diff --check` pass. No route or UI changed, so no E2E or physical-device claim. |
-| Integration state | `INTEGRATED_LOCAL / DONE 2026-08-28` at `3126c1c`; exact staged-file review matched all 70 approved files. |
-| Remote synchronization | local `main` contains `3126c1c`; `origin/main` remains `dc26226` because no push was authorized. |
+| Risk lane | Elevated shared-checkout and persistence-schema risk, with legacy migration, complete-backup integrity, long-history retention, rollback, and unrelated visual-work exclusion. |
+| Reserved paths | Relationship Runtime and persistence inventory; focused relationship, gift, complete-backup, Event Instance, and Mini Scene recovery tests; matching roadmap/package/architecture status text. Contacts lifecycle, visual work, `.agents/**`, and `tmp/**` are excluded. |
+| Acceptance | Read V1/V2/V3 relationship carriers without guessed links; report rejected or ungrouped rows; preserve current backup and rollback behavior; prove 501/241/125 owner history, restore, persistence, reopen, and the complete gift journey. |
+| Validation | Focused recovery coverage passes 7 files / 54 tests; full Vitest passes 341 files / 2573 tests; lint, the 706-module production build, governance 19/19, and `git diff --check` pass. No route or UI changed, so no E2E or physical-device claim. |
+| Integration state | `INTEGRATED_LOCAL / DONE 2026-08-28` at `98f1250`; the exact five-file behavior/test scope was reviewed before commit. |
+| Remote synchronization | local `main` contains `98f1250`; `origin/main` remains `dc26226` because no push was authorized. |
 
 For every item start, replace the current execution record with the task ID, executor PC, worktree path, branch, exact base commit, dirty/untracked inventory, risk lane, reserved paths, acceptance, and required checks. For every workgroup handoff, record the source commit and `READY_FOR_INTEGRATION_REVIEW` without changing the roadmap row to `DONE`. After integration and controller validation, append a compact completion entry below and update the canonical ledger with the date and evidence commit.
 
@@ -425,7 +426,9 @@ Completion log:
 
 17. `CMG-09 DONE 2026-08-28` at `3126c1c`: Relationship Runtime indexes per-person memory aggregates, Mini Scene indexes retained/archived history, Contacts and World Hub clone only requested pages, and Chat receives one current relationship plus bounded relevant-memory and active-shared-experience summaries without raw supporting records. Storage formats and complete owner history remain unchanged. Focused coverage passes 6 files / 56 tests; real shared-experience consumers pass 5 files / 38 tests; full Vitest passes 340 files / 2571 tests; lint, the 706-module build, governance 19/19, and diff checks pass. No UI or E2E change.
 
-`CMG-06` is complete at `f9f14f9`; `CMG-07` is complete on the Event Instance V2 retention/migration paths; `DCF-04` and `DCF-06` are integrated locally at the commits above. `CMG-08` is integrated, and `CMG-09` is integrated at `3126c1c`; `CMG-10` is the next dependency-safe CMG item.
+18. `CMG-10 DONE 2026-08-28` at `98f1250`: Relationship Runtime V3 accepts V1/V2/V3 carriers and exposes bounded restore diagnostics for rejected and ungrouped rows without fabricating memory or experience links. A current complete backup jointly carries 501 relationship events, 241 Event Instances, and 125 retained/archived Mini Scenes through empty-container restore, persistence, and reopen. The gift journey rebuilds from restored Shopping, Chat, Calendar/Reminders, Wallet, Phone, and Relationship snapshots with three ordered progress stages, five owner-reference classes, and one role memory. Focused coverage passes 7 files / 54 tests; full Vitest passes 341 files / 2573 tests; lint, the 706-module build, governance 19/19, and diff checks pass. Previously truncated rows are not claimed recoverable; no UI or E2E change.
+
+`CMG-06` is complete at `f9f14f9`; `CMG-07` is complete on the Event Instance V2 retention/migration paths; `CMG-08` is integrated; `CMG-09` is integrated at `3126c1c`; and `CMG-10` closes the sequence at `98f1250`. Contacts V3-5 and new Work Hub/Event behavior remain separately gated.
 
 The 2026-07-22 product-release audit changes that order through roadmap 4.9:
 
@@ -572,12 +575,12 @@ One slice must preserve storage shapes and product behavior, add focused tests, 
 
 ## 8. Validation
 
-Current `CMG-09` validation on 2026-08-28:
+Current `CMG-10` validation on 2026-08-28:
 
-- focused bounded-reading coverage passes 6 files / 56 tests, real shared-experience consumer coverage passes 5 files / 38 tests, and the corrected Chat/Runtime focus passes 4 files / 42 tests;
-- full Vitest passes 340 files / 2571 tests when explicitly scoped with `npm.cmd run test -- --dir tests`, avoiding unrelated untracked `.codex/**` tool tests;
+- focused migration/recovery coverage passes 7 files / 54 tests, including Relationship Runtime migration diagnostics, complete backup, Event Instance, Mini Scene, persistence inventory, and restored gift continuity;
+- full Vitest passes 341 files / 2573 tests when explicitly scoped with `npm.cmd run test -- --dir tests`, avoiding unrelated untracked tool and visual artifacts;
 - project lint, the 706-module production build, governance 19/19, and `git diff --check` pass;
-- no route, visible UI, persistence schema, or owner-history retention rule changed, so no new Playwright path or physical-device claim was required.
+- no route or visible UI changed, so no new Playwright path or physical-device claim was required. Relationship Runtime advances from V2 to V3 with V1/V2 compatibility and no owner-history deletion.
 
 Current `CMG-04` validation on 2026-08-21:
 

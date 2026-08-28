@@ -135,7 +135,7 @@ Contacts V2 and memory 4.2 are complete at current acceptance. Do not restart th
 
 `CONTACTS-V3-0 Architecture And Decision Freeze` and `CONTACTS-V3-1 Contacts Profile Owner Foundation` are complete.
 
-The `CONTACTS-V3-4 Role Lifecycle` decision freeze and V3-4A/V3-4B/V3-4C implementation slices are complete in the current working tree. Do not begin V3-5 consumer adoption automatically. The live repository queue returns to `CMG-09`; if Contacts is explicitly resumed later, V3-5 must start with a bounded consumer inventory and adoption decision.
+The `CONTACTS-V3-4 Role Lifecycle` decision freeze and V3-4A/V3-4B/V3-4C implementation slices are complete in the integrated tree. Do not begin V3-5 consumer adoption automatically. The CMG sequence is now complete through `CMG-10`; if Contacts is explicitly resumed later, V3-5 must start with a bounded consumer inventory and adoption decision.
 
 Live execution record: `CONTACTS_V3_2A_EXECUTION_PLAN.md`. Its card, persona review/save, formal Chat context, read-only Event identity, and Work Hub matching slices are complete.
 
@@ -148,7 +148,7 @@ Current safe sequence:
 5. leave V3-5 consumer adoption gated until the roadmap explicitly promotes one bounded consumer slice;
 6. stop before Work Hub organization ownership, ordinary work chains, Work Hub events, Chronicle, Community/Media, SMS, EVE-5, Mini Scene expansion, or another event family.
 
-Work Hub organization ownership, the first Work Hub-native event, and broader identity-conditioned Event Runtime work remain separately gated after this Contacts identity foundation. Integrated `CMG-08` remains separate Mini Scene persistence work, while integrated `CMG-09` bounds Relationship Runtime/Chat reads without becoming Contacts V3 lifecycle scope.
+Work Hub organization ownership, the first Work Hub-native event, and broader identity-conditioned Event Runtime work remain separately gated after this Contacts identity foundation. Integrated `CMG-08` remains separate Mini Scene persistence work; `CMG-09` bounds Relationship Runtime/Chat reads; and `CMG-10` closes migration/recovery proof without becoming Contacts V3 lifecycle scope.
 
 The older cross-device plans remain implementation history. They are not current task sources unless the live roadmap promotes an exact remaining slice.
 

@@ -12,7 +12,7 @@ Do not restart completed Contacts 4.1, memory 4.2, World Hub 4.3, or service-acc
 
 The best next work is:
 
-1. finish the promoted roadmap 4.5-CMG plan by executing `CMG-10` after integrated `CMG-09`, preserving its history and recovery rules;
+1. preserve the completed roadmap 4.5-CMG sequence through `CMG-10` while product-preview proof exercises its history and recovery rules;
 2. preserve the completed non-active IndexedDB/Book Batch 2B foundation, active Book-only reference cutover, browser evidence, and unchanged legacy fallback;
 3. keep Gallery/R2, dual write, legacy Book deletion, garbage collection, and each non-Book owner migration separately approved inside the relevant CMG retention slice;
 4. security/toolchain hardening and release-gate alignment;
@@ -160,11 +160,12 @@ Current contract status:
 - pure request/draft/artifact/policy schemas, the registered Event Runtime text caller, Book structured-profile/regex validation, deterministic world/profile resolution, persistent policies/bindings/audit, and the global Text Presenter are landed;
 - `CMG-08` adds explicit complete-scene retention, same-occurrence reuse, new-revision regeneration, retained/archived World Hub paging, and removal of the historical 120-artifact cap;
 - `CMG-09` bounded retained-history indexing is integrated at `3126c1c`; no production trigger Adapter, safe regex execution engine, built-in structured transform profile, interactive HTML, or broader source Adapter is implemented.
+- `CMG-10` migration/recovery closure is integrated at `98f1250`: Relationship Runtime reports rejected or ungrouped legacy rows without guessed links, combined long-history backup/reopen is proven, and the gift journey remains one experience after owner snapshots restore.
 
-The next active continuity gate is not another Mini Scene feature. It is roadmap-controlled `CMG-10` migration/recovery proof after integrated `CMG-09`:
+The continuity gate is complete at current acceptance:
 
-- preserve full retained Mini Scene history while returning only requested World Hub pages;
-- preserve storage/backup compatibility and prove reopen, restore, rollback, and high-row-count behavior;
+- full retained Mini Scene history remains separate from requested World Hub pages;
+- storage/backup compatibility, reopen, restore, rollback, and high-row-count behavior are covered;
 - keep production triggers, profile-binding UI, safe transforms, HTML, and additional caller expansion separately promoted.
 
 Do not use CMG reading/recovery closure to add regex execution, iframe/HTML presentation, or Calendar/Map/Chat triggers. Those remain separate stages.

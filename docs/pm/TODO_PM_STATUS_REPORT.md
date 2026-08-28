@@ -2,7 +2,7 @@
 
 Updated: 2026-08-28
 
-Integrated baseline: `3126c1c`
+Integrated baseline: `98f1250`
 
 Working tree: excluded local tool caches and QA/visual artifacts remain outside integrated capability claims.
 
@@ -16,10 +16,9 @@ The project is not yet a production-hardened final release. Named physical-devic
 
 ## 2. Current Execution Order
 
-1. `CMG-10`: close migration, restore, failure, reopen, and high-row-count proof after integrated `CMG-09` bounded continuity reading.
-2. Preserve Contacts/World Hub paging and Chat prompt bounds while proving legacy and recovery behavior.
-3. Complete the remaining hosted product proof: installed PWA, relaunch, backup round trip, external protections, and named true-device evidence.
-4. Run World Pack true-device validation only where it overlaps the release device matrix.
+1. Complete the remaining hosted product proof: installed PWA, relaunch, backup round trip, external protections, and named true-device evidence.
+2. Preserve the completed `CMG-00` through `CMG-10` continuity contracts while fixing only failures found by product-preview proof.
+3. Run World Pack true-device validation only where it overlaps the release device matrix.
 
 Hotspot decomposition, incremental typing, personal R2/Worker, production push, broader Gallery/non-Book migration, World Setting W2, and secondary-module expansion remain on hold until the first usable product preview unless the user explicitly changes priority.
 
@@ -35,7 +34,7 @@ This table summarizes package status. It does not replace any package's named mi
 | Map / Calendar / Reminders | `INTEGRATED_LOCAL / scoped milestones` | Calendar V3 plus storage V4 handoffs, Agenda Journey/Activity Session, Mail and Work Hub schedule proposals, Map journeys/Footprints, 104 Seoul places with reviewed media and 92 exact card heroes | source-conflict actions, remaining place-media/hero decisions, PWA/true-device proof, later MJE stages | `docs/pm/map-calendar-reminders/STATUS_AND_HANDOFF.md` |
 | Commerce / Finance / Assets | `PARTIAL_DONE` | eleven Shopping storefronts, paid checkout and support flows, fifteen Food Delivery entries with scoped carts/orders, Wallet cards/activity/statements/payees/receipt sharing, ordinary consequence proof | refund/cancellation settlement, tracking shares, Assets/Stock depth, named physical-device proof | `docs/pm/commerce-finance-and-assets/STATUS_AND_HANDOFF.md` |
 | Visual / IA | `PARTIAL_DONE` | Home/App Store systems, thirteen S1 App previews plus Notification Center, day/night and authored theme/icon foundations, visual workflow and Playwright quality gate | cross-module consistency, real-device polish, and later approved focused slices | `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md` |
-| Module Architecture | `IN_PROGRESS / CMG-00 THROUGH CMG-09 DONE` | release-local backup/recovery, same-container writer safety, Book Repository cutover, shared Image/TTS/Music contracts, CMG-00 through CMG-09 and DCF repairs | CMG-10 is next; later hotspot/adapter/type work remains gated | `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` |
+| Module Architecture | `CMG-00 THROUGH CMG-10 DONE` | release-local backup/recovery, same-container writer safety, Book Repository cutover, shared Image/TTS/Music contracts, complete CMG continuity closure, and DCF repairs | product-preview proof is next; later hotspot/adapter/type work remains gated | `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` |
 
 ## 4. What Users Can Do Now
 

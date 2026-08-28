@@ -2,7 +2,7 @@
 
 Updated: 2026-08-28
 
-Integrated baseline: `3126c1c`
+Integrated baseline: `98f1250`
 
 ## 1. Architecture Goals
 
@@ -283,6 +283,8 @@ The generic provider contract supports user-authorized JSON search APIs that ret
 - one continuing matter is one shared experience with progress updates, a concise role-memory summary, and references to owner-native supporting records. Summaries are grouped by experience or subject, never by an arbitrary row count;
 - Chat consumes current relationship truth from Relationship Runtime exactly once. Integrated `CMG-09` bounds that projection to 3 relevant role memories / 720 characters and 2 non-archived stable-ID-deduplicated shared-experience summaries / 480 characters; source modules/IDs, supporting-record counts, and raw recent relationship events remain owner-review data rather than prompt content. Profile premise/classification remains context and cannot become a competing current answer;
 - Relationship Runtime and Mini Scene may maintain rebuildable in-memory indexes for person/state paging, but those indexes do not change persisted shapes or authorize retention loss; Contacts and World Hub return only the requested page while every owner record remains durable;
+- Relationship Runtime V3 reads V1/V2/V3 carriers and exposes a bounded rebuildable restore report. Invalid-target rows are rejected with a reason; valid rows without an explicit `memoryKey` remain owner history but are not grouped. Migration never derives `memoryKey` or `sharedExperienceId` from text, source module, or source ID;
+- complete-backup recovery jointly preserves expanded Relationship Runtime, Event Instance V2, and retained Mini Scene histories through persistence and reopen. This proves surviving owner records; it does not reconstruct rows already discarded by older capped writers;
 - cleanup helpers remove or anonymize source-linked data through explicit handlers.
 
 ### Media And Sharing

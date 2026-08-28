@@ -2,7 +2,7 @@
 
 Updated: 2026-08-28
 
-Measurement baseline: static inventory remains integrated `f06a575`; behavioral status is aligned through integrated `3126c1c`, while excluded local cache and QA/visual artifacts remain outside integrated claims.
+Measurement baseline: static inventory remains integrated `f06a575`; behavioral status is aligned through integrated `98f1250`, while excluded local cache and QA/visual artifacts remain outside integrated claims.
 
 Purpose: engineering handoff reference for module maturity, ownership risk, edit cost, and validation posture.
 
@@ -14,9 +14,9 @@ SchatPhone is in:
 
 > integrated product preview + durable continuity closure + release hardening
 
-The strongest loops are real and test protected. The main risks are uneven finish, concentrated implementation cost, remaining continuity migration/recovery proof, and release claims that still lack installed-PWA and named physical-device proof.
+The strongest loops are real and test protected. The main risks are uneven finish, concentrated implementation cost, and release claims that still lack installed-PWA and named physical-device proof.
 
-The original four roadmap baselines remain complete. Since then the project has integrated the Camera/Image Generation and Music first slices, release-local recovery and Book Repository reference cutover, CMG shared-experience repairs through `CMG-09`, Event Runtime/Calendar collaborations, commerce checkout/support flows, Map media expansion, Appearance theme/icon foundations, and the thirteen-App S1 shell portfolio. Optional Mini Scene retention, retained-history management, and bounded continuity reading are integrated; `CMG-10`, production triggers, profile binding, safe transforms, and HTML remain gated.
+The original four roadmap baselines remain complete. Since then the project has integrated the Camera/Image Generation and Music first slices, release-local recovery and Book Repository reference cutover, CMG shared-experience and recovery closure through `CMG-10`, Event Runtime/Calendar collaborations, commerce checkout/support flows, Map media expansion, Appearance theme/icon foundations, and the thirteen-App S1 shell portfolio. Production Mini Scene triggers, profile binding, safe transforms, and HTML remain gated.
 
 ## 2. Maturity Tiers
 
@@ -27,7 +27,7 @@ The original four roadmap baselines remain complete. Since then the project has 
 | Lock / shell navigation | stable | preserve notification and lock-return contracts |
 | Home entry system | stable but large | treat as shell infrastructure; avoid domain logic |
 | Chat core | stable but very heavy | extract named seams before adding another side system |
-| Contacts / relationship baseline | stable V2 baseline with CMG hardening partial | preserve Relationship Runtime as the one current truth; retain completed 500/300 cap and disclosure repairs while finishing dependent CMG reading/recovery work |
+| Contacts / relationship baseline | stable baseline with CMG hardening complete | preserve Relationship Runtime as the one current truth, retain completed cap/grouping/reading/recovery contracts, and do not infer missing legacy links |
 | Gallery | stable image-asset platform service; local material-library contract confirmed | keep one reusable-media owner, require explicit local retention, use one whole-library backup choice, preserve URLs as URLs, and do not turn backup into offload |
 | Image Generation | shared first slice implemented; Camera is the visible owner | keep provider protocols behind the shared module, back up public configuration only, keep credentials/candidates device-local, and require explicit Gallery retention |
 | persistence / backup / diagnostics | release-local v3 complete backup/recovery, product-level recovery, same-container one-writer/read-only-preview protection with automatic cooperative handoff, and Book-only Repository cutover browser-tested | keep one-container/one-save, complete versions, no sync/merge; preserve non-Book cutover gates and pursue capacity/root-generation/R2 work only as separate architecture slices |
@@ -51,7 +51,7 @@ The original four roadmap baselines remain complete. Since then the project has 
 
 | Area | Judgment | Constraint |
 | --- | --- | --- |
-| Event Runtime | guarded foreground baseline with Event Instance retention repair, Mini Scene optional retention, and EVE/CJA slices integrated | conservative event families only; production Mini Scene triggers and `CMG-10` recovery proof remain separately gated |
+| Event Runtime | guarded foreground baseline with Event Instance retention/recovery proof, Mini Scene optional retention, and EVE/CJA slices integrated | conservative event families only; production Mini Scene triggers remain separately gated |
 | Mini Scene | AI-required text shell plus optional retained history integrated; production triggers still gated | preserve bounded retained-history reads; HTML and broader source Adapters remain staged |
 | World Hub | narrow review baseline | no broad value/funds/unlock/freeform editor |
 | Groups | target/member/reply-mode V1 | no full multi-speaker orchestration |
@@ -181,12 +181,11 @@ Keep review-first semantics. The push relay must be described and deployed as a 
 
 ## 6. Current Engineering Order
 
-1. complete `CMG-10` migration/recovery proof after integrated `CMG-09`, without deleting owner history;
-2. preserve the bounded Contacts/World Hub paging and Chat prompt contracts while proving legacy/high-row-count behavior;
+1. finish external protection, installed-PWA/relaunch, backup round trip, and named true-device proof over the existing hosted baselines;
+2. preserve completed CMG migration/recovery, bounded Contacts/World Hub paging, and Chat prompt contracts during release proof;
 3. preserve the accepted complete-backup, same-container writer, Book Repository, and rollback boundaries while keeping non-Book/R2 migration separately approved;
-4. finish external protection, installed-PWA/relaunch, backup round trip, and named true-device proof over the existing hosted baselines;
-5. run World Pack device validation only where it overlaps that release matrix;
-6. keep hotspot decomposition, cross-store depth, and incremental typing on hold until the product-preview gate or an explicit user promotion.
+4. run World Pack device validation only where it overlaps that release matrix;
+5. keep hotspot decomposition, cross-store depth, and incremental typing on hold until the product-preview gate or an explicit user promotion.
 
 ## 7. Work To Avoid
 

@@ -2,7 +2,7 @@
 
 Updated: 2026-08-28
 
-Integrated baseline: `3126c1c`
+Integrated baseline: `98f1250`
 
 Document state: `CANDIDATE_POOL / NON_EXECUTABLE`
 
@@ -14,7 +14,7 @@ Purpose: retain unpromoted module-deepening ideas without creating a second road
 - Package `STATUS_AND_HANDOFF.md` files own detailed domain progress, evidence, exclusions, and the next safe slice.
 - This file records candidate themes only. It does not assign P0/P1, `IN_PROGRESS`, or `DONE`.
 - A candidate becomes executable only after the user or live roadmap promotes one exact scope and the owning package records it.
-- Current accepted work such as integrated `CMG-08`/`CMG-09`, next `CMG-10`, installed-PWA/relaunch proof, backup round trip, external protections, and named true-device proof stays in the roadmap and is not duplicated here.
+- Current accepted work such as completed `CMG-08` through `CMG-10`, installed-PWA/relaunch proof, backup round trip, external protections, and named true-device proof stays in the roadmap and is not duplicated here.
 
 ## 2. Current Candidate Themes
 

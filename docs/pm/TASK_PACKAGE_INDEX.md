@@ -4,7 +4,7 @@ Updated: 2026-08-28
 
 This file is the PM-facing and handoff-facing index for all current task packages.
 
-Integrated alignment baseline: `3126c1c`.
+Integrated alignment baseline: `98f1250`.
 
 Package handoffs preserve scoped milestone detail. A whole-project report may link to these statuses, but it must not replace a child task's ID, commit, validation, exclusions, or remaining stage. See `docs/process/DOCUMENT_GOVERNANCE.md`.
 
@@ -33,10 +33,10 @@ Current routing note:
 
 ## Current Alignment Check
 
-Checked against integrated baseline `3126c1c` on 2026-08-28:
+Checked against integrated baseline `98f1250` on 2026-08-28:
 
 - all seven package quartets remain present and retain their own detailed milestones, validation, exclusions, and next-safe-slice records;
-- the Module Architecture handoff records integrated `CMG-08`/`CMG-09` and next `CMG-10` without creating another execution board;
+- the Module Architecture handoff records `CMG-08` through `CMG-10` complete without creating another execution board;
 - the Commerce handoff header now covers its integrated 2026-08-24 checkout/support work;
 - Chat records the CMG-09 bounded prompt-consumer contract; Contacts retains its separate lifecycle and relationship-owner detail;
 - Event and Map/Calendar handoffs already carry the current integrated scoped state;
