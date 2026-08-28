@@ -1,6 +1,6 @@
 # SchatPhone Development Tooling
 
-Updated: 2026-08-26
+Updated: 2026-08-28
 
 Purpose: record shared development-tool assumptions, local skill inventory, and cross-PC setup rules for SchatPhone.
 
@@ -260,6 +260,7 @@ The current externally sourced repo-local skills recorded in `.agents/skills` an
 | `frontend-logic-design` | Information architecture, navigation depth, and interaction-logic review | `docs/process/VISUAL_WORKFLOW.md` and `docs/process/EVENT_WORKFLOW.md` when event surfaces need IA cleanup |
 | `image-to-code` | Pixel-level 750px source-image, screenshot, or design-export restoration into code plus high-resolution PNG slices | `docs/process/VISUAL_WORKFLOW.md` |
 | `gpt-image` | Scenario-specific GPT Image prompt/reference atlas for product, food, brand, poster, UI, infographic, illustration, character, and edit workflows; execution remains separately governed | `docs/process/VISUAL_WORKFLOW.md` |
+| `gpt-image-2-style-library` | Compact GPT-Image2 industrial-template, style-tag, scene-tag, and example-case selector for production prompt planning | `docs/process/VISUAL_WORKFLOW.md` |
 | `redesign-existing-projects` | Audit-first visual refinement of an existing app without replacing its framework, behavior, or product hierarchy | `docs/process/VISUAL_WORKFLOW.md` |
 | `ui-ux-pro-max` | Local searchable UI/UX reference data for product patterns, palettes, typography, accessibility, Vue guidance, icons, charts, and motion | `docs/process/VISUAL_WORKFLOW.md` |
 | `gsap-core`, `gsap-frameworks`, `gsap-performance`, `gsap-plugins`, `gsap-scrolltrigger`, `gsap-timeline`, `gsap-utils` | Official GSAP API, Vue lifecycle, plugin, sequencing, scroll-motion, utility, reduced-motion, and performance guidance | `docs/process/VISUAL_WORKFLOW.md` |
@@ -420,6 +421,27 @@ npx.cmd -y skills@latest add wuyoscar/gpt_image_2_skill --skill gpt-image --agen
 ```
 
 Normal secondary-PC setup receives the vendored directory and lock entry through Git. A deliberate refresh must repeat the source/security review and update the recorded commit/hash before replacing the reviewed copy.
+
+### 8.2.1 GPT-Image2 Style Library Skill
+
+`gpt-image-2-style-library` is a vendored project-local style and industrial-template selector, not an image-generation runtime. The reviewed 2026-08-28 snapshot is upstream commit `c7d293963b21c60bf338003915438cc5c39dd3ca`, package version `1.0.4`, under the MIT license. Its compact reference indexes the upstream template categories, style tags, scene tags, constraints, pitfalls, and example-case IDs for fast prompt-direction selection.
+
+Use it before generation when a task benefits from quickly choosing one production template family for a product image, poster, UI mockup, infographic, brand asset, photograph, illustration, character, scene, history graphic, or document-style visual. Use `gpt-image` instead when the main need is deeper prompt craft, edit invariants, multi-reference control, or a richer category atlas; using one does not make the other mandatory.
+
+Project policy narrows the upstream package:
+
+- rewrite selected templates for the accepted SchatPhone subject, composition, crop, locale, brand ownership, and runtime placement;
+- keep project-native `imagegen` or `codex-image` as the execution path and keep generated assets inside the existing candidate-review and asset-upload-list workflow;
+- do not run the vendored `bin/install.mjs` or the `npm run install:skill` maintenance instruction during normal project work because that installer removes and replaces same-named skill directories under user-level agent homes;
+- treat upstream example links, brands, characters, likenesses, and source images as reference provenance rather than reuse permission.
+
+The reviewed project-local install command is:
+
+```text
+npx.cmd -y skills@latest add freestylefly/awesome-gpt-image-2 --skill gpt-image-2-style-library --agent codex --copy --yes
+```
+
+Normal secondary-PC setup receives `.agents/skills/gpt-image-2-style-library` and its `skills-lock.json` entry through Git. A deliberate refresh must repeat the source/security review and update the recorded commit/hash before replacing the reviewed copy.
 
 ### 8.3 Chinese Novelist Skill
 

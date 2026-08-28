@@ -1,6 +1,6 @@
 # SchatPhone Visual Workflow
 
-Updated: 2026-08-26
+Updated: 2026-08-28
 
 This document defines the `视觉专项` workflow.
 
@@ -449,6 +449,8 @@ These are expected in `.agents/skills` for repo-local visual work:
   - pixel-level restoration from a provided UI image, screenshot, Figma export, or long design image into code and high-resolution PNG slices.
 - `gpt-image`
   - scenario-specific prompt-pattern and edit-invariant lookup across the vendored GPT Image reference atlas; use it to shape SchatPhone-owned generation requests, not as a production runtime dependency.
+- `gpt-image-2-style-library`
+  - compact GPT-Image2 industrial-template selector for matching a request to template categories, style tags, scene tags, constraints, and example-case IDs before prompt writing.
 - `redesign-existing-projects`
   - audit-first refinement when an existing screen or group of screens reads as generic, inconsistent, or visually under-resolved but its current framework and behavior should remain intact.
 - `visual-art-direction`
@@ -478,8 +480,11 @@ These are expected in `.agents/skills` for repo-local visual work:
 - use `chinese-font-selector` when Chinese font licensing, CJK/Latin pairing, or Chinese typography hierarchy is the material design decision;
 - use `ip-as-logo` when the accepted slice needs a compact product-owned IP/mascot logo direction or candidate brief;
 - use `image-to-code` when the source image itself is the contract and the task needs 750px 1:1 restoration, transparent PNG slices, or strict screenshot/design-export matching;
+- use `gpt-image-2-style-library` when the main need is fast template-family and style-direction classification across product, poster, UI, infographic, brand, photography, illustration, character, scene, history, or document visuals; rewrite the selected structure for SchatPhone rather than copying an example prompt unchanged;
 - use `gpt-image` when a dedicated asset-production round needs a close prompt pattern for product/food imagery, brand systems, posters, UI mockups, information graphics, illustration, character work, or reference-image editing; load only the nearest atlas category and rewrite the result for the accepted SchatPhone art direction;
+- choose the smallest prompt specialist that resolves the task: `gpt-image-2-style-library` for compact template/style selection, or `gpt-image` for deeper craft and edit invariants; do not load both automatically;
 - treat `gpt-image` as a reference and prompt-craft specialist. Project-native `imagegen` or `codex-image` remains the default execution path; do not run the bundled CLI, read a local `.env`, use its moving-`main` `uvx` fallback, or make a billable API call unless the user explicitly approves that local-key execution and cost boundary;
+- treat `gpt-image-2-style-library` as reference-only guidance. Do not run its vendored `bin/install.mjs` or `npm run install:skill` maintenance instruction during normal project work; the reviewed project-local copy and `skills-lock.json` own installation and cross-PC continuity;
 - treat gallery author/source links as provenance for reference discovery, not as permission to ship copied prompts, brands, characters, likenesses, or source images;
 - treat the installed GSAP skills as one motion-specialist family and load only the members required by the accepted motion slice; do not add the `gsap` runtime dependency merely because the skills are installed;
 - for actual Vue GSAP work, pair the smallest relevant API topic with `gsap-frameworks`, preserve component cleanup, and keep reduced-motion behavior functional;
@@ -503,6 +508,7 @@ Do not add a new visual skill only because one screen needs more polish. First u
 - `redesign-existing-projects` for audit-first improvement of existing product surfaces;
 - `ui-ux-pro-max` for local searchable UI/UX evidence when the decision space is broader than the current docs;
 - `image-to-code` for source-image-to-code restoration and high-resolution slicing;
+- `gpt-image-2-style-library` for compact GPT-Image2 template, style, scene, and example-case selection before a separately governed generation call;
 - `gpt-image` for a bounded scene-specific prompt/reference lookup before a separately governed generation call;
 - the official GSAP skill family for a separately scoped motion implementation or performance problem;
 - `imagegen` for candidate raster assets when missing imagery is the actual gap;

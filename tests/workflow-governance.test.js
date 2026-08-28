@@ -51,6 +51,7 @@ const SPECIALIST_SKILLS = [
   'gsap-utils',
   'image-to-code',
   'gpt-image',
+  'gpt-image-2-style-library',
   'game-engine',
   'unit-test-vue-pinia',
 ]

@@ -45,6 +45,12 @@
       "skillPath": "skills/gpt-image/SKILL.md",
       "computedHash": "1c73d140f8319d8e74be6fceef0cc36f091054d9beee3d689d74cfbccdf3e743"
     },
+    "gpt-image-2-style-library": {
+      "source": "freestylefly/awesome-gpt-image-2",
+      "sourceType": "github",
+      "skillPath": "agents/skills/gpt-image-2-style-library/SKILL.md",
+      "computedHash": "f2cbc5a7d36d68f8758854ea086901f9301386a097872e1db2ffaec019833f4c"
+    },
     "grill-me": {
       "source": "mattpocock/skills",
       "sourceType": "github",
