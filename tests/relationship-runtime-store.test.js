@@ -211,8 +211,8 @@ describe('relationship runtime store', () => {
     expect(promptContext).toContain('Relationship runtime snapshot: Mika.')
     expect(promptContext).toContain('Stage: friend')
     expect(promptContext).toContain('First shared meal')
-    expect(promptContext).toContain('Memory summaries:')
-    expect(promptContext).toContain('food_delivery:shared_meal')
+    expect(promptContext).toContain('Relevant role memories: none.')
+    expect(promptContext).not.toContain('food_delivery:shared_meal')
   })
 
   test('merges multiple applied facts into one memory summary when they share a memory key', () => {
@@ -285,7 +285,7 @@ describe('relationship runtime store', () => {
       intimacy: 20,
     })
     expect(store.buildPromptContextForTarget({ profileId: 5, name: 'Aki' })).toContain(
-      'Memory summaries: Planned a dorayaki date with Aki.',
+      'Relevant role memories: Planned a dorayaki date with Aki.',
     )
     expect(store.events[0].effectApplied).toBe(false)
     expect(store.events[0].memoryRole).toBe('supporting')
@@ -399,9 +399,10 @@ describe('relationship runtime store', () => {
     )
     expect(summary.latestEventSummary).toBe('Gift purchased for Rin: Dorayaki Box.')
     expect(promptContext).toContain(
-      'Memory summaries: Gift purchased for Rin: Dorayaki Box. (2 linked records: Shopping gift, Calendar plan).',
+      'Relevant role memories: Gift purchased for Rin: Dorayaki Box.',
     )
-    expect(promptContext).not.toContain('Memory summaries: Calendar plan recorded with Rin')
+    expect(promptContext).not.toContain('linked records')
+    expect(promptContext).not.toContain('Calendar plan recorded with Rin')
   })
 
   test('deletes one memory group and recomputes relationship metrics from remaining events', () => {
@@ -743,8 +744,8 @@ describe('relationship runtime store', () => {
 
     expect(storedOrder).toEqual(['recent_work_call', 'birthday_necklace'])
     expect(recall.items.map((item) => item.memoryKey)).toEqual(['birthday_necklace'])
-    expect(prompt).toContain('Memory summaries: You gave Context Recall a silver birthday necklace.')
-    expect(prompt).not.toContain('Memory summaries: You had a recent phone call about work.')
+    expect(prompt).toContain('Relevant role memories: You gave Context Recall a silver birthday necklace.')
+    expect(prompt).not.toContain('Relevant role memories: You had a recent phone call about work.')
   })
 
   test('returns one shared prompt projection and excludes memories while runtime is disabled', () => {

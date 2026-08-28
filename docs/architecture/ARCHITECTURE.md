@@ -1,8 +1,8 @@
 # SchatPhone Architecture
 
-Updated: 2026-08-26
+Updated: 2026-08-28
 
-Integrated baseline: `f06a575`
+Integrated baseline: `dc26226`
 
 ## 1. Architecture Goals
 
@@ -268,7 +268,7 @@ The generic provider contract supports user-authorized JSON search APIs that ret
 - the Module owns world/profile resolution, AI-required structured artifact generation and validation, bounded safe transforms, presenter selection, optional retained-artifact lifecycle, the artifact's universal text representation, and interaction audit;
 - Text and sandboxed HTML Presenter Adapters form the presentation seam. Raw AI HTML and legacy Chat `htmlSnippet` remain inert;
 - the Stage 1 contract/profile modules remain pure and the regex layer still validates without executing;
-- `store:mini-scene` V1 owns the current shell's durable artifacts, policies, bindings, and interaction audit; the target CMG-08 contract retains complete artifacts only after explicit user choice, removes silent row eviction, and exposes paged management. Complete-backup v4 includes the `miniScene` section and still verifies complete v3 packages;
+- `store:mini-scene` V2 owns the current shell's durable retained artifacts, policies, bindings, and interaction audit. `CMG-08` retains complete artifacts only after explicit user choice, removes silent row eviction, reuses retained occurrences before provider calls, and exposes paged saved/archived management. Complete-backup v4 includes the `miniScene` section and still verifies complete v3 packages;
 - source owners persist canonical event results, while Relationship Runtime and any approved diary/timeline projection owner persist concise memory/continuity records regardless of full-scene retention. There is no prebuilt library of finished AI scenes; Book is the reusable rules/profile/template source library, and retained Mini Scenes are user history;
 - Event Runtime is the only functional registered caller. Missing AI, invalid Drafts, forbidden markup, or missing provider provenance create no artifact; the root Text Presenter records choices as owner-validation requests and returns to World Hub;
 - Calendar remains V3 and has no Mini Scene-specific authoring fields, generator button, or registered caller;
@@ -281,7 +281,8 @@ The generic provider contract supports user-authorized JSON search APIs that ret
 - `relationship-event-gating.js` reads stored category/modifier classifications, never raw premise prose;
 - relationship runtime owns memory grouping and current state;
 - one continuing matter is one shared experience with progress updates, a concise role-memory summary, and references to owner-native supporting records. Summaries are grouped by experience or subject, never by an arbitrary row count;
-- Chat consumes current relationship truth from Relationship Runtime exactly once. Profile premise/classification remains context and cannot become a competing current answer;
+- Chat consumes current relationship truth from Relationship Runtime exactly once. The current `CMG-09` working implementation bounds that projection to 3 relevant role memories / 720 characters and 2 non-archived stable-ID-deduplicated shared-experience summaries / 480 characters; source modules/IDs, supporting-record counts, and raw recent relationship events remain owner-review data rather than prompt content. Profile premise/classification remains context and cannot become a competing current answer;
+- Relationship Runtime and Mini Scene may maintain rebuildable in-memory indexes for person/state paging, but those indexes do not change persisted shapes or authorize retention loss; Contacts and World Hub return only the requested page while every owner record remains durable;
 - cleanup helpers remove or anonymize source-linked data through explicit handlers.
 
 ### Media And Sharing

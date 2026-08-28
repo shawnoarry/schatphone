@@ -98,6 +98,25 @@ describe('GalleryView people/place albums', () => {
     wrapper.unmount()
   })
 
+  test('keeps archived profiles out of new person-tag choices', async () => {
+    const galleryStore = useGalleryStore()
+    const chatStore = useChatStore()
+    const activeProfile = chatStore.addRoleProfile({ roleId: '1003', name: 'Active Person' })
+    const archivedProfile = chatStore.addRoleProfile({ roleId: '1004', name: 'Archived Person' })
+    expect(chatStore.archiveRoleProfile(archivedProfile.id)).toMatchObject({ ok: true })
+    importPhoto(galleryStore, 'archive-filter-photo')
+
+    const { wrapper } = await mountGallery()
+    await wrapper.find('.gallery-cell').trigger('click')
+    await nextTick()
+
+    const labels = wrapper.findAll('.gallery-person-pick').map((node) => node.text())
+    expect(labels).toContain(activeProfile.name)
+    expect(labels).not.toContain(archivedProfile.name)
+
+    wrapper.unmount()
+  })
+
   test('free-text place tags group into place albums', async () => {
     const galleryStore = useGalleryStore()
     const { assetId } = importPhoto(galleryStore, 'place-photo')

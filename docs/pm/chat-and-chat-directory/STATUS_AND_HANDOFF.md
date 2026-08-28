@@ -1,6 +1,6 @@
 # Chat And Chat Directory Status And Handoff
 
-Updated: 2026-08-21
+Updated: 2026-08-28
 
 This file is the handoff page for Chat, Chat Directory, service accounts, and Chat-side role binding work.
 
@@ -64,6 +64,7 @@ Chat sound boundary: global Settings owns the default system/Home/notification s
 38. Image capability differences now degrade behind the transport seam. Automatic mode attempts native image input only on the supported official OpenAI Adapter; unknown compatible and non-visual paths receive natural label/caption cues with no URL, Gallery asset ID, provider name, transport mode, or local-storage error language. An explicit native preference may still try a compatible endpoint once. Fallback diagnostics remain internal instead of appearing beneath ordinary assistant messages, and prompt rules prohibit claims about unavailable visual details or model limitations.
 39. Chat response parsing now has a disabled-by-default AI `disclosureCandidates` seam for an explicit future review checkpoint. The prompt schema is added only when that policy is explicitly supplied; normalization binds each candidate to the trusted role and an exact current user-message id, caps and trims the model text, and returns a temporary review-only object without persistence or Relationship Runtime writes.
 40. `CMG-04 DONE 2026-08-21` at `134f7f7`: the explicit user action now groups new disclosures conservatively by subject. Hospital and birthday details remain separate, later clinic/hospital detail updates one hospital memory with all exact message sources retained, and unknown subjects stay separate instead of being guessed together. Old generic disclosure memories remain readable and unchanged. Ordinary messages are still not scanned, and the disabled AI-candidate seam remains disabled.
+41. `CMG-09 IMPLEMENTATION_COMPLETE / READY_FOR_COMMIT 2026-08-28`: the current working tree keeps one Relationship Runtime snapshot per role Chat and caps its continuity context at 3 relevant role memories / 720 characters plus 2 active shared-experience summaries / 480 characters. Shared experiences deduplicate by stable ID, archived memories do not enter the active-experience projection, and raw source modules/IDs, supporting-record counts, and recent relationship rows stay out of the prompt. Stored Chat and Relationship Runtime history remains unchanged; integration commit is pending.
 
 Still incomplete or risky:
 
@@ -121,6 +122,8 @@ Validation evidence for the 2026-08-18 disclosure slice: focused Chat action, Ch
 Validation evidence for `CMG-03` on 2026-08-20: focused Chat prompt, role identity, and Chat/WorldBook integration tests pass at 3 files / 20 tests; full Vitest passes 296 files / 2092 tests; ESLint, production build, governance at 2 files / 14 tests, and `git diff --check` pass. No route or visible UI changed, so no new E2E path was required.
 
 Validation evidence for `CMG-04` on 2026-08-21: focused Chat disclosure, Relationship Adapter, and Runtime coverage passes 4 files / 45 tests; ESLint, production build, governance at 2 files / 14 tests, and `git diff --check` pass. Full Vitest passes 299/300 files and 2115/2116 tests; only tracked `DCF-06` exceeds its 5-second full-suite limit, while the affected file passes alone at 13/13 in 2.44 seconds. No route or visible UI changed, so no new E2E path was required.
+
+Validation evidence for `CMG-09` on 2026-08-28: focused bounded-reading coverage passes 6 files / 56 tests, real shared-experience consumer coverage passes 5 files / 38 tests, corrected Chat/Runtime focus passes 4 files / 42 tests, and full Vitest passes 340 files / 2571 tests. Lint, the 706-module build, governance 19/19, and `git diff --check` pass. No route or visible UI changed, so no new E2E path was required.
 
 ## 4. Must Sync When Working Here
 

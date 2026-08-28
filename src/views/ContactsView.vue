@@ -11,6 +11,8 @@ import { useFoodDeliveryStore } from '../stores/foodDelivery'
 import { usePhoneStore } from '../stores/phone'
 import { useCalendarStore } from '../stores/calendar'
 import { useMapStore } from '../stores/map'
+import { useMiniSceneStore } from '../stores/miniScene'
+import { useSimulationStore } from '../stores/simulation'
 import {
   RELATIONSHIP_MEMORY_REVIEW_STATES,
   useRelationshipRuntimeStore,
@@ -55,15 +57,21 @@ import {
 import {
   buildRoleDeleteImpact,
   deleteRoleMemoryGroup,
-  deleteRoleProfileCascade,
   resetRoleRelationshipState,
 } from '../lib/contacts-relationship-actions'
 import {
   cleanupCoverageText as formatCleanupCoverageText,
   cleanupResultSummaryText as formatCleanupResultSummaryText,
-  createRelationshipSourceCleanupHandlers,
+  createRelationshipSourceCleanupRegistry,
   sourceModuleSummaryText as formatSourceModuleSummaryText,
 } from '../lib/relationship-source-cleanup-handlers'
+import {
+  archiveRoleProfileWithWallet,
+  buildPermanentRoleDeleteImpact,
+  permanentlyDeleteArchivedRoleProfile,
+  restoreRoleProfileWithWallet,
+} from '../lib/contacts-profile-lifecycle-coordinator'
+import { isContactsProfileArchived } from '../lib/contacts-profile-owner'
 import { useDialog } from '../composables/useDialog'
 import { useContactsHomeListModel } from '../composables/useContactsHomeListModel'
 import { useContactsDangerZoneModel } from '../composables/useContactsDangerZoneModel'
@@ -100,6 +108,8 @@ const foodDeliveryStore = useFoodDeliveryStore()
 const phoneStore = usePhoneStore()
 const calendarStore = useCalendarStore()
 const mapStore = useMapStore()
+const miniSceneStore = useMiniSceneStore()
+const simulationStore = useSimulationStore()
 const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const { t } = useI18n()
 const { confirmDialog, promptDialog } = useDialog()
@@ -118,6 +128,8 @@ const profileModalMode = ref('create')
 const editingProfileId = ref(0)
 const selectedProfileId = ref(0)
 const contactsSearchQuery = ref('')
+const archivedSearchQuery = ref('')
+const isArchivedManagerOpen = ref(false)
 const isProfileTemplateEditorOpen = ref(false)
 const showProfileBindings = ref(false)
 const CONTACTS_DETAIL_SHEETS = Object.freeze({
@@ -132,6 +144,7 @@ const CONTACTS_DETAIL_SHEETS = Object.freeze({
 const activeDetailSheet = ref(CONTACTS_DETAIL_SHEETS.OVERVIEW)
 const profileScrollElement = ref(null)
 const dangerIncludeLinkedRecords = ref(false)
+const retainUnsupportedReferences = ref(false)
 const selectedMemoryKey = ref('')
 const assetPackCategory = ref('reference')
 const draftPreviewMap = reactive({})
@@ -499,6 +512,7 @@ const selectedProfile = computed(() =>
 )
 
 const isProfileOpen = computed(() => Boolean(selectedProfile.value))
+const isSelectedProfileArchived = computed(() => isContactsProfileArchived(selectedProfile.value))
 
 const isContactsDetailSheetOpen = computed(
   () => isProfileOpen.value && activeDetailSheet.value !== CONTACTS_DETAIL_SHEETS.OVERVIEW,
@@ -833,6 +847,83 @@ const selectedDeleteImpact = computed(() =>
     : null,
 )
 
+const relationshipSourceCleanupRegistry = computed(() =>
+  createRelationshipSourceCleanupRegistry({
+    phoneStore,
+    shoppingStore,
+    foodDeliveryStore,
+    walletStore,
+    calendarStore,
+    mapStore,
+    t,
+  }),
+)
+
+const selectedPermanentDeleteImpact = computed(() =>
+  isSelectedProfileArchived.value
+    ? buildPermanentRoleDeleteImpact({
+        chatStore,
+        relationshipRuntimeStore,
+        walletStore,
+        galleryStore,
+        miniSceneStore,
+        simulationStore,
+        cleanupRegistry: relationshipSourceCleanupRegistry.value,
+        profile: selectedProfile.value,
+      })
+    : null,
+)
+
+const permanentDeleteImpactGroups = computed(() => {
+  const impact = selectedPermanentDeleteImpact.value
+  if (!impact) return []
+  return [
+    {
+      key: 'delete',
+      title: t('将删除', 'Will be deleted'),
+      items: [
+        t('人物档案 1 份', '1 person profile'),
+        t(
+          `Chat 绑定 ${impact.chatBindingCount || 0} 项、对话 ${impact.chatConversationCount || 0} 项`,
+          `${impact.chatBindingCount || 0} Chat binding(s), ${impact.chatConversationCount || 0} conversation(s)`,
+        ),
+        t(
+          `关系事件 ${impact.relationshipEventCount || 0} 项、记忆组 ${impact.memoryGroupCount || 0} 项`,
+          `${impact.relationshipEventCount || 0} relationship event(s), ${impact.memoryGroupCount || 0} memory group(s)`,
+        ),
+      ],
+    },
+    {
+      key: 'unlink',
+      title: t('将解除关联', 'Will be unlinked'),
+      items: [
+        t(`Wallet 收款身份 ${impact.knownPayeeCount || 0} 项`, `${impact.knownPayeeCount || 0} Wallet payee identity(s)`),
+        t(`Gallery 人物标签 ${impact.galleryPersonTagCount || 0} 项`, `${impact.galleryPersonTagCount || 0} Gallery person tag(s)`),
+        t(`Mini Scene 绑定 ${impact.miniSceneBindingCount || 0} 项`, `${impact.miniSceneBindingCount || 0} Mini Scene binding(s)`),
+      ],
+    },
+    {
+      key: 'retain',
+      title: t('将保留为历史', 'Will remain as history'),
+      items: [
+        t(`Wallet 历史账单 ${impact.retainedWalletTransactionCount || 0} 项`, `${impact.retainedWalletTransactionCount || 0} Wallet history item(s)`),
+        t(`事件提案历史 ${impact.retainedSimulationProposalCount || 0} 项`, `${impact.retainedSimulationProposalCount || 0} event proposal(s)`),
+      ],
+    },
+    {
+      key: 'unsupported',
+      title: t('未登记引用', 'Unregistered references'),
+      items: impact.unsupportedSourceModules.length
+        ? impact.unsupportedSourceModules
+        : [t('没有发现', 'None found')],
+    },
+  ]
+})
+
+const hasUnsupportedPermanentDeleteReferences = computed(
+  () => (selectedPermanentDeleteImpact.value?.unsupportedSourceModules || []).length > 0,
+)
+
 const {
   availableMemorySourceFilters,
   hasPreviousMemoryPage,
@@ -1053,6 +1144,7 @@ const selectProfile = (profile) => {
   if (!profile?.id) return
   selectedProfileId.value = Number(profile.id)
   dangerIncludeLinkedRecords.value = false
+  retainUnsupportedReferences.value = false
   selectedMemoryKey.value = ''
   activeDetailSheet.value = CONTACTS_DETAIL_SHEETS.OVERVIEW
   void replaceContactsQuery({
@@ -1061,9 +1153,25 @@ const selectProfile = (profile) => {
   })
 }
 
+const openArchivedManager = () => {
+  isArchivedManagerOpen.value = true
+  archivedSearchQuery.value = ''
+}
+
+const closeArchivedManager = () => {
+  isArchivedManagerOpen.value = false
+  archivedSearchQuery.value = ''
+}
+
+const selectArchivedProfile = (profile) => {
+  isArchivedManagerOpen.value = true
+  selectProfile(profile)
+}
+
 const closeSelectedProfile = () => {
   selectedProfileId.value = 0
   dangerIncludeLinkedRecords.value = false
+  retainUnsupportedReferences.value = false
   selectedMemoryKey.value = ''
   activeDetailSheet.value = CONTACTS_DETAIL_SHEETS.OVERVIEW
   isProfileTemplateEditorOpen.value = false
@@ -2212,16 +2320,8 @@ const cleanupResultSummaryText = (cleanupResult) => {
   return formatCleanupResultSummaryText(cleanupResult, t)
 }
 
-const relationshipSourceCleanupHandlers = computed(() =>
-  createRelationshipSourceCleanupHandlers({
-    phoneStore,
-    shoppingStore,
-    foodDeliveryStore,
-    walletStore,
-    calendarStore,
-    mapStore,
-    t,
-  }),
+const relationshipSourceCleanupHandlers = computed(
+  () => relationshipSourceCleanupRegistry.value.handlers,
 )
 
 const confirmTypedRole = async (profile, title, message) => {
@@ -2283,28 +2383,101 @@ const resetSelectedRelationship = async () => {
   )
 }
 
-const deleteSelectedProfile = async () => {
+const archiveSelectedProfile = async () => {
   const profile = selectedProfile.value
-  if (!profile?.id) return
-  const firstOk = await confirmDialog({
-    title: t('删除角色档案', 'Delete role profile'),
+  if (!profile?.id || isSelectedProfileArchived.value) return
+  const ok = await confirmDialog({
+    title: t('归档人物', 'Archive person'),
     message: t(
-      '该操作不可撤销，会删除 Contacts 档案、Chat Directory 绑定、该角色聊天记录、关系进度和记忆组。',
-      'This cannot be undone. It deletes the Contacts profile, Chat Directory binding, role chat history, relationship progress, and memories.',
+      '归档后，此人物会从常用联系人中隐藏并进入只读状态。档案、聊天和关系记忆都会保留，Wallet 中的收款身份会暂停使用。',
+      'The person will leave active Contacts and become read-only. Their profile, chats, and relationship memories stay intact, while their Wallet payee identity is suspended.',
     ),
-    details: deleteRoleProfileDialogDetails.value,
-    confirmText: t('继续', 'Continue'),
+    confirmText: t('归档', 'Archive'),
     cancelText: t('取消', 'Cancel'),
-    tone: 'danger',
+    tone: 'warning',
   })
-  if (!firstOk) return
-  const scopeOk = await confirmDialog({
-    title: t('确认删除范围', 'Confirm delete scope'),
+  if (!ok) return
+  const result = archiveRoleProfileWithWallet({
+    chatStore,
+    walletStore,
+    profileId: profile.id,
+    expectedRevision: profile.revision,
+    note: 'Archived from Contacts management.',
+  })
+  if (!result.ok) {
+    setUiNotice(
+      'error',
+      result.rollback?.ok
+        ? t('归档失败，原有档案和收款身份已恢复。', 'Archive failed. The profile and payee identity were restored.')
+        : t('归档失败，自动恢复未完整完成，请先不要继续操作。', 'Archive failed and rollback was incomplete. Stop and review the stored data.'),
+      4200,
+    )
+    return
+  }
+  isArchivedManagerOpen.value = true
+  activeDetailSheet.value = CONTACTS_DETAIL_SHEETS.OVERVIEW
+  setUiNotice('success', t('人物已归档，相关历史仍保留。', 'Person archived. Related history is preserved.'))
+}
+
+const restoreSelectedProfile = async () => {
+  const profile = selectedProfile.value
+  if (!profile?.id || !isSelectedProfileArchived.value) return
+  const ok = await confirmDialog({
+    title: t('恢复人物', 'Restore person'),
     message: t(
-      '请再次确认这次删除会跨越 Contacts、Chat Directory、聊天记录和关系运行时数据。',
-      'Confirm this deletion crosses Contacts, Chat Directory, chat history, and relationship runtime data.',
+      '恢复后，此人物会重新出现在常用联系人中；原来的 Wallet 收款身份也会恢复为可用。',
+      'The person will return to active Contacts, and the same Wallet payee identity will become available again.',
     ),
-    details: deleteRoleScopeDialogDetails.value,
+    confirmText: t('恢复', 'Restore'),
+    cancelText: t('取消', 'Cancel'),
+  })
+  if (!ok) return
+  const result = restoreRoleProfileWithWallet({
+    chatStore,
+    walletStore,
+    profileId: profile.id,
+    expectedRevision: profile.revision,
+  })
+  if (!result.ok) {
+    setUiNotice(
+      'error',
+      result.rollback?.ok
+        ? t('恢复失败，人物仍保持归档状态。', 'Restore failed. The person remains archived.')
+        : t('恢复失败，自动回滚未完整完成，请先不要继续操作。', 'Restore failed and rollback was incomplete. Stop and review the stored data.'),
+      4200,
+    )
+    return
+  }
+  isArchivedManagerOpen.value = false
+  activeDetailSheet.value = CONTACTS_DETAIL_SHEETS.OVERVIEW
+  setUiNotice('success', t('人物已恢复，原收款身份可继续使用。', 'Person restored. The same payee identity is available again.'))
+}
+
+const permanentlyDeleteSelectedProfile = async () => {
+  const profile = selectedProfile.value
+  const impact = selectedPermanentDeleteImpact.value
+  if (!profile?.id || !isSelectedProfileArchived.value || !impact) return
+  if (hasUnsupportedPermanentDeleteReferences.value && !retainUnsupportedReferences.value) {
+    setUiNotice(
+      'warning',
+      t(
+        '请先明确选择保留未登记引用，或取消本次永久删除。',
+        'Choose to retain unregistered references before permanent deletion, or cancel.',
+      ),
+      3600,
+    )
+    return
+  }
+  const scopeOk = await confirmDialog({
+    title: t('永久删除人物', 'Permanently delete person'),
+    message: t(
+      '这会执行下方影响预览中的删除和解绑，保留项仍只作为历史快照存在。该操作不可撤销。',
+      'This applies the deletion and unlinking shown in the impact preview. Retained items remain only as history snapshots. This cannot be undone.',
+    ),
+    details: permanentDeleteImpactGroups.value.flatMap((group) => [
+      group.title,
+      ...group.items,
+    ]),
     confirmText: t('继续输入 ID', 'Continue to ID'),
     cancelText: t('取消', 'Cancel'),
     tone: 'danger',
@@ -2312,24 +2485,38 @@ const deleteSelectedProfile = async () => {
   if (!scopeOk) return
   const typedOk = await confirmTypedRole(
     profile,
-    t('确认删除角色', 'Confirm role deletion'),
-    t('为避免误操作，请输入该角色 ID。', 'Type this role ID to avoid accidental deletion.'),
+    t('确认永久删除', 'Confirm permanent deletion'),
+    t(
+      '输入这个人物的角色 ID。永久删除后，人物 ID 和角色 ID 都不会被重新使用。',
+      'Type this person\'s role ID. After deletion, neither the person ID nor role ID will be reused.',
+    ),
   )
   if (!typedOk) return
-  const result = deleteRoleProfileCascade({
+  const result = permanentlyDeleteArchivedRoleProfile({
     chatStore,
     relationshipRuntimeStore,
-    profile,
+    walletStore,
+    galleryStore,
+    miniSceneStore,
+    simulationStore,
+    cleanupRegistry: relationshipSourceCleanupRegistry.value,
+    profileId: profile.id,
+    expectedRevision: profile.revision,
     includeLinkedRecords: dangerIncludeLinkedRecords.value,
-    cleanupHandlers: relationshipSourceCleanupHandlers.value,
+    unsupportedReferencePolicy: hasUnsupportedPermanentDeleteReferences.value ? 'retain' : '',
   })
   if (!result.ok) {
-    setUiNotice('error', t('删除失败，请重试。', 'Delete failed, please retry.'))
+    setUiNotice(
+      'error',
+      result.rollback?.ok
+        ? t('永久删除失败，所有已变更数据均已恢复。', 'Permanent deletion failed. All changed data was restored.')
+        : t('永久删除失败，自动回滚未完整完成，请先不要继续操作。', 'Permanent deletion failed and rollback was incomplete. Stop and review the stored data.'),
+      4600,
+    )
     return
   }
-  walletStore.removeKnownPayeeAccountsForProfile(profile.id)
   closeSelectedProfile()
-  setUiNotice('success', t('角色档案已删除。', 'Role profile deleted.'))
+  setUiNotice('success', t('人物已永久删除，历史快照按预览保留。', 'Person permanently deleted. History snapshots were retained as previewed.'))
 }
 
 const deleteMemoryGroup = async (memory) => {
@@ -2430,9 +2617,6 @@ const meterPercent = (value) => {
 const {
   selectedDangerImpactText,
   resetRelationshipDialogDetails,
-  deleteRoleProfileDialogDetails,
-  deleteRoleScopeDialogDetails,
-  dangerIncludeLinkedRecordsText,
   memoryDeletePreviewMessage,
   memoryDeletePreviewDetails,
   memoryDeleteFinalDetails,
@@ -2522,15 +2706,19 @@ const contactIsChatBound = (profile = {}) =>
 
 const {
   selfProfiles,
+  archivedProfiles,
   isContactsSearchActive,
+  isArchivedSearchActive,
   filteredSelfProfiles,
   filteredMainProfiles,
   filteredNpcProfiles,
+  filteredArchivedProfiles,
   recentInteractionContacts,
   contactRecentSourceLabel,
 } = useContactsHomeListModel({
   roleProfiles,
   contactsSearchQuery,
+  archivedSearchQuery,
   t,
   isChatBound: contactIsChatBound,
   getRelationshipSnapshot: profileRelationshipSnapshot,
@@ -2651,9 +2839,11 @@ watch(
       ? profiles.find((profile) => Number(profile.id) === Number(normalizedRouteProfileId))
       : null
     if (requestedProfile) {
+      isArchivedManagerOpen.value = isContactsProfileArchived(requestedProfile)
       if (Number(selectedProfileId.value) !== Number(requestedProfile.id)) {
         selectedProfileId.value = Number(requestedProfile.id)
         dangerIncludeLinkedRecords.value = false
+        retainUnsupportedReferences.value = false
         selectedMemoryKey.value = ''
         activeDetailSheet.value = CONTACTS_DETAIL_SHEETS.OVERVIEW
       }
@@ -2662,6 +2852,7 @@ watch(
     if (selectedProfileId.value) {
       selectedProfileId.value = 0
       dangerIncludeLinkedRecords.value = false
+      retainUnsupportedReferences.value = false
       selectedMemoryKey.value = ''
       activeDetailSheet.value = CONTACTS_DETAIL_SHEETS.OVERVIEW
     }
@@ -3441,6 +3632,34 @@ onBeforeUnmount(() => {
           {{ t('没有匹配的联系人。', 'No matching contacts.') }}
         </div>
 
+        <button
+          v-if="!isContactsSearchActive"
+          type="button"
+          class="contacts-archive-entry"
+          data-testid="contacts-open-archive-manager"
+          @click="openArchivedManager"
+        >
+          <span class="contacts-archive-entry__icon" aria-hidden="true">
+            <i class="fas fa-box-archive"></i>
+          </span>
+          <span class="contacts-archive-entry__copy">
+            <strong>{{ t('已归档', 'Archived') }}</strong>
+            <small>
+              {{
+                archivedProfiles.length
+                  ? t(
+                      `${archivedProfiles.length} 个人物`,
+                      archivedProfiles.length === 1
+                        ? '1 person'
+                        : `${archivedProfiles.length} people`,
+                    )
+                  : t('暂时没有归档人物', 'No archived people')
+              }}
+            </small>
+          </span>
+          <i class="fas fa-chevron-right contacts-row-chevron" aria-hidden="true"></i>
+        </button>
+
         <p class="contacts-boundary-copy" data-testid="contacts-boundary-copy">
           {{
             t(
@@ -3453,8 +3672,81 @@ onBeforeUnmount(() => {
     </div>
 
     <div
+      v-if="isArchivedManagerOpen && !selectedProfile"
+      class="contacts-profile-layer"
+      data-testid="contacts-archive-manager"
+    >
+      <div class="contacts-profile-header">
+        <button
+          type="button"
+          class="contacts-nav-button text-blue-500 text-sm flex items-center gap-1"
+          data-testid="contacts-archive-manager-back"
+          @click="closeArchivedManager"
+        >
+          <i class="fas fa-chevron-left" aria-hidden="true"></i>
+          {{ t('通讯录', 'Contacts') }}
+        </button>
+        <span class="font-bold truncate">{{ t('已归档', 'Archived') }}</span>
+        <span class="contacts-header-count" data-testid="contacts-archive-count">
+          {{ archivedProfiles.length }}
+        </span>
+      </div>
+      <div class="contacts-profile-scroll contacts-archive-manager-body">
+        <label class="contacts-search" data-testid="contacts-archive-search">
+          <i class="fas fa-search" aria-hidden="true"></i>
+          <input
+            v-model="archivedSearchQuery"
+            data-testid="contacts-archive-search-input"
+            type="search"
+            :placeholder="t('搜索已归档人物', 'Search archived people')"
+            :aria-label="t('搜索已归档人物', 'Search archived people')"
+          />
+        </label>
+        <section class="contacts-list-section" data-testid="contacts-archive-list">
+          <button
+            v-for="contact in filteredArchivedProfiles"
+            :key="`archived-${contact.id}`"
+            type="button"
+            class="contacts-row"
+            :data-testid="`contacts-archive-row-${contact.id}`"
+            @click="selectArchivedProfile(contact)"
+          >
+            <span class="contacts-avatar">
+              <img
+                :src="contactAvatarUrl(contact)"
+                :alt="contact.name"
+                class="w-full h-full object-cover"
+              />
+            </span>
+            <span class="contacts-row-copy">
+              <strong class="contacts-row-name">{{ contact.name }}</strong>
+              <span class="contacts-row-meta">
+                {{ contact.role || t('未设置角色', 'Role not set') }} · ID
+                {{ normalizeRoleId(contact.roleId, contact.id) }}
+              </span>
+              <span class="contacts-row-hint">{{ t('只读 · 可恢复', 'Read-only · Can be restored') }}</span>
+            </span>
+            <i class="fas fa-chevron-right contacts-row-chevron" aria-hidden="true"></i>
+          </button>
+        </section>
+        <div
+          v-if="filteredArchivedProfiles.length === 0"
+          class="contacts-empty-search"
+          data-testid="contacts-archive-empty"
+        >
+          {{
+            isArchivedSearchActive
+              ? t('没有匹配的归档人物。', 'No archived people match this search.')
+              : t('归档人物会出现在这里。', 'Archived people will appear here.')
+          }}
+        </div>
+      </div>
+    </div>
+
+    <div
       v-if="selectedProfile"
       class="contacts-profile-layer"
+      :class="{ 'contacts-profile-layer-readonly': isSelectedProfileArchived }"
       data-testid="contacts-role-detail"
     >
       <div class="contacts-profile-header">
@@ -3464,10 +3756,12 @@ onBeforeUnmount(() => {
           data-testid="contacts-profile-back"
           @click="closeSelectedProfile"
         >
-          <i class="fas fa-chevron-left"></i> {{ t('通讯录', 'Contacts') }}
+          <i class="fas fa-chevron-left"></i>
+          {{ isSelectedProfileArchived ? t('已归档', 'Archived') : t('通讯录', 'Contacts') }}
         </button>
         <span class="font-bold truncate">{{ selectedProfileHeader.name }}</span>
         <button
+          v-if="!isSelectedProfileArchived"
           type="button"
           class="contacts-small-action"
           @click="openEditProfile(selectedProfile)"
@@ -3478,6 +3772,18 @@ onBeforeUnmount(() => {
 
       <div ref="profileScrollElement" class="contacts-profile-scroll">
         <div v-if="!isContactsDetailSheetOpen" class="contacts-profile-overview space-y-3">
+          <div
+            v-if="isSelectedProfileArchived"
+            class="contacts-archived-banner"
+            data-testid="contacts-archived-readonly-banner"
+            role="status"
+          >
+            <i class="fas fa-box-archive" aria-hidden="true"></i>
+            <span>
+              <strong>{{ t('这个人物已归档', 'This person is archived') }}</strong>
+              <small>{{ t('档案和历史仍保留；当前页面只读，Wallet 收款已暂停。', 'Profile and history are preserved. This page is read-only, and Wallet payments are suspended.') }}</small>
+            </span>
+          </div>
           <section class="contacts-detail-section contacts-profile-hero">
           <div class="contacts-hero-card">
             <div class="contacts-hero-avatar">
@@ -3522,7 +3828,7 @@ onBeforeUnmount(() => {
             </span>
           </button>
 
-          <div class="contacts-profile-actions contacts-hero-actions">
+          <div v-if="!isSelectedProfileArchived" class="contacts-profile-actions contacts-hero-actions">
             <button
               v-if="selectedRoleChatContact && selectedProfileEntityType !== CONTACTS_ENTITY_TYPES.SELF_PROFILE"
               type="button"
@@ -3549,6 +3855,16 @@ onBeforeUnmount(() => {
               {{ t('编辑档案', 'Edit profile') }}
             </button>
           </div>
+          <div v-else class="contacts-profile-actions contacts-hero-actions">
+            <button
+              type="button"
+              class="contacts-primary-action"
+              data-testid="contacts-restore-role"
+              @click="restoreSelectedProfile"
+            >
+              {{ t('恢复人物', 'Restore person') }}
+            </button>
+          </div>
           <div v-if="selectedProfileStatusChips.length" class="contacts-profile-chips">
             <span
               v-for="chip in selectedProfileStatusChips"
@@ -3558,7 +3874,7 @@ onBeforeUnmount(() => {
               {{ chip.label }}
             </span>
           </div>
-          <div v-if="selectedProfileHeader.isNpc" class="mt-3 space-y-2">
+          <div v-if="selectedProfileHeader.isNpc && !isSelectedProfileArchived" class="mt-3 space-y-2">
             <button
               type="button"
               class="contacts-primary-action"
@@ -3641,7 +3957,13 @@ onBeforeUnmount(() => {
             @click="openDetailSheet(CONTACTS_DETAIL_SHEETS.DANGER)"
           >
             <p class="contacts-role-hub-label">{{ t('管理', 'Manage') }}</p>
-            <p class="contacts-role-hub-value">{{ t('重置或删除', 'Reset or delete') }}</p>
+            <p class="contacts-role-hub-value">
+              {{
+                isSelectedProfileArchived
+                  ? t('恢复或永久删除', 'Restore or delete')
+                  : t('重置或归档', 'Reset or archive')
+              }}
+            </p>
             <p class="contacts-role-hub-detail">{{ t('危险操作单独放在这里。', 'Destructive actions stay here.') }}</p>
           </button>
           </div>
@@ -3667,6 +3989,18 @@ onBeforeUnmount(() => {
               <h2 class="contacts-detail-sheet-title">{{ activeDetailSheetTitle }}</h2>
             </div>
           </div>
+
+          <fieldset
+            class="contacts-detail-readonly-scope"
+            :disabled="isSelectedProfileArchived && activeDetailSheet !== CONTACTS_DETAIL_SHEETS.DANGER"
+          >
+            <div
+              v-if="isSelectedProfileArchived && activeDetailSheet !== CONTACTS_DETAIL_SHEETS.DANGER"
+              class="contacts-archived-inline-notice"
+              data-testid="contacts-archived-sheet-readonly"
+            >
+              {{ t('归档状态下仅供查看；恢复人物后才能编辑或更新这些内容。', 'Archived content is view-only. Restore the person before editing or updating it.') }}
+            </div>
 
           <section
             v-if="activeDetailSheet === CONTACTS_DETAIL_SHEETS.RELATIONSHIP"
@@ -5533,46 +5867,99 @@ onBeforeUnmount(() => {
           <section
             v-if="activeDetailSheet === CONTACTS_DETAIL_SHEETS.DANGER"
             class="contacts-detail-section contacts-danger-zone space-y-3"
+            data-testid="contacts-lifecycle-management"
           >
-            <div>
-              <p class="text-sm font-bold">{{ t('危险区', 'Danger Zone') }}</p>
-              <p class="text-[11px] text-gray-500 mt-1">
-                {{ t('重置关系会保留档案；删除角色会移除档案、聊天绑定、聊天记录与关系运行时记录。', 'Reset keeps the profile. Delete removes the profile, chat binding, chat history, and runtime relationship records.') }}
-              </p>
-            </div>
-            <div class="rounded-lg border border-red-100 bg-red-50/70 px-3 py-2 text-[11px] text-red-700">
-              {{ selectedDangerImpactText }}
-            </div>
-            <label class="flex items-start gap-2 text-[11px] text-gray-600">
-              <input
-                v-model="dangerIncludeLinkedRecords"
-                type="checkbox"
-                class="mt-0.5"
-                data-testid="contacts-danger-include-linked-records"
-              />
-              <span>
-                {{ dangerIncludeLinkedRecordsText }}
-              </span>
-            </label>
-            <div class="grid grid-cols-2 gap-2">
+            <template v-if="!isSelectedProfileArchived">
+              <div>
+                <p class="text-sm font-bold">{{ t('人物管理', 'Person management') }}</p>
+                <p class="text-[11px] text-gray-500 mt-1">
+                  {{ t('重置关系只清除关系进度；归档会保留档案和历史，并暂停新的 Wallet 付款。', 'Reset clears relationship progress only. Archive preserves the profile and history, and pauses new Wallet payments.') }}
+                </p>
+              </div>
+              <div class="rounded-lg border border-red-100 bg-red-50/70 px-3 py-2 text-[11px] text-red-700">
+                {{ selectedDangerImpactText }}
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  data-testid="contacts-reset-relationship"
+                  @click="resetSelectedRelationship"
+                  class="contacts-danger-secondary"
+                >
+                  {{ t('重置关系', 'Reset') }}
+                </button>
+                <button
+                  type="button"
+                  data-testid="contacts-archive-role"
+                  @click="archiveSelectedProfile"
+                  class="contacts-danger-primary"
+                >
+                  {{ t('归档人物', 'Archive') }}
+                </button>
+              </div>
+            </template>
+            <template v-else>
+              <div>
+                <p class="text-sm font-bold">{{ t('归档人物管理', 'Archived person management') }}</p>
+                <p class="text-[11px] text-gray-500 mt-1">
+                  {{ t('恢复是可逆操作；永久删除只能从这里执行，并会留下最小 ID 墓碑以防止身份复用。', 'Restore is reversible. Permanent deletion is available only here and leaves a minimal ID tombstone to prevent identity reuse.') }}
+                </p>
+              </div>
               <button
                 type="button"
-                data-testid="contacts-reset-relationship"
-                @click="resetSelectedRelationship"
-                class="contacts-danger-secondary"
+                class="contacts-primary-action"
+                data-testid="contacts-restore-role-manage"
+                @click="restoreSelectedProfile"
               >
-                {{ t('重置关系', 'Reset') }}
+                {{ t('恢复人物', 'Restore person') }}
               </button>
+              <div class="contacts-impact-preview" data-testid="contacts-permanent-delete-impact">
+                <section
+                  v-for="group in permanentDeleteImpactGroups"
+                  :key="group.key"
+                  class="contacts-impact-group"
+                  :data-testid="`contacts-impact-${group.key}`"
+                >
+                  <h3>{{ group.title }}</h3>
+                  <ul>
+                    <li v-for="item in group.items" :key="item">{{ item }}</li>
+                  </ul>
+                </section>
+              </div>
+              <label class="contacts-lifecycle-choice">
+                <input
+                  v-model="dangerIncludeLinkedRecords"
+                  type="checkbox"
+                  data-testid="contacts-permanent-delete-clean-linked"
+                />
+                <span>
+                  {{ t('同时解除已登记跨模块历史中的人物关联，并在需要时匿名化文字；未勾选时，仅处理人物及直接绑定。', 'Also unlink this person from registered cross-module history and anonymize text when needed. When off, only the person and direct bindings are handled.') }}
+                </span>
+              </label>
+              <label
+                v-if="hasUnsupportedPermanentDeleteReferences"
+                class="contacts-lifecycle-choice contacts-lifecycle-choice-warning"
+              >
+                <input
+                  v-model="retainUnsupportedReferences"
+                  type="checkbox"
+                  data-testid="contacts-permanent-delete-retain-unsupported"
+                />
+                <span>
+                  {{ t('我确认保留上方“未登记引用”，不把它们当作仍存在的人物身份。', 'I confirm that the unregistered references above will be retained and will not count as a live person identity.') }}
+                </span>
+              </label>
               <button
                 type="button"
-                data-testid="contacts-delete-role"
-                @click="deleteSelectedProfile"
-                class="contacts-danger-primary"
+                data-testid="contacts-permanent-delete-role"
+                @click="permanentlyDeleteSelectedProfile"
+                class="contacts-danger-primary contacts-danger-full"
               >
-                {{ t('删除角色', 'Delete Role') }}
+                {{ t('永久删除人物', 'Permanently delete person') }}
               </button>
-            </div>
+            </template>
           </section>
+          </fieldset>
         </div>
       </div>
     </div>
@@ -5727,6 +6114,135 @@ onBeforeUnmount(() => {
   color: var(--contacts-muted);
   font-size: 11px;
   line-height: 1.45;
+}
+
+.contacts-archive-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  width: 100%;
+  border: 1px solid var(--contacts-border);
+  border-radius: 14px;
+  padding: 8px 12px;
+  color: var(--contacts-text);
+  background: var(--contacts-surface-strong);
+  text-align: left;
+  box-shadow: 0 8px 18px rgba(45, 63, 89, 0.06);
+}
+
+.contacts-archive-entry:active {
+  background: var(--contacts-accent-soft);
+}
+
+.contacts-archive-entry__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border-radius: 50%;
+  color: var(--contacts-accent-strong);
+  background: var(--contacts-accent-soft);
+}
+
+.contacts-archive-entry__copy {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 2px;
+}
+
+.contacts-archive-entry__copy strong,
+.contacts-archive-entry__copy small {
+  display: block;
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.contacts-archive-entry__copy strong {
+  font-size: 13px;
+}
+
+.contacts-archive-entry__copy small {
+  color: var(--contacts-muted);
+  font-size: 11px;
+}
+
+.contacts-archive-manager-body {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 14px 16px 24px;
+}
+
+.contacts-header-count {
+  min-width: 44px;
+  color: var(--contacts-muted);
+  font-size: 12px;
+  text-align: right;
+}
+
+.contacts-archived-banner,
+.contacts-archived-inline-notice {
+  color: #75531e;
+  background: rgba(247, 235, 205, 0.76);
+  border: 1px solid rgba(176, 122, 74, 0.24);
+}
+
+.contacts-archived-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border-radius: 8px;
+  padding: 11px 12px;
+}
+
+.contacts-archived-banner > i {
+  margin-top: 2px;
+}
+
+.contacts-archived-banner span {
+  display: grid;
+  gap: 2px;
+}
+
+.contacts-archived-banner strong,
+.contacts-archived-banner small {
+  display: block;
+  letter-spacing: 0;
+}
+
+.contacts-archived-banner strong {
+  font-size: 12px;
+}
+
+.contacts-archived-banner small {
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.contacts-detail-readonly-scope {
+  display: contents;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.contacts-archived-inline-notice {
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.contacts-detail-readonly-scope:disabled button,
+.contacts-detail-readonly-scope:disabled input,
+.contacts-detail-readonly-scope:disabled select,
+.contacts-detail-readonly-scope:disabled textarea {
+  cursor: not-allowed;
 }
 
 .contacts-worldbook-handoff {
@@ -7646,6 +8162,64 @@ onBeforeUnmount(() => {
 
 .contacts-danger-zone {
   border-color: rgba(220, 38, 38, 0.18);
+}
+
+.contacts-impact-preview {
+  border-top: 1px solid rgba(38, 34, 27, 0.1);
+  border-bottom: 1px solid rgba(38, 34, 27, 0.1);
+}
+
+.contacts-impact-group {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(38, 34, 27, 0.08);
+}
+
+.contacts-impact-group:last-child {
+  border-bottom: 0;
+}
+
+.contacts-impact-group h3 {
+  margin: 0 0 5px;
+  color: var(--contacts-text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.contacts-impact-group ul {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--contacts-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.contacts-lifecycle-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  min-height: 44px;
+  padding: 8px 0;
+  color: var(--contacts-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.contacts-lifecycle-choice input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin-top: 1px;
+}
+
+.contacts-lifecycle-choice-warning {
+  color: #8b331f;
+}
+
+.contacts-danger-full {
+  width: 100%;
+  min-height: 44px;
 }
 
 .contacts-danger-inline,

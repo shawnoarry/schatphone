@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import { CONTACTS_ENTITY_TYPES, normalizeRoleId } from '../lib/role-profile-schema'
+import { isContactsProfileActive, isContactsProfileArchived } from '../lib/contacts-profile-owner'
 
 const defaultT = (zh, en) => en || zh
 
@@ -20,13 +21,26 @@ export const buildContactsSearchText = (profile = {}) =>
 export function useContactsHomeListModel({
   roleProfiles,
   contactsSearchQuery,
+  archivedSearchQuery,
   t = defaultT,
   isChatBound = () => false,
   getRelationshipSnapshot = () => null,
   getEventAttachedCount = () => 0,
   formatEntityTypeLabel = (entityType) => entityType || '',
 } = {}) {
-  const allRoleProfiles = computed(() => (Array.isArray(roleProfiles?.value) ? roleProfiles.value : []))
+  const allRoleProfiles = computed(() =>
+    (Array.isArray(roleProfiles?.value) ? roleProfiles.value : []).filter(isContactsProfileActive),
+  )
+
+  const archivedProfiles = computed(() =>
+    (Array.isArray(roleProfiles?.value) ? roleProfiles.value : [])
+      .filter(isContactsProfileArchived)
+      .sort(
+        (left, right) =>
+          Number(right.lifecycle?.archivedAt || 0) - Number(left.lifecycle?.archivedAt || 0) ||
+          Number(right.id) - Number(left.id),
+      ),
+  )
 
   const selfProfiles = computed(() =>
     allRoleProfiles.value.filter((item) => item.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE),
@@ -49,6 +63,9 @@ export function useContactsHomeListModel({
   const normalizedContactsSearchQuery = computed(() =>
     normalizeContactsSearchText(contactsSearchQuery?.value),
   )
+  const normalizedArchivedSearchQuery = computed(() =>
+    normalizeContactsSearchText(archivedSearchQuery?.value),
+  )
 
   const filterContactsBySearch = (profiles = []) => {
     const query = normalizedContactsSearchQuery.value
@@ -60,6 +77,12 @@ export function useContactsHomeListModel({
   const filteredSelfProfiles = computed(() => filterContactsBySearch(selfProfiles.value))
   const filteredMainProfiles = computed(() => filterContactsBySearch(mainRoleProfiles.value))
   const filteredNpcProfiles = computed(() => filterContactsBySearch(npcRoleProfiles.value))
+  const isArchivedSearchActive = computed(() => normalizedArchivedSearchQuery.value.length > 0)
+  const filteredArchivedProfiles = computed(() => {
+    const query = normalizedArchivedSearchQuery.value
+    if (!query) return archivedProfiles.value
+    return archivedProfiles.value.filter((profile) => buildContactsSearchText(profile).includes(query))
+  })
 
   const contactRecentScore = (profile = {}) => {
     if (!profile?.id || profile.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE) return 0
@@ -92,13 +115,17 @@ export function useContactsHomeListModel({
 
   return {
     selfProfiles,
+    archivedProfiles,
     mainRoleProfiles,
     npcRoleProfiles,
     normalizedContactsSearchQuery,
+    normalizedArchivedSearchQuery,
     isContactsSearchActive,
     filteredSelfProfiles,
     filteredMainProfiles,
     filteredNpcProfiles,
+    filteredArchivedProfiles,
+    isArchivedSearchActive,
     recentInteractionContacts,
     contactRecentScore,
     contactRecentSourceLabel,

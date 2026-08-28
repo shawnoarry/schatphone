@@ -38,6 +38,9 @@ import { cloneRolePayeeAccounts, normalizeRolePayeeAccounts } from './wallet-ban
 export const CONTACTS_PROFILE_OWNER_CODES = Object.freeze({
   PROFILE_CREATED: 'profile_created',
   PROFILE_REVISED: 'profile_revised',
+  PROFILE_ARCHIVED: 'profile_archived',
+  PROFILE_RESTORED: 'profile_restored',
+  PROFILE_PERMANENTLY_DELETED: 'profile_permanently_deleted',
   PROFILE_REMOVED: 'profile_removed',
   PROFILES_REPLACED: 'profiles_replaced',
   PROFILE_NOT_FOUND: 'profile_not_found',
@@ -45,12 +48,24 @@ export const CONTACTS_PROFILE_OWNER_CODES = Object.freeze({
   DUPLICATE_PROFILE_ID: 'duplicate_profile_id',
   INVALID_ROLE_ID: 'invalid_role_id',
   ROLE_ID_CONFLICT: 'role_id_conflict',
+  PROFILE_ID_RESERVED: 'profile_id_reserved',
+  PROFILE_NOT_ARCHIVED: 'profile_not_archived',
+  SELF_PROFILE_LIFECYCLE_FORBIDDEN: 'self_profile_lifecycle_forbidden',
   INVALID_ENTITY_TRANSITION: 'invalid_entity_transition',
   STALE_REVISION: 'stale_revision',
   SELF_PROFILE_WORLD_AMBIGUOUS: 'self_profile_world_ambiguous',
   USER_EDITED_PROTECTED: 'user_edited_protected',
   WRITE_REJECTED: 'write_rejected',
 })
+
+export const CONTACTS_PROFILE_LIFECYCLE_STATES = Object.freeze({
+  ACTIVE: 'active',
+  ARCHIVED: 'archived',
+})
+
+export const CONTACTS_PROFILE_LIFECYCLE_SCHEMA_VERSION = 1
+
+const MAX_ARCHIVE_NOTE_LENGTH = 240
 
 const RELATIONSHIP_PROFILE_FIELD_KEYS = [
   'relationshipLabelText',
@@ -69,6 +84,87 @@ const ENTITY_TYPE_KEYS = new Set(Object.values(CONTACTS_ENTITY_TYPES))
 const toPositiveInt = (value) => {
   const parsed = Number(value)
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0
+}
+
+const normalizeTimestamp = (value) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0
+}
+
+const normalizeArchiveNote = (value) =>
+  typeof value === 'string'
+    ? value.normalize('NFKC').replace(/\s+/g, ' ').trim().slice(0, MAX_ARCHIVE_NOTE_LENGTH)
+    : ''
+
+export const normalizeContactsProfileLifecycle = (rawLifecycle = {}) => {
+  const source = rawLifecycle && typeof rawLifecycle === 'object' ? rawLifecycle : {}
+  const state = source.state === CONTACTS_PROFILE_LIFECYCLE_STATES.ARCHIVED
+    ? CONTACTS_PROFILE_LIFECYCLE_STATES.ARCHIVED
+    : CONTACTS_PROFILE_LIFECYCLE_STATES.ACTIVE
+  return {
+    state,
+    archivedAt: normalizeTimestamp(source.archivedAt),
+    restoredAt: normalizeTimestamp(source.restoredAt),
+    archiveNote: normalizeArchiveNote(source.archiveNote),
+  }
+}
+
+export const isContactsProfileArchived = (profile = {}) =>
+  normalizeContactsProfileLifecycle(profile?.lifecycle).state ===
+  CONTACTS_PROFILE_LIFECYCLE_STATES.ARCHIVED
+
+export const isContactsProfileActive = (profile = {}) => !isContactsProfileArchived(profile)
+
+const normalizeContactsProfileTombstone = (rawTombstone = {}) => {
+  const profileId = toPositiveInt(rawTombstone?.profileId)
+  const roleId = normalizeRoleId(rawTombstone?.roleId)
+  if (!profileId || !isValidRoleId(roleId)) return null
+  return {
+    profileId,
+    roleId,
+    entityType: ENTITY_TYPE_KEYS.has(rawTombstone?.entityType)
+      ? rawTombstone.entityType
+      : CONTACTS_ENTITY_TYPES.NPC,
+    worldId: typeof rawTombstone?.worldId === 'string'
+      ? rawTombstone.worldId.normalize('NFKC').trim().slice(0, 120)
+      : '',
+    deletedAt: normalizeTimestamp(rawTombstone?.deletedAt),
+    schemaVersion: Math.max(1, toPositiveInt(rawTombstone?.schemaVersion)),
+  }
+}
+
+export const normalizeContactsProfileLifecycleState = (rawState = {}, rawProfiles = []) => {
+  const source = rawState && typeof rawState === 'object' && !Array.isArray(rawState) ? rawState : {}
+  const tombstones = []
+  const seenProfileIds = new Set()
+  const seenRoleIds = new Set()
+  for (const rawTombstone of Array.isArray(source.tombstones) ? source.tombstones : []) {
+    const tombstone = normalizeContactsProfileTombstone(rawTombstone)
+    if (!tombstone) continue
+    const roleKey = tombstone.roleId.toLowerCase()
+    if (seenProfileIds.has(tombstone.profileId) || seenRoleIds.has(roleKey)) continue
+    seenProfileIds.add(tombstone.profileId)
+    seenRoleIds.add(roleKey)
+    tombstones.push(tombstone)
+  }
+  tombstones.sort((left, right) => left.profileId - right.profileId)
+  const maxLiveProfileId = (Array.isArray(rawProfiles) ? rawProfiles : []).reduce(
+    (max, profile) => Math.max(max, toPositiveInt(profile?.id)),
+    0,
+  )
+  const maxTombstoneProfileId = tombstones.reduce(
+    (max, tombstone) => Math.max(max, tombstone.profileId),
+    0,
+  )
+  return {
+    schemaVersion: CONTACTS_PROFILE_LIFECYCLE_SCHEMA_VERSION,
+    profileIdHighWaterMark: Math.max(
+      toPositiveInt(source.profileIdHighWaterMark),
+      maxLiveProfileId,
+      maxTombstoneProfileId,
+    ),
+    tombstones,
+  }
 }
 
 export const normalizeContactsProfileRevision = (value) => {
@@ -148,6 +244,7 @@ export const cloneContactsProfile = (profile = {}) => ({
   assetPack: cloneRoleAssetPack(profile.assetPack),
   assetFolderBindings: cloneRoleAssetFolderBindings(profile.assetFolderBindings),
   tags: Array.isArray(profile.tags) ? [...profile.tags] : [],
+  lifecycle: normalizeContactsProfileLifecycle(profile.lifecycle),
 })
 
 const immutableProfile = (profile) => (profile ? deepFreeze(cloneContactsProfile(profile)) : null)
@@ -210,6 +307,7 @@ export const normalizeContactsProfile = (
           .map((item) => (typeof item === 'string' ? item.trim() : ''))
           .filter(Boolean)
       : [],
+    lifecycle: normalizeContactsProfileLifecycle(rawProfile?.lifecycle),
     revision: normalizeContactsProfileRevision(rawProfile?.revision),
     createdAt:
       typeof rawProfile?.createdAt === 'number' && Number.isFinite(rawProfile.createdAt)
@@ -273,10 +371,22 @@ const successReceipt = (code, profile, previousRevision = 0, extra = {}) =>
     ...extra,
   })
 
-export const createContactsProfileOwner = ({ profiles, now = Date.now } = {}) => {
+export const createContactsProfileOwner = ({ profiles, lifecycleState = {}, now = Date.now } = {}) => {
   if (!Array.isArray(profiles)) {
     throw new TypeError('Contacts Profile Owner requires an array carrier.')
   }
+  if (!lifecycleState || typeof lifecycleState !== 'object' || Array.isArray(lifecycleState)) {
+    throw new TypeError('Contacts Profile Owner requires an object lifecycle carrier.')
+  }
+
+  const applyLifecycleState = (rawState = {}, profileList = profiles) => {
+    const normalized = normalizeContactsProfileLifecycleState(rawState, profileList)
+    Object.keys(lifecycleState).forEach((key) => delete lifecycleState[key])
+    Object.assign(lifecycleState, normalized)
+    return normalized
+  }
+
+  applyLifecycleState(lifecycleState, profiles)
 
   const findMutableProfileById = (profileId) => {
     const numericId = toPositiveInt(profileId)
@@ -310,6 +420,12 @@ export const createContactsProfileOwner = ({ profiles, now = Date.now } = {}) =>
         })
       }
     }
+    if (isContactsProfileArchived(profile) && options.allowArchived !== true) {
+      return failureReceipt(CONTACTS_PROFILE_OWNER_CODES.PROFILE_ARCHIVED, {
+        profileId: numericId,
+        revision: profile.revision,
+      })
+    }
     return { ok: true, profile }
   }
 
@@ -317,11 +433,15 @@ export const createContactsProfileOwner = ({ profiles, now = Date.now } = {}) =>
     const normalized = normalizeRoleId(roleId)
     if (!isValidRoleId(normalized)) return false
     const excluded = toPositiveInt(excludeProfileId)
-    return !profiles.some(
+    const conflictsWithLiveProfile = profiles.some(
       (profile) =>
         Number(profile.id) !== excluded &&
         normalizeRoleId(profile.roleId).toLowerCase() === normalized.toLowerCase(),
     )
+    const conflictsWithTombstone = lifecycleState.tombstones.some(
+      (tombstone) => normalizeRoleId(tombstone.roleId).toLowerCase() === normalized.toLowerCase(),
+    )
+    return !conflictsWithLiveProfile && !conflictsWithTombstone
   }
 
   const reviseProfile = (profileId, updates = {}, options = {}) => {
@@ -443,9 +563,11 @@ export const createContactsProfileOwner = ({ profiles, now = Date.now } = {}) =>
   }
 
   return {
-    listProfileReferences() {
+    listProfileReferences({ includeArchived = false } = {}) {
       return deepFreeze(
-        profiles.map((profile) => ({
+        profiles
+          .filter((profile) => includeArchived || isContactsProfileActive(profile))
+          .map((profile) => ({
           profileId: profile.id,
           roleId: profile.roleId,
           name: profile.name,
@@ -454,6 +576,7 @@ export const createContactsProfileOwner = ({ profiles, now = Date.now } = {}) =>
           worldId: profile.templateLink?.primaryWorldId || '',
           templateId: profile.templateLink?.profileTemplateId || '',
           revision: profile.revision,
+          lifecycleState: profile.lifecycle.state,
         })),
       )
     },
@@ -477,7 +600,9 @@ export const createContactsProfileOwner = ({ profiles, now = Date.now } = {}) =>
     selectSelfProfileForWorld(worldId) {
       const normalizedWorldId = typeof worldId === 'string' ? worldId.trim() : ''
       const selfProfiles = profiles.filter(
-        (profile) => profile.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE,
+        (profile) =>
+          profile.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE &&
+          isContactsProfileActive(profile),
       )
       const exactMatches = normalizedWorldId
         ? selfProfiles.filter(
@@ -538,6 +663,10 @@ export const createContactsProfileOwner = ({ profiles, now = Date.now } = {}) =>
       return profiles.map((profile) => cloneContactsProfile(profile))
     },
 
+    createLifecyclePersistenceSnapshot() {
+      return structuredClone(normalizeContactsProfileLifecycleState(lifecycleState, profiles))
+    },
+
     createProfile(payload = {}) {
       const hasExplicitId = Object.prototype.hasOwnProperty.call(payload, 'id')
       const explicitId = hasExplicitId ? toPositiveInt(payload.id) : 0
@@ -549,12 +678,13 @@ export const createContactsProfileOwner = ({ profiles, now = Date.now } = {}) =>
           profileId: explicitId,
         })
       }
+      if (explicitId && lifecycleState.tombstones.some((item) => item.profileId === explicitId)) {
+        return failureReceipt(CONTACTS_PROFILE_OWNER_CODES.PROFILE_ID_RESERVED, {
+          profileId: explicitId,
+        })
+      }
 
-      const maxProfileId = profiles.reduce(
-        (max, profile) => Math.max(max, toPositiveInt(profile.id)),
-        0,
-      )
-      const nextId = explicitId || maxProfileId + 1
+      const nextId = explicitId || lifecycleState.profileIdHighWaterMark + 1
       const normalized = normalizeContactsProfile(
         { ...payload, id: nextId },
         profiles.length,
@@ -567,10 +697,127 @@ export const createContactsProfileOwner = ({ profiles, now = Date.now } = {}) =>
         return failureReceipt(CONTACTS_PROFILE_OWNER_CODES.ROLE_ID_CONFLICT, { profileId: nextId })
       }
       profiles.push(normalized)
+      lifecycleState.profileIdHighWaterMark = Math.max(
+        lifecycleState.profileIdHighWaterMark,
+        normalized.id,
+      )
       return successReceipt(CONTACTS_PROFILE_OWNER_CODES.PROFILE_CREATED, normalized, 0)
     },
 
     reviseProfile,
+
+    archiveProfile(profileId, archiveInput = {}, options = {}) {
+      const validation = validateMutation(profileId, options)
+      if (!validation.ok) return validation
+      const target = validation.profile
+      if (target.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE) {
+        return failureReceipt(CONTACTS_PROFILE_OWNER_CODES.SELF_PROFILE_LIFECYCLE_FORBIDDEN, {
+          profileId: target.id,
+          revision: target.revision,
+        })
+      }
+      const previousRevision = target.revision
+      target.lifecycle = {
+        ...normalizeContactsProfileLifecycle(target.lifecycle),
+        state: CONTACTS_PROFILE_LIFECYCLE_STATES.ARCHIVED,
+        archivedAt: Math.max(0, Math.floor(now())),
+        archiveNote: normalizeArchiveNote(archiveInput?.note),
+      }
+      touchProfile(target)
+      return successReceipt(
+        CONTACTS_PROFILE_OWNER_CODES.PROFILE_ARCHIVED,
+        target,
+        previousRevision,
+      )
+    },
+
+    restoreProfile(profileId, options = {}) {
+      const validation = validateMutation(profileId, { ...options, allowArchived: true })
+      if (!validation.ok) return validation
+      const target = validation.profile
+      if (target.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE) {
+        return failureReceipt(CONTACTS_PROFILE_OWNER_CODES.SELF_PROFILE_LIFECYCLE_FORBIDDEN, {
+          profileId: target.id,
+          revision: target.revision,
+        })
+      }
+      if (!isContactsProfileArchived(target)) {
+        return failureReceipt(CONTACTS_PROFILE_OWNER_CODES.PROFILE_NOT_ARCHIVED, {
+          profileId: target.id,
+          revision: target.revision,
+        })
+      }
+      const previousRevision = target.revision
+      target.lifecycle = {
+        ...normalizeContactsProfileLifecycle(target.lifecycle),
+        state: CONTACTS_PROFILE_LIFECYCLE_STATES.ACTIVE,
+        restoredAt: Math.max(0, Math.floor(now())),
+      }
+      touchProfile(target)
+      return successReceipt(
+        CONTACTS_PROFILE_OWNER_CODES.PROFILE_RESTORED,
+        target,
+        previousRevision,
+      )
+    },
+
+    permanentlyDeleteArchivedProfile(profileId, options = {}) {
+      const validation = validateMutation(profileId, { ...options, allowArchived: true })
+      if (!validation.ok) return validation
+      const target = validation.profile
+      if (target.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE) {
+        return failureReceipt(CONTACTS_PROFILE_OWNER_CODES.SELF_PROFILE_LIFECYCLE_FORBIDDEN, {
+          profileId: target.id,
+          revision: target.revision,
+        })
+      }
+      if (!isContactsProfileArchived(target)) {
+        return failureReceipt(CONTACTS_PROFILE_OWNER_CODES.PROFILE_NOT_ARCHIVED, {
+          profileId: target.id,
+          revision: target.revision,
+        })
+      }
+
+      const index = profiles.findIndex((profile) => Number(profile.id) === Number(target.id))
+      if (index < 0) {
+        return failureReceipt(CONTACTS_PROFILE_OWNER_CODES.PROFILE_NOT_FOUND, {
+          profileId: target.id,
+        })
+      }
+      const tombstone = normalizeContactsProfileTombstone({
+        profileId: target.id,
+        roleId: target.roleId,
+        entityType: target.entityType,
+        worldId: target.templateLink?.primaryWorldId,
+        deletedAt: Math.max(0, Math.floor(now())),
+        schemaVersion: CONTACTS_PROFILE_LIFECYCLE_SCHEMA_VERSION,
+      })
+      if (!tombstone) {
+        return failureReceipt(CONTACTS_PROFILE_OWNER_CODES.WRITE_REJECTED, {
+          profileId: target.id,
+          revision: target.revision,
+        })
+      }
+
+      const snapshot = immutableProfile(target)
+      profiles.splice(index, 1)
+      applyLifecycleState(
+        {
+          ...lifecycleState,
+          tombstones: [...lifecycleState.tombstones, tombstone],
+        },
+        profiles,
+      )
+      return deepFreeze({
+        ok: true,
+        code: CONTACTS_PROFILE_OWNER_CODES.PROFILE_PERMANENTLY_DELETED,
+        profileId: target.id,
+        previousRevision: target.revision,
+        revision: target.revision,
+        profile: snapshot,
+        tombstone: structuredClone(tombstone),
+      })
+    },
 
     listDetailItems(profileId, section = '') {
       const profile = findMutableProfileById(profileId)
@@ -939,14 +1186,35 @@ export const createContactsProfileOwner = ({ profiles, now = Date.now } = {}) =>
       })
     },
 
-    replaceAllProfiles(rawProfiles = []) {
+    replaceAllProfiles(rawProfiles = [], options = {}) {
       const prepared = prepareProfileList(rawProfiles, now)
       if (!prepared.ok) {
         return failureReceipt(prepared.code, {
           duplicateProfileIds: prepared.duplicateProfileIds || [],
         })
       }
+      const nextLifecycleState = normalizeContactsProfileLifecycleState(
+        options.lifecycleState ?? lifecycleState,
+        prepared.profiles,
+      )
+      const tombstoneProfileIds = new Set(
+        nextLifecycleState.tombstones.map((tombstone) => tombstone.profileId),
+      )
+      const tombstoneRoleIds = new Set(
+        nextLifecycleState.tombstones.map((tombstone) => tombstone.roleId.toLowerCase()),
+      )
+      const reservedProfile = prepared.profiles.find(
+        (profile) =>
+          tombstoneProfileIds.has(profile.id) ||
+          tombstoneRoleIds.has(normalizeRoleId(profile.roleId).toLowerCase()),
+      )
+      if (reservedProfile) {
+        return failureReceipt(CONTACTS_PROFILE_OWNER_CODES.PROFILE_ID_RESERVED, {
+          profileId: reservedProfile.id,
+        })
+      }
       profiles.splice(0, profiles.length, ...prepared.profiles)
+      applyLifecycleState(nextLifecycleState, profiles)
       return deepFreeze({
         ok: true,
         code: CONTACTS_PROFILE_OWNER_CODES.PROFILES_REPLACED,

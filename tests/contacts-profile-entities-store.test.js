@@ -1,5 +1,5 @@
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, test } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { useChatStore } from '../src/stores/chat'
 import { CONTACTS_ENTITY_TYPES } from '../src/lib/profile-template-schema'
 
@@ -7,6 +7,7 @@ describe('Contacts profile entity model', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
+    vi.restoreAllMocks()
   })
 
   test('creates self profile without chat-target capabilities', () => {
@@ -111,6 +112,74 @@ describe('Contacts profile entity model', () => {
       profileValues: [expect.objectContaining({ fieldId: 'agency' })],
     })
     expect(restored.getContactById(binding.id).profileId).toBe(supporting.id)
+  })
+
+  test('archives and restores a role without losing its binding, conversation, or stable IDs', () => {
+    const store = useChatStore()
+    const profile = store.addRoleProfile({
+      roleId: '1010',
+      name: 'Archived role',
+      entityType: CONTACTS_ENTITY_TYPES.SUPPORTING_ROLE,
+    })
+    const binding = store.bindRoleProfile(profile.id)
+    const message = store.appendMessage(binding.id, { role: 'user', content: 'Keep this history.' })
+    const archived = store.archiveRoleProfile(profile.id, {
+      expectedRevision: profile.revision,
+      note: 'Later',
+    })
+
+    expect(archived).toMatchObject({ ok: true, reason: 'profile_archived' })
+    expect(store.getRoleProfileById(profile.id)).toMatchObject({
+      id: profile.id,
+      roleId: '1010',
+      lifecycle: { state: 'archived', archiveNote: 'Later' },
+    })
+    expect(store.getContactById(binding.id).profileId).toBe(profile.id)
+    expect(store.getMessagesByContactId(binding.id).some((item) => item.id === message.id)).toBe(true)
+    expect(store.canContactSendMessages(store.getContactById(binding.id))).toBe(false)
+    expect(store.appendMessage(binding.id, { role: 'assistant', content: 'Blocked.' })).toBeNull()
+    expect(
+      store.setContactChatSocialState(binding.id, 'contact_blocked'),
+    ).toBe(false)
+    expect(store.bindRoleProfile(profile.id)).toBeNull()
+    expect(store.updateRoleProfile(profile.id, { bio: 'Blocked edit' })).toBe(false)
+
+    const archivedRevision = store.getRoleProfileById(profile.id).revision
+    const restored = store.restoreRoleProfile(profile.id, { expectedRevision: archivedRevision })
+    expect(restored).toMatchObject({ ok: true, reason: 'profile_restored' })
+    expect(store.getRoleProfileById(profile.id)).toMatchObject({
+      id: profile.id,
+      roleId: '1010',
+      lifecycle: { state: 'active' },
+    })
+    expect(store.canContactSendMessages(store.getContactById(binding.id))).toBe(true)
+    expect(store.bindRoleProfile(profile.id).id).toBe(binding.id)
+
+    store.saveNow()
+    const persisted = JSON.parse(localStorage.getItem('schatphone:store:chat') || '{}')
+    expect(persisted.data.contactsLifecycle).toMatchObject({
+      schemaVersion: 1,
+      profileIdHighWaterMark: expect.any(Number),
+      tombstones: [],
+    })
+  })
+
+  test('rolls an archive back when persistence fails', () => {
+    const store = useChatStore()
+    const profile = store.addRoleProfile({ roleId: '1011', name: 'Rollback role' })
+    const before = JSON.parse(JSON.stringify(profile))
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota')
+    })
+
+    const result = store.archiveRoleProfile(profile.id, { expectedRevision: profile.revision })
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: 'persistence_failed',
+      rollback: { restored: true },
+    })
+    expect(store.getRoleProfileById(profile.id)).toEqual(before)
   })
 
   test('upgrades NPC to main role while preserving values and existing chat binding', () => {

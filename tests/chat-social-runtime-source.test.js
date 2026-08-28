@@ -56,6 +56,8 @@ describe('chat social runtime source', () => {
     createRoleBinding(chatStore, { name: 'Connected Role' }, {
       chatSocialState: CHAT_CONTACT_SOCIAL_STATES.CONNECTED,
     })
+    const archived = createRoleBinding(chatStore, { name: 'Archived Candidate' })
+    expect(chatStore.archiveRoleProfile(archived.profile.id)).toMatchObject({ ok: true })
     const selfProfile = chatStore.addRoleProfile({
       name: 'Self Profile',
       entityType: CONTACTS_ENTITY_TYPES.SELF_PROFILE,

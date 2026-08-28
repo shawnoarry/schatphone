@@ -482,6 +482,9 @@ describe('canonical persistence-owner inventory', () => {
     const contacts = PERSISTENCE_OWNER_DATA_CLASSES.find(
       (entry) => entry.id === 'contacts.role-profiles',
     )
+    const contactsLifecycle = PERSISTENCE_OWNER_DATA_CLASSES.find(
+      (entry) => entry.id === 'contacts.profile-lifecycle-reservations',
+    )
     const worldBook = PERSISTENCE_OWNER_DATA_CLASSES.find(
       (entry) => entry.id === 'worldbook.world-context',
     )
@@ -515,6 +518,12 @@ describe('canonical persistence-owner inventory', () => {
     )
 
     expect(contacts).toMatchObject({ logicalOwner: 'Contacts', storageKeys: ['store:chat'] })
+    expect(contactsLifecycle).toMatchObject({
+      logicalOwner: 'Contacts',
+      storageKeys: ['store:chat'],
+      backupRequirement: 'required',
+      backupSectionId: 'contacts-lifecycle',
+    })
     expect(worldBook).toMatchObject({ logicalOwner: 'WorldBook', storageKeys: ['store:system'] })
     expect(worldSuite).toMatchObject({
       logicalOwner: 'World Suite',
@@ -588,6 +597,7 @@ describe('canonical persistence-owner inventory', () => {
     ).flatMap((section) => section.dataClassIds)
 
     expect(namedRequiredGapClassIds).toEqual([
+      'contacts.profile-lifecycle-reservations',
       'chat.module-identity-settings',
       'world-suite.installation-inventory',
       'mini-scene.artifacts-and-policies',
@@ -626,6 +636,10 @@ describe('canonical persistence-owner inventory', () => {
       shapeOk: true,
       completePackageEligible: false,
       knownGaps: [
+        {
+          sectionId: 'contacts-lifecycle-known-gap',
+          dataClassIds: ['contacts.profile-lifecycle-reservations'],
+        },
         {
           sectionId: 'chat-module-identity-known-gap',
           dataClassIds: ['chat.module-identity-settings'],

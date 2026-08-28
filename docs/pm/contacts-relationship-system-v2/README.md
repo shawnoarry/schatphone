@@ -1,21 +1,22 @@
 # Contacts Relationship System V2 Package
 
-Updated: 2026-08-27
+Updated: 2026-08-28
 
 Use this package for work touching Contacts, Chat Directory boundary, role identity, relationship reset/delete, one-memory delete, role detail IA, or World Hub cleanup semantics tied to one role.
 
 ## Read This Package In This Order
 
 1. `STATUS_AND_HANDOFF.md`
-2. `CONTACTS_V3_IDENTITY_AND_ROLE_CORE_PLAN.md` for the accepted next identity-owner, persona-confirmation, projection, lifecycle, and migration direction
-3. `CONTACTS_V3_0_ARCHITECTURE_AND_DECISION_FREEZE.md` for the frozen current-state inventory, per-world Self Profile decision, compatibility/rollback rules, and `CONTACTS-V3-1` file set
-4. `CONTACTS_V3_2A_EXTENSIBLE_PROFILE_CARD_DESIGN.md` when the task touches extensible profile-card categories, world-generated forms, user-added fields, or free-text classification
-5. `CONTACTS_V3_2A_EXECUTION_PLAN.md` for the live step-by-step implementation order and the dependent event queue
-6. `PRODUCT_BOUNDARY.md`
-7. `DESTRUCTIVE_ACTIONS.md`
-8. `ROLE_HUB_INFORMATION_ARCHITECTURE.md`
-9. `IMPLEMENTATION_WORKSTREAMS.md`
-10. `ROLE_PROFILE_TEMPLATE_DECISION_LOG.md` when the task touches WorldBook-driven profile templates, Self Profile, Supporting Role, World NPC, or person-depth upgrade
+2. `CONTACTS_V3_IDENTITY_AND_ROLE_CORE_PLAN.md` for the accepted identity-owner, persona-confirmation, projection, lifecycle, and migration direction
+3. `CONTACTS_V3_4_ROLE_LIFECYCLE_DECISION_FREEZE.md` when the task touches person archive, restore, permanent delete, ID non-reuse, tombstones, receiving-account suspension/revocation, or lifecycle rollback
+4. `CONTACTS_V3_0_ARCHITECTURE_AND_DECISION_FREEZE.md` for the frozen current-state inventory, per-world Self Profile decision, compatibility/rollback rules, and `CONTACTS-V3-1` file set
+5. `CONTACTS_V3_2A_EXTENSIBLE_PROFILE_CARD_DESIGN.md` when the task touches extensible profile-card categories, world-generated forms, user-added fields, or free-text classification
+6. `CONTACTS_V3_2A_EXECUTION_PLAN.md` for the completed card/persona/projection record and dependent event stop lines
+7. `PRODUCT_BOUNDARY.md`
+8. `DESTRUCTIVE_ACTIONS.md`
+9. `ROLE_HUB_INFORMATION_ARCHITECTURE.md`
+10. `IMPLEMENTATION_WORKSTREAMS.md`
+11. `ROLE_PROFILE_TEMPLATE_DECISION_LOG.md` when the task touches WorldBook-driven profile templates, Self Profile, Supporting Role, World NPC, or person-depth upgrade
 
 Also read these when needed:
 
@@ -40,7 +41,8 @@ Current cross-device handoff and execution record:
 
 ## Fast Product Meaning
 
-- Contacts V2 remains complete at its accepted role, relationship, memory, WorldBook-field, cleanup, and Role Hub baseline. Contacts V3 is now complete through profile-card construction, Persona Confirmation, and the approved purpose-specific projections. Pasted persona text remains review-only until every row is accepted or ignored; one confirmation writes one rollback-safe Contacts Profile Owner revision. The next candidate is `CONTACTS-V3-4 Role Lifecycle`, after its archive/restore, permanent-ID, tombstone, and receiving-account-revocation semantics are frozen.
+- Contacts V2 remains complete at its accepted role, relationship, memory, WorldBook-field, cleanup, and Role Hub baseline. Contacts V3 is complete through profile-card construction, Persona Confirmation, approved purpose-specific projections, and V3-4A/V3-4B/V3-4C role lifecycle. Contacts now exposes one counted/searchable archived-people manager, read-only archived details, rollback-safe archive/restore with the same Wallet payee identity, and archive-only permanent deletion through grouped impact plus typed role-ID confirmation. The legacy active-person direct-delete entry is removed; V3-5 consumer adoption remains gated.
+- Person archive is reversible and preserves the complete person, Chat history, relationship, memories, source lineage, and receiving-account identity while suspending new interaction/projections. Permanent deletion is archive-first, creates a minimal tombstone, reserves both profile and role IDs, revokes new payee use, and preserves immutable owner history without rebinding it to another person.
 - `CONTACTS-V3-0` freezes one global device account plus one independent Self Profile per world. `CONTACTS-V3-1` now keeps `store:chat.roleProfiles` as the compatibility carrier while moving profile normalization, revision, CRUD, detail, classification, asset, NPC-upgrade, removal, hydration, and persistence-copy rules into `src/lib/contacts-profile-owner.js`.
 - Contacts is now the executable owner of Self Profile, Main Role, Supporting Role, and World NPC record behavior. Chat keeps the old method names and storage envelope for compatibility, but no longer implements the profile rules itself.
 - The executable baseline has four person types. Supporting Role sits between Main Role and World NPC; the legacy `npc` value remains World NPC, old NPCs are not automatically reclassified, and family/friend/colleague/etc. remain separate relationship labels.

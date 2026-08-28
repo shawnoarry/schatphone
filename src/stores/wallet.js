@@ -68,6 +68,7 @@ export const WALLET_TRANSACTION_SOURCE_FILTERS = Object.freeze({
 const WALLET_TRANSACTION_TYPES = new Set(['income', 'expense', 'transfer'])
 const WALLET_TRANSFER_DIRECTIONS = new Set(['incoming', 'outgoing'])
 const WALLET_TRANSFER_STATUSES = new Set(['completed'])
+const WALLET_KNOWN_PAYEE_STATUSES = new Set(['active', 'suspended', 'closed'])
 const WALLET_COMMERCE_PAYMENT_STATUSES = new Set(['completed', 'reversed', 'refunded'])
 const WALLET_TRANSACTION_SOURCE_FILTER_VALUES = new Set(
   Object.values(WALLET_TRANSACTION_SOURCE_FILTERS),
@@ -185,6 +186,17 @@ const normalizePositiveInt = (value, fallback = 0) => {
   return Number.isSafeInteger(number) && number > 0 ? number : fallback
 }
 
+const normalizeDeletedPersonReference = (rawReference = {}) => {
+  const profileId = normalizePositiveInt(rawReference?.profileId)
+  const roleId = normalizeText(rawReference?.roleId, '', 40)
+  if (!profileId || !roleId) return null
+  return {
+    profileId,
+    roleId,
+    deletedAt: Math.max(0, toInt(rawReference?.deletedAt, 0)),
+  }
+}
+
 const normalizeKnownPayeeAccount = (rawPayee, index = 0) => {
   if (!rawPayee || typeof rawPayee !== 'object') return null
   const payeeAccountId = normalizeText(rawPayee.payeeAccountId || rawPayee.id, '', 140)
@@ -218,7 +230,7 @@ const normalizeKnownPayeeAccount = (rawPayee, index = 0) => {
     currency,
     accountNumberLast4,
     maskedAccountNumber: `•••• ${accountNumberLast4}`,
-    status: rawPayee.status === 'closed' ? 'closed' : 'active',
+    status: WALLET_KNOWN_PAYEE_STATUSES.has(rawPayee.status) ? rawPayee.status : 'active',
     sourceChatId: normalizePositiveInt(rawPayee.sourceChatId || rawPayee.chatId),
     sourceMessageId: normalizeText(rawPayee.sourceMessageId || rawPayee.messageId, '', 140),
     disclosedAt,
@@ -313,6 +325,9 @@ const normalizeWalletTransaction = (
     sourceChatId: normalizePositiveInt(rawTransaction.sourceChatId),
     sourceMessageId: normalizeText(rawTransaction.sourceMessageId, '', 140),
     relationshipBinding: normalizeRelationshipBinding(rawTransaction.relationshipBinding),
+    deletedPersonReference: normalizeDeletedPersonReference(
+      rawTransaction.deletedPersonReference,
+    ),
     quoteSnapshot: normalizeMoneyQuote(
       rawTransaction.quoteSnapshot || rawTransaction.moneyQuote || rawTransaction.checkoutQuote,
     ),
@@ -488,11 +503,13 @@ export const useWalletStore = defineStore('wallet', () => {
     return knownPayeeAccounts.value.find((payee) => payee.id === id) || null
   }
 
-  const listKnownPayeeAccountsForProfile = (profileId = 0) => {
+  const listKnownPayeeAccountsForProfile = (profileId = 0, options = {}) => {
     const numericProfileId = normalizePositiveInt(profileId)
     if (!numericProfileId) return []
     return knownPayeeAccounts.value.filter(
-      (payee) => payee.ownerProfileId === numericProfileId && payee.status === 'active',
+      (payee) =>
+        payee.ownerProfileId === numericProfileId &&
+        (payee.status === 'active' || (options.includeSuspended && payee.status === 'suspended')),
     )
   }
 
@@ -538,6 +555,34 @@ export const useWalletStore = defineStore('wallet', () => {
     )
     return before - knownPayeeAccounts.value.length
   }
+
+  const setKnownPayeeStatusForProfile = (profileId = 0, fromStatus = '', toStatus = '') => {
+    const numericProfileId = normalizePositiveInt(profileId)
+    if (
+      !numericProfileId ||
+      !WALLET_KNOWN_PAYEE_STATUSES.has(fromStatus) ||
+      !WALLET_KNOWN_PAYEE_STATUSES.has(toStatus)
+    ) {
+      return 0
+    }
+    let updatedCount = 0
+    knownPayeeAccounts.value = knownPayeeAccounts.value.map((payee) => {
+      if (payee.ownerProfileId !== numericProfileId || payee.status !== fromStatus) return payee
+      updatedCount += 1
+      return {
+        ...payee,
+        status: toStatus,
+        updatedAt: Date.now(),
+      }
+    })
+    return updatedCount
+  }
+
+  const suspendKnownPayeeAccountsForProfile = (profileId = 0) =>
+    setKnownPayeeStatusForProfile(profileId, 'active', 'suspended')
+
+  const restoreKnownPayeeAccountsForProfile = (profileId = 0) =>
+    setKnownPayeeStatusForProfile(profileId, 'suspended', 'active')
 
   const findDefaultBankAccountForCurrency = (currency = '') => {
     const code = normalizeCurrency(currency, '')
@@ -1200,6 +1245,66 @@ export const useWalletStore = defineStore('wallet', () => {
     return true
   }
 
+  const markTransactionPersonDeleted = (
+    transactionId,
+    profile = {},
+    deletedAt = Date.now(),
+  ) => {
+    const transaction = findTransactionById(transactionId)
+    const profileId = normalizePositiveInt(profile?.id ?? profile?.profileId)
+    const roleId = normalizeText(profile?.roleId, '', 40)
+    if (!transaction || !profileId || !roleId) return false
+    const matchesProfile =
+      bindingMatchesProfile(transaction.relationshipBinding, profile) ||
+      Number(transaction.recipientProfileId) === profileId ||
+      Number(transaction.deletedPersonReference?.profileId) === profileId
+    if (!matchesProfile) return false
+
+    transaction.deletedPersonReference = {
+      profileId,
+      roleId,
+      deletedAt: Math.max(0, toInt(deletedAt, Date.now())),
+    }
+    transaction.relationshipBinding = clearRelationshipBinding()
+    transaction.payeeAccountId = ''
+    transaction.recipientProfileId = 0
+    transaction.recipientContactId = 0
+    transaction.sourceChatId = 0
+    transaction.sourceMessageId = ''
+    transaction.updatedAt = Date.now()
+    return true
+  }
+
+  const markTransactionsForDeletedProfile = (profile = {}, options = {}) => {
+    const profileId = normalizePositiveInt(profile?.id ?? profile?.profileId)
+    const roleId = normalizeText(profile?.roleId, '', 40)
+    if (!profileId || !roleId) {
+      return { requestedCount: 0, removedCount: 0, updatedCount: 0 }
+    }
+    const matchedTransactions = transactions.value.filter(
+      (transaction) =>
+        bindingMatchesProfile(transaction.relationshipBinding, profile) ||
+        Number(transaction.recipientProfileId) === profileId,
+    )
+    let updatedCount = 0
+    matchedTransactions.forEach((transaction) => {
+      if (
+        markTransactionPersonDeleted(
+          transaction.id,
+          { ...profile, id: profileId, roleId },
+          options.deletedAt,
+        )
+      ) {
+        updatedCount += 1
+      }
+    })
+    return {
+      requestedCount: matchedTransactions.length,
+      removedCount: 0,
+      updatedCount,
+    }
+  }
+
   const cleanupRelationshipForProfile = (profile = {}, options = {}) => {
     const replacementName = normalizeText(options.replacementName, 'Unknown counterparty', 120)
     const matchedTransactions = transactions.value.filter((transaction) =>
@@ -1457,15 +1562,13 @@ export const useWalletStore = defineStore('wallet', () => {
   }
 
   const persistToStorage = () => {
-    writePersistedState(WALLET_STORAGE_KEY, createBackupSnapshot(), {
+    return writePersistedState(WALLET_STORAGE_KEY, createBackupSnapshot(), {
       version: WALLET_STORAGE_VERSION,
       migrate: migrateWalletStorage,
     })
   }
 
-  const saveNow = () => {
-    persistToStorage()
-  }
+  const saveNow = () => persistToStorage()
 
   const resetForTesting = () => {
     primaryCurrency.value = DEFAULT_CURRENCY
@@ -1558,6 +1661,8 @@ export const useWalletStore = defineStore('wallet', () => {
     listKnownPayeeAccountsForProfile,
     rememberRolePayeeAccount,
     removeKnownPayeeAccountsForProfile,
+    suspendKnownPayeeAccountsForProfile,
+    restoreKnownPayeeAccountsForProfile,
     findDefaultBankAccountForCurrency,
     listTransactionsByAccount,
     listTransactionsByCard,
@@ -1582,6 +1687,8 @@ export const useWalletStore = defineStore('wallet', () => {
     formatMoneyAmount,
     removeTransaction,
     anonymizeTransaction,
+    markTransactionPersonDeleted,
+    markTransactionsForDeletedProfile,
     cleanupRelationshipForProfile,
     createBackupSnapshot,
     createBackupSnapshotAsync,

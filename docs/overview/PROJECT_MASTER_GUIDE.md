@@ -1,10 +1,10 @@
 # SchatPhone Project Master Guide
 
-Updated: 2026-08-27
+Updated: 2026-08-28
 
-Integrated baseline: `f06a575`
+Integrated baseline: `dc26226`
 
-Working tree: preserved but excluded from integrated capability and measurement claims.
+Working tree: Contacts V3.4 lifecycle work, validated CMG-09 bounded continuity reading, and local QA/visual artifacts are preserved but excluded from integrated capability and measurement claims until committed.
 
 ## 1. Purpose And Status Method
 
@@ -299,7 +299,7 @@ Largest current files:
 
 ## 9. Current Execution Direction
 
-1. complete dependent `CMG-09` reading-cost and `CMG-10` migration/recovery proof;
+1. integrate the validated working-tree `CMG-09` reading-cost slice, then complete dependent `CMG-10` migration/recovery proof;
 2. keep production Mini Scene trigger integration separately gated to a named accepted event family;
 3. close installed-PWA/relaunch, backup round trip, external protection, and named true-device evidence;
 4. run World Pack true-device validation only where it overlaps the release matrix;

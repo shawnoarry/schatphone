@@ -1,14 +1,14 @@
 # Contacts Relationship System V2 Status And Handoff
 
-Updated: 2026-08-27
+Updated: 2026-08-28
 
-Integrated baseline: `52c637e`
+Integrated baseline: `dc26226`
 
 This file is the handoff page for anyone continuing Contacts, role, relationship, or memory-management work.
 
 ## 1. Current Status
 
-Status: `CONTACTS_V2_DONE / CONTACTS-V3-0_DONE 2026-08-27 / CONTACTS-V3-1_DONE 2026-08-27 / CONTACTS-V3-2A_DONE 2026-08-27 / CARD-1_DONE / ROLE-0_DECISION_DONE / ROLE-1_DONE / CARD-2_DONE / CARD-3_DONE / CARD-4_DONE / CARD-5_DONE / CARD-6_DONE / PERSONA-1_DONE / PERSONA-2_DONE 2026-08-27 / CONTACTS-V3-3_DONE 2026-08-27 / CONTACTS-V3-4_NEXT`
+Status: `CONTACTS_V2_DONE / CONTACTS-V3-0_DONE 2026-08-27 / CONTACTS-V3-1_DONE 2026-08-27 / CONTACTS-V3-2A_DONE 2026-08-27 / CARD-1_DONE / ROLE-0_DECISION_DONE / ROLE-1_DONE / CARD-2_DONE / CARD-3_DONE / CARD-4_DONE / CARD-5_DONE / CARD-6_DONE / PERSONA-1_DONE / PERSONA-2_DONE 2026-08-27 / CONTACTS-V3-3_DONE 2026-08-27 / CONTACTS-V3-4_DECISION_FREEZE_COMPLETE / V3-4A_DONE 2026-08-28 / V3-4B_DONE 2026-08-28 / V3-4C_DONE 2026-08-28 / V3-5_GATED`
 
 Accepted next-lane direction:
 
@@ -30,6 +30,9 @@ Accepted next-lane direction:
 - `PERSONA-1 DONE 2026-08-27` adds a review-only whole-description classifier inside the existing Contacts world-profile sheet. Exact source segments become matched values, new-field suggestions, conflicts, or retained unclassified text; the immutable draft is bound to person, world, template, and revision references. Closing, parse failure, stale async responses, and successful classification do not write profile values, template links, or profile revisions.
 - `PERSONA-2 DONE 2026-08-27` requires an accept or ignore decision for every row, allows accepted values and new-field metadata to be edited, rechecks person/world/template/profile revisions, and writes exactly once through Contacts Profile Owner. Accepted new fields use the existing person-extension shape and accepted values use the same manual profile-value structure as direct entry. Validation or persistence failure changes no canonical profile; persistence failure restores and re-persists the complete old snapshot.
 - `CONTACTS-V3-3 DONE 2026-08-27` adds one Contacts-owned projection gate plus bounded formal Chat, Event Player Context, and Work Hub consumers. Purpose, person type, visibility, manual confirmation source, world, template, and profile revision all fail closed. Chat reads only `chat_context`; Player Context requires `event_eligibility` on all three stable identity fields; Work Hub reads only `work_hub_matching` clues and receives no membership, credential, signing, publishing, or organization authority.
+- `CONTACTS-V3-4A DONE 2026-08-28` completes the lifecycle decision freeze and adds the compatibility-safe foundation: active/archived profile state, persisted ID high-water/tombstone reservation carrier, rollback-safe non-Self archive/restore, complete-backup v5, and archived-person fail-closed behavior across Contacts lists, Chat messages/binding/social automation, formal projections, Work Hub matching, and new Chat/Gallery targets. Stable IDs, bindings, conversations, messages, profile content, relationship truth, accounts, and history stay stored.
+- `CONTACTS-V3-4B DONE 2026-08-28` adds one internal permanent-delete coordinator for archived non-Self people. It validates the exact revision and cleanup coverage, inventories Chat/relationship/Wallet/Gallery/Mini Scene/source impacts, requires an explicit retain policy for unknown source owners, snapshots every participant, revokes known payees, replaces live Wallet links with a persisted deleted-person reference while preserving transaction snapshots, unlinks Gallery/Mini Scene references, removes Relationship Runtime and Chat data, and commits one minimal tombstone. Cleanup or persistence failure restores and re-persists every participating owner.
+- `CONTACTS-V3-4C DONE 2026-08-28` exposes one bounded archive-first lifecycle flow in the existing Contacts surface: active people archive through a short confirmation; Wallet payees are suspended and restored under the same account ID; the home page has one counted/searchable archived-people manager; archived details are visibly read-only; permanent deletion appears only in archived management with grouped delete/unlink/history/unknown-reference impact, explicit retain choice for unknown owners, and typed visible role-ID confirmation. The legacy active-person direct-delete entry is removed. Desktop/mobile reload, rollback-feedback, horizontal-overflow, and WCAG A/AA proof are covered without a broad visual redesign.
 
 Confirmed persistence dependency for future work:
 
@@ -132,19 +135,20 @@ Contacts V2 and memory 4.2 are complete at current acceptance. Do not restart th
 
 `CONTACTS-V3-0 Architecture And Decision Freeze` and `CONTACTS-V3-1 Contacts Profile Owner Foundation` are complete.
 
-The next safe slice is the `CONTACTS-V3-4 Role Lifecycle` decision/contract freeze. Do not begin lifecycle writes until archive/restore, permanent profile-ID non-reuse, tombstone, and receiving-account revocation semantics are explicit.
+The `CONTACTS-V3-4 Role Lifecycle` decision freeze and V3-4A/V3-4B/V3-4C implementation slices are complete in the current working tree. Do not begin V3-5 consumer adoption automatically. The live repository queue returns to `CMG-09`; if Contacts is explicitly resumed later, V3-5 must start with a bounded consumer inventory and adoption decision.
 
 Live execution record: `CONTACTS_V3_2A_EXECUTION_PLAN.md`. Its card, persona review/save, formal Chat context, read-only Event identity, and Work Hub matching slices are complete.
 
 Current safe sequence:
 
-1. freeze V3-4 archive, restore, permanent-ID non-reuse, tombstone, and receiving-account revocation semantics against current cleanup and impact-preview behavior;
-2. inventory current create/update/archive/restore/NPC-upgrade/delete orchestration before moving any call behind a lifecycle Interface;
-3. preserve stable IDs, Chat bindings/history, profile values/extensions, relationship truth, receiving accounts, migration, backup/restore, and write-failure rollback;
-4. keep the completed purpose-specific projections read-only and revision-bound while lifecycle work is reviewed;
-5. stop before Work Hub organization ownership, ordinary work chains, Work Hub events, Chronicle, Community/Media, SMS, EVE-5, Mini Scene, or another event family.
+1. preserve V3-4A's lifecycle carrier, V3-4B's coordinator/rollback/tombstone contracts, and V3-4C's archive-first user flow;
+2. keep archived Wallet payees suspended under the same ID and restore them only after a successful person restore;
+3. keep permanent deletion exclusive to archived-person management and retain the grouped impact plus visible role-ID confirmation;
+4. keep relationship reset, Chat unbind, memory archive, person archive, and permanent delete as separate operations;
+5. leave V3-5 consumer adoption gated until the roadmap explicitly promotes one bounded consumer slice;
+6. stop before Work Hub organization ownership, ordinary work chains, Work Hub events, Chronicle, Community/Media, SMS, EVE-5, Mini Scene expansion, or another event family.
 
-Work Hub organization ownership, the first Work Hub-native event, and broader identity-conditioned Event Runtime work remain separately gated after this Contacts identity foundation. `CMG-08` remains separate Mini Scene persistence work and is not absorbed into Contacts V3.
+Work Hub organization ownership, the first Work Hub-native event, and broader identity-conditioned Event Runtime work remain separately gated after this Contacts identity foundation. Integrated `CMG-08` remains separate Mini Scene persistence work, while working-tree `CMG-09` bounds Relationship Runtime/Chat reads without becoming Contacts V3 lifecycle scope.
 
 The older cross-device plans remain implementation history. They are not current task sources unless the live roadmap promotes an exact remaining slice.
 
@@ -283,6 +287,8 @@ The older cross-device plans remain implementation history. They are not current
 - `CMG-06` validation on 2026-08-21: focused Relationship Runtime and Contacts memory coverage passes 31/31, including 501 retained facts, 301 retained entities, v1 carrier migration, close/reopen, backup restore, prompt character budget, quota-style save rollback, page/offset reads, page navigation, and source-filter options. Contacts desktop Chromium E2E passes 1/1; full Vitest passes 301 files / 2129 tests; ESLint, production build, governance (2 files / 14 tests), and `git diff --check` pass.
 - `CARD-5` validation on 2026-08-27: focused person-extension/owner/storage/editor coverage passes 6 files / 61 tests; the Contacts person-page component suite passes 16 tests; desktop Chromium and simulated Pixel 5 E2E pass 4 tests for person isolation, explicit template promotion, old-template retention, draft cancellation, and no horizontal overflow. The formal `tests/` run excluding the environment-bound image-publishing tooling test passes 330 files / 2482 tests; ESLint and production build pass, with only the existing large-chunk advisory; governance passes 2 files / 19 tests and `git diff --check` passes.
 - `CARD-6` validation on 2026-08-27: focused proposal, WorldBook, template, owner, storage, and Contacts coverage passes 10 files / 91 tests; the formal `tests/` run excluding the environment-bound image-publishing tooling test passes 331 files / 2489 tests; desktop Chromium and simulated Pixel 5 E2E pass 6 tests across the WorldBook -> Contacts value loop, manual template editing, and current-world suggestion cancel/save behavior. ESLint, production build, governance, and final diff checks are recorded in `CONTACTS_V3_2A_EXECUTION_PLAN.md`.
+- `CONTACTS-V3-4A` validation on 2026-08-28: the final archived-target/Chat-social/Store focus run passes 5 files / 31 tests; the complete project suite excluding the environment-owned `.codex/**` tree passes 338 files / 2551 tests; the existing Chat Directory Chromium E2E passes 1/1. ESLint, production build, governance (2 files / 19 tests), and `git diff --check` pass. The implementation adds no user-facing archive route or permanent-delete rewrite.
+- `CONTACTS-V3-4B / V3-4C` validation on 2026-08-28: the formal `tests/` suite passes 339 files / 2568 tests; the Contacts lifecycle E2E passes on desktop Chromium and mobile Chrome, covering archive, reload/direct return to archived management, search, restore, WCAG A/AA, mobile landscape, and horizontal overflow. ESLint, production build, governance (2 files / 19 tests), and `git diff --check` pass. A root-level Vitest invocation can also discover environment-owned untracked `.codex/**` tooling tests, so the authoritative project command is `npm.cmd run test -- --dir tests`.
 
 ## 5. Must Sync When Working Here
 
@@ -299,3 +305,4 @@ At the end of a meaningful round, check and update:
 9. `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md` when Self Profile eligibility, dynamic player-state ownership, or social/news world-participation meaning changes
 10. `CONTACTS_V3_IDENTITY_AND_ROLE_CORE_PLAN.md` when Contacts V3 ownership, persona confirmation, projection, lifecycle, migration, acceptance, or open-decision meaning changes
 11. `CONTACTS_V3_0_ARCHITECTURE_AND_DECISION_FREEZE.md` when the frozen owner Interface, per-world Self Profile decision, migration inventory, compatibility/rollback contract, or V3-1 file set changes
+12. `CONTACTS_V3_4_ROLE_LIFECYCLE_DECISION_FREEZE.md` when person archive/restore, permanent delete, ID reservation, tombstone, receiving-account lifecycle, retained history, rollback, or Self Profile lifecycle meaning changes

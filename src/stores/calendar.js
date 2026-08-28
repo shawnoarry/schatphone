@@ -1281,9 +1281,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     return result
   }
 
-  const saveNow = () => {
-    persistToStorage()
-  }
+  const saveNow = () => persistToStorage()
 
   const resetForTesting = () => {
     events.value = []

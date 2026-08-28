@@ -147,6 +147,19 @@ export const useMiniSceneStore = defineStore('miniScene', () => {
   const activeArtifactIsRetained = computed(() =>
     ['retained', 'archived'].includes(activePresentation.value?.retention?.state),
   )
+  const retainedArtifactStateIndex = computed(() => {
+    const retained = []
+    const archived = []
+    artifacts.value.forEach((artifact) => {
+      if (artifact.retention.state === 'retained') retained.push(artifact)
+      else if (artifact.retention.state === 'archived') archived.push(artifact)
+    })
+    return {
+      all: artifacts.value,
+      retained,
+      archived,
+    }
+  })
 
   const findArtifactById = (artifactId) => {
     const id = normalizeMiniSceneId(artifactId)
@@ -216,6 +229,24 @@ export const useMiniSceneStore = defineStore('miniScene', () => {
     artifacts: cloneMiniSceneValue(artifacts.value),
     interactionAudit: cloneMiniSceneValue(interactionAudit.value),
   })
+
+  const countProfileBindingsForProfile = (profileId = 0) => {
+    const numericProfileId = Math.max(0, Math.floor(Number(profileId) || 0))
+    if (!numericProfileId) return 0
+    return profileBindings.value.filter(
+      (binding) => Number(binding.profileId) === numericProfileId,
+    ).length
+  }
+
+  const removeProfileBindingsForProfile = (profileId = 0) => {
+    const numericProfileId = Math.max(0, Math.floor(Number(profileId) || 0))
+    if (!numericProfileId) return 0
+    const before = profileBindings.value.length
+    profileBindings.value = profileBindings.value.filter(
+      (binding) => Number(binding.profileId) !== numericProfileId,
+    )
+    return before - profileBindings.value.length
+  }
 
   const persistToStorage = () =>
     writePersistedState(MINI_SCENE_STORAGE_KEY, createPersistedSnapshot(), {
@@ -438,9 +469,7 @@ export const useMiniSceneStore = defineStore('miniScene', () => {
   const listRetainedArtifacts = ({ state = 'all', page = 1, pageSize = HISTORY_PAGE_SIZE } = {}) => {
     const normalizedState = ['retained', 'archived'].includes(state) ? state : 'all'
     const normalizedPageSize = normalizePageSize(pageSize)
-    const filtered = artifacts.value.filter(
-      (artifact) => normalizedState === 'all' || artifact.retention.state === normalizedState,
-    )
+    const filtered = retainedArtifactStateIndex.value[normalizedState]
     const total = filtered.length
     const totalPages = Math.max(1, Math.ceil(total / normalizedPageSize))
     const normalizedPage = Math.min(normalizePage(page), totalPages)
@@ -567,6 +596,8 @@ export const useMiniSceneStore = defineStore('miniScene', () => {
     findReusableArtifactForRequest,
     findActivePresentationForRequest,
     getModulePolicy,
+    countProfileBindingsForProfile,
+    removeProfileBindingsForProfile,
     setModulePresentationMode,
     presentTemporaryArtifact,
     commitArtifact,

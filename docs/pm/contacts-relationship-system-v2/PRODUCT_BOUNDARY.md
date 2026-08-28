@@ -1,6 +1,6 @@
 # Contacts Relationship Product Boundary / 通讯录关系语义边界
 
-Updated: 2026-08-27
+Updated: 2026-08-28
 
 This document explains the current product meaning of each related module in plain language, so future engineers and AI assistants do not let the same field mean two different things.
 
@@ -96,6 +96,18 @@ Profile-template fields are normal Contacts information first. Date, yes/no, and
 WorldBook owns the reusable profile-card structure and provides the manual category/field editor. Contacts owns each person's concrete values and now renders that confirmed structure inside the existing person page: reading shows saved values and natural-language prompts by category, while explicit editing shows the full applicable form. Old flat templates fall back to a default category and out-of-template values remain custom details. Renaming or moving a category/field does not change its stable ID; saving a template revision must not silently delete or overwrite existing person values. A form field's visibility or purpose marker does not transfer Contacts ownership to Chat, Event Runtime, Work Hub, or a public-content surface.
 
 Person-specific structure is not a second notes system. Contacts merges `profileExtensions` with the selected world template for display and editing while preserving their separate ownership on save. A person-only category or field cannot appear on another person. Adding the structure to the current world template requires an explicit choice and one confirmed template-version write; it does not auto-fill other people, and cancellation must leave both the person and template unchanged.
+
+### 3.3 Person Lifecycle Boundary
+
+Contacts distinguishes reversible person archive from permanent person deletion:
+
+- archive preserves the complete person, Chat binding/history, relationship truth, memories, source lineage, and receiving-account identity, but suspends new Chat generation, new bindings, identity projections, matching, event eligibility, and new payee actions until explicit restore;
+- restore reactivates the same profile and role IDs in place and cannot be inferred from AI, events, or downstream activity;
+- permanent deletion is archive-first for non-self people, removes the live profile and confirmed destructive scope, creates a minimal tombstone, and permanently reserves the old profile and role IDs in the current save lineage;
+- immutable Wallet receipts/transactions, orders, Calendar history, event audit, and other owner history retain their own snapshots or a neutral deleted-person reference and never rebind to a future profile;
+- ordinary Self Profile archive/delete is outside the first V3.4 implementation and must fail closed until a world/account identity flow defines replacement or world reset.
+
+Person archive is not memory archive, relationship reset, or Chat unbind. The detailed contract is `CONTACTS_V3_4_ROLE_LIFECYCLE_DECISION_FREEZE.md`. V3-4A implements internal archive/restore and archived-consumer gates; V3-4B implements internal archive-first permanent-delete coordination, Wallet revocation/history unlinking, tombstones, and rollback; V3-4C implements one user-facing archived-people manager, archived Wallet suspension/restore, read-only archived detail, grouped impact, typed role-ID confirmation, and replacement of the legacy active-person direct-delete entry.
 
 ## 4. Chat Directory / 会话通讯录
 

@@ -1,6 +1,6 @@
 # Chat And Chat Directory Package
 
-Updated: 2026-08-18
+Updated: 2026-08-28
 
 Use this package for Chat thread behavior, Chat Directory, service accounts, role binding into Chat, and message-surface work.
 
@@ -22,7 +22,7 @@ Current subscription UX note: service and official accounts now behave more like
 
 Current WorldBook note: Chat prompt assembly and the thread WorldBook summary now consume the same `world-interface` result, so the user-visible active knowledge state matches the world context sent to AI.
 
-Current request-cost note: Chat thread details show an approximate next-request text-token total split into world setting, people/memory/reply rules, and recent conversation. It reuses the actual prompt/context projection, does not persist the assembled prompt, excludes image billing, and never limits or removes text.
+Current request-cost note: Chat thread details show an approximate next-request text-token total split into world setting, people/memory/reply rules, and recent conversation. It reuses the actual prompt/context projection, does not persist the assembled prompt, excludes image billing, and never limits or removes stored text. Relationship Runtime supplies one current relationship plus at most 3 relevant role memories / 720 characters and 2 non-archived stable-ID-deduplicated shared-experience summaries / 480 characters; raw source metadata and supporting relationship rows remain available to owner review but stay out of the prompt.
 
 Current/future Mini Scene note: today's Chat `mini_scene` rich block is Chat history with an inert `htmlSnippet` code preview, not the shared interactive popup system. Under roadmap 4.8, new Chat-triggered scenes will later call the shared Mini Scene Interface, retain Chat source truth, and store only an artifact reference plus display snapshot where needed. Legacy snippets must never be executed or silently migrated to HTML.
 

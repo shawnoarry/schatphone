@@ -1,6 +1,6 @@
 # SchatPhone Role Binding Contract / SchatPhone 角色绑定契约
 
-Updated: 2026-08-27
+Updated: 2026-08-28
 
 ## 1. Purpose
 
@@ -98,7 +98,12 @@ Rules:
 - An already-bound non-Self role reuses its existing contact and conversation; a disabled unbound role must not create a new target.
 - Chat binding does not prove that an entity is a Main Role.
 - World NPC -> Supporting Role -> Main Role, including the compatibility direct NPC -> Main Role path, must preserve existing Chat binding and history.
+- Archiving a Contacts person preserves the binding, conversation, and messages for review, but the archived profile cannot create a new binding or new generated Chat messages until explicit restore succeeds.
+- Restoring a person reuses the same profile, contact, and conversation IDs; it does not bind by name or create a replacement thread.
+- Permanent profile deletion remains Contacts-owned lifecycle orchestration. After the archive-first confirmation, Chat removes the binding/conversation/messages under the confirmed destructive scope, while a Contacts tombstone reserves the old profile and role IDs outside this binding contract.
 - Capacity management may page or reversibly cold-archive Chat history, but cannot silently or irreversibly delete authoritative role-thread history; lifecycle ownership remains in Contacts rather than this binding contract.
+
+The archived-person binding and Chat eligibility rules above are implemented by `CONTACTS-V3-4A`. V3-4B provides the internal archive-first removal/tombstone coordinator, and V3-4C exposes the complete user flow: active people archive first, archived detail is read-only, Wallet payees suspend/restore under the same ID, and permanent deletion is available only from archived-person management.
 
 ## 5. Hierarchy Rules
 

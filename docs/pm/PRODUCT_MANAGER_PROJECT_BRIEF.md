@@ -1,8 +1,8 @@
 # SchatPhone Product Manager Brief
 
-Updated: 2026-08-26
+Updated: 2026-08-28
 
-Integrated baseline: `f06a575`
+Integrated baseline: `dc26226`
 
 ## 1. Product
 
@@ -24,8 +24,8 @@ The project is an integrated V1 in product-preview and release-hardening work. T
 
 Follow the roadmap exactly:
 
-1. `CMG-08`;
-2. dependent `CMG-09` and `CMG-10`;
+1. integrate the validated working-tree `CMG-09` bounded-reading slice after completed `CMG-08`;
+2. execute dependent `CMG-10` migration/recovery proof;
 3. installed-PWA/relaunch, backup round trip, external protection, and true-device proof;
 4. World Pack device validation where it overlaps that release matrix.
 

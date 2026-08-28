@@ -19,6 +19,20 @@ const createProfile = (overrides = {}) => ({
 })
 
 describe('role identity projection Module', () => {
+  test('does not expose archived role identity or continuity to formal Chat', () => {
+    const projection = buildRoleIdentityProjection({
+      contact: { id: 1, kind: 'role', profileId: 10 },
+      profile: createProfile({
+        name: 'Archived person',
+        bio: 'Must stay out of new prompts',
+        lifecycle: { state: 'archived', archivedAt: 1 },
+      }),
+    })
+
+    expect(projection).toMatchObject({ roleBound: false, stableText: '', dynamicText: '' })
+    expect(JSON.stringify(projection)).not.toContain('Archived person')
+  })
+
   test('projects the bound Contacts profile as one stable identity snapshot', () => {
     const projection = buildRoleIdentityProjection({
       contact: { id: 1, kind: 'role', name: 'Stale name', role: 'stale role' },

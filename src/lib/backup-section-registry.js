@@ -23,6 +23,14 @@ export const LEGACY_V2_BACKUP_SECTION_REGISTRY = freezeRegistry([
   { id: 'agenda-journey-legacy-compatibility', owner: 'Agenda Journey', coverage: 'required_legacy_compatibility', dataClassIds: ['agenda-journey.execution-plans'], payloadFields: [{ path: 'calendar', shape: 'object' }] },
   { id: 'activity-session-legacy-compatibility', owner: 'Activity Session', coverage: 'required_legacy_compatibility', dataClassIds: ['activity-session.timing-records'], payloadFields: [{ path: 'calendar', shape: 'object' }] },
   { id: 'contacts-role-profiles', owner: 'Contacts', coverage: 'required', dataClassIds: ['contacts.role-profiles'], payloadFields: [{ path: 'roleProfiles', shape: 'array' }] },
+  {
+    id: 'contacts-lifecycle-known-gap',
+    owner: 'Contacts',
+    coverage: 'known_gap',
+    dataClassIds: ['contacts.profile-lifecycle-reservations'],
+    payloadFields: [],
+    reason: 'Legacy v2 exports predate profile-ID high-water marks and permanent-delete tombstone reservations.',
+  },
   { id: 'chat-directory-conversations', owner: 'Chat', coverage: 'required', dataClassIds: ['chat.directory-and-conversations'], payloadFields: [{ path: 'contacts', shape: 'array' }, { path: 'conversations', shape: 'object' }] },
   { id: 'chat-messages', owner: 'Chat', coverage: 'required', dataClassIds: ['chat.user-visible-messages'], payloadFields: [{ path: 'messagesByConversation', shape: 'object' }] },
   {

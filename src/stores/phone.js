@@ -837,15 +837,13 @@ export const usePhoneStore = defineStore('phone', () => {
   }
 
   const persistToStorage = () => {
-    writePersistedState(PHONE_STORAGE_KEY, createBackupSnapshot(), {
+    return writePersistedState(PHONE_STORAGE_KEY, createBackupSnapshot(), {
       version: PHONE_STORAGE_VERSION,
       migrate: migratePhoneStorage,
     })
   }
 
-  const saveNow = () => {
-    persistToStorage()
-  }
+  const saveNow = () => persistToStorage()
 
   const resetForTesting = () => {
     clearIncomingCallTimer()

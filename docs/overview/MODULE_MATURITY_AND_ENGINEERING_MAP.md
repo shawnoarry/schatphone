@@ -1,8 +1,8 @@
 # SchatPhone Module Maturity And Engineering Map
 
-Updated: 2026-08-26
+Updated: 2026-08-28
 
-Measurement baseline: integrated `f06a575`; current dirty-worktree changes are excluded.
+Measurement baseline: static inventory remains integrated `f06a575`; behavioral status is aligned through integrated `dc26226`, while current dirty-worktree changes are excluded from integrated claims.
 
 Purpose: engineering handoff reference for module maturity, ownership risk, edit cost, and validation posture.
 
@@ -14,9 +14,9 @@ SchatPhone is in:
 
 > integrated product preview + durable continuity closure + release hardening
 
-The strongest loops are real and test protected. The main risks are uneven finish, concentrated implementation cost, remaining Mini Scene retention/reuse work, and release claims that still lack installed-PWA and named physical-device proof.
+The strongest loops are real and test protected. The main risks are uneven finish, concentrated implementation cost, remaining continuity migration/recovery proof, and release claims that still lack installed-PWA and named physical-device proof.
 
-The original four roadmap baselines remain complete. Since then the project has integrated the Camera/Image Generation and Music first slices, release-local recovery and Book Repository reference cutover, CMG shared-experience repairs through `CMG-07`, Event Runtime/Calendar collaborations, commerce checkout/support flows, Map media expansion, Appearance theme/icon foundations, and the thirteen-App S1 shell portfolio. The Mini Scene AI/text shell is landed, while `CMG-08` occurrence reuse/optional retention, dependent CMG reading/recovery closure, production triggers, profile binding, safe transforms, and HTML remain gated.
+The original four roadmap baselines remain complete. Since then the project has integrated the Camera/Image Generation and Music first slices, release-local recovery and Book Repository reference cutover, CMG shared-experience repairs through `CMG-08`, Event Runtime/Calendar collaborations, commerce checkout/support flows, Map media expansion, Appearance theme/icon foundations, and the thirteen-App S1 shell portfolio. Optional Mini Scene retention and retained-history management are integrated; `CMG-09` bounded continuity reading is validated only in the working tree, while `CMG-10`, production triggers, profile binding, safe transforms, and HTML remain gated.
 
 ## 2. Maturity Tiers
 
@@ -51,8 +51,8 @@ The original four roadmap baselines remain complete. Since then the project has 
 
 | Area | Judgment | Constraint |
 | --- | --- | --- |
-| Event Runtime | guarded foreground baseline with Event Instance retention repair and EVE/CJA slices integrated | conservative event families only; `CMG-08` remains the next Mini Scene governance dependency |
-| Mini Scene | AI-required text shell landed; production triggers still gated | make request reuse deterministic and committed-artifact retention durable before another trigger; HTML and broader source Adapters remain staged |
+| Event Runtime | guarded foreground baseline with Event Instance retention repair, Mini Scene optional retention, and EVE/CJA slices integrated | conservative event families only; production Mini Scene triggers and `CMG-10` recovery proof remain separately gated |
+| Mini Scene | AI-required text shell plus optional retained history integrated; production triggers still gated | preserve bounded retained-history reads; HTML and broader source Adapters remain staged |
 | World Hub | narrow review baseline | no broad value/funds/unlock/freeform editor |
 | Groups | target/member/reply-mode V1 | no full multi-speaker orchestration |
 | Phone | working support loop | not a main fantasy lane |
@@ -181,8 +181,8 @@ Keep review-first semantics. The push relay must be described and deployed as a 
 
 ## 6. Current Engineering Order
 
-1. complete `CMG-08` occurrence/request reuse, optional full-scene retention, retained-scene management, and removal of silent 120-artifact truncation;
-2. complete dependent `CMG-09` bounded reads/prompts and `CMG-10` migration/recovery proof without deleting owner history;
+1. integrate the validated working-tree `CMG-09` bounded reads/prompts without deleting owner history;
+2. complete dependent `CMG-10` migration/recovery proof after that integration;
 3. preserve the accepted complete-backup, same-container writer, Book Repository, and rollback boundaries while keeping non-Book/R2 migration separately approved;
 4. finish external protection, installed-PWA/relaunch, backup round trip, and named true-device proof over the existing hosted baselines;
 5. run World Pack device validation only where it overlaps that release matrix;

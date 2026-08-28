@@ -641,7 +641,7 @@ describe('ContactsView relationship danger flows', () => {
     wrapper.unmount()
   })
 
-  test('requires irreversible, scope, and typed-id confirmations before deleting a role', async () => {
+  test('archives before exposing permanent deletion and requires a typed role id', async () => {
     const chatStore = useChatStore()
     const relationshipRuntimeStore = useRelationshipRuntimeStore()
     const walletStore = useWalletStore()
@@ -676,16 +676,33 @@ describe('ContactsView relationship danger flows', () => {
     await openDetailSheet(wrapper, 'danger')
 
     const { dialogState, submitDialog, setDialogInputValue } = useDialog()
-    await wrapper.get('[data-testid="contacts-delete-role"]').trigger('click')
+    expect(wrapper.find('[data-testid="contacts-permanent-delete-role"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="contacts-archive-role"]').trigger('click')
     await flushUi()
-    expect(dialogState.title).toBe('Delete role profile')
+    expect(dialogState.title).toBe('Archive person')
     submitDialog()
     await flushUi()
-    expect(dialogState.title).toBe('Confirm delete scope')
-    expect(dialogState.details.join(' ')).toContain('Chat Directory')
+    expect(chatStore.getRoleProfileById(profile.id)).toMatchObject({
+      lifecycle: { state: 'archived' },
+    })
+    expect(walletStore.findKnownPayeeAccountById(knownPayee.id)?.status).toBe('suspended')
+    expect(wrapper.get('[data-testid="contacts-archived-readonly-banner"]').text()).toContain(
+      'This person is archived',
+    )
+
+    await openDetailSheet(wrapper, 'danger')
+    expect(wrapper.get('[data-testid="contacts-permanent-delete-impact"]').text()).toContain(
+      'Will be deleted',
+    )
+    expect(wrapper.get('[data-testid="contacts-permanent-delete-impact"]').text()).toContain(
+      'Will remain as history',
+    )
+    await wrapper.get('[data-testid="contacts-permanent-delete-role"]').trigger('click')
+    await flushUi()
+    expect(dialogState.title).toBe('Permanently delete person')
     submitDialog()
     await flushUi()
-    expect(dialogState.title).toBe('Confirm role deletion')
+    expect(dialogState.title).toBe('Confirm permanent deletion')
     setDialogInputValue('wrong-id')
     submitDialog()
     expect(dialogState.visible).toBe(true)
@@ -697,6 +714,146 @@ describe('ContactsView relationship danger flows', () => {
     expect(chatStore.contacts.some((item) => item.id === binding.id)).toBe(false)
     expect(relationshipRuntimeStore.summarizeEntityForTarget({ profileId: profile.id }).exists).toBe(false)
     expect(walletStore.findKnownPayeeAccountById(knownPayee.id)).toBeNull()
+
+    wrapper.unmount()
+  })
+
+  test('searches archived people, opens a read-only detail, and restores the same profile', async () => {
+    const chatStore = useChatStore()
+    const archivedProfile = chatStore.addRoleProfile({
+      roleId: '952B',
+      name: 'Archived Search Target',
+      role: 'Producer',
+    })
+    const archived = chatStore.archiveRoleProfile(archivedProfile.id, {
+      expectedRevision: archivedProfile.revision,
+    })
+    expect(archived.ok).toBe(true)
+
+    const wrapper = await mountContactsView()
+    expect(wrapper.find(`[data-testid="contacts-row-${archivedProfile.id}"]`).exists()).toBe(false)
+    expect(wrapper.get('[data-testid="contacts-open-archive-manager"]').text()).toContain('1 person')
+
+    await wrapper.get('[data-testid="contacts-open-archive-manager"]').trigger('click')
+    await flushUi()
+    expect(wrapper.get('[data-testid="contacts-archive-count"]').text()).toBe('1')
+    await wrapper.get('[data-testid="contacts-archive-search-input"]').setValue('producer')
+    await flushUi()
+    expect(wrapper.get(`[data-testid="contacts-archive-row-${archivedProfile.id}"]`).text()).toContain(
+      'Archived Search Target',
+    )
+
+    await wrapper.get(`[data-testid="contacts-archive-row-${archivedProfile.id}"]`).trigger('click')
+    await flushUi()
+    expect(wrapper.get('[data-testid="contacts-archived-readonly-banner"]').text()).toContain(
+      'read-only',
+    )
+    expect(wrapper.find('[data-testid="contacts-start-chat"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="contacts-open-details-sheet"]').trigger('click')
+    await flushUi()
+    expect(wrapper.get('.contacts-detail-readonly-scope').attributes()).toHaveProperty('disabled')
+
+    await wrapper.get('[data-testid="contacts-detail-sheet-back"]').trigger('click')
+    await flushUi()
+    const { dialogState, submitDialog } = useDialog()
+    await wrapper.get('[data-testid="contacts-restore-role"]').trigger('click')
+    await flushUi()
+    expect(dialogState.title).toBe('Restore person')
+    submitDialog()
+    await flushUi()
+
+    expect(chatStore.getRoleProfileById(archivedProfile.id)).toMatchObject({
+      lifecycle: { state: 'active' },
+    })
+    expect(wrapper.find('[data-testid="contacts-archive-manager"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="contacts-profile-back"]').trigger('click')
+    await flushUi()
+    expect(wrapper.get(`[data-testid="contacts-row-${archivedProfile.id}"]`).text()).toContain(
+      'Archived Search Target',
+    )
+
+    wrapper.unmount()
+  })
+
+  test('shows rollback feedback and keeps the person active when archive persistence fails', async () => {
+    const chatStore = useChatStore()
+    const walletStore = useWalletStore()
+    const { profile, binding } = createRoleWithBinding(chatStore, {
+      roleId: '952C',
+      name: 'Archive Failure',
+    })
+    const payee = walletStore.rememberRolePayeeAccount({
+      account: profile.payeeAccounts[0],
+      profile,
+      contact: binding,
+    })
+    const originalWalletSave = walletStore.saveNow.bind(walletStore)
+    vi.spyOn(walletStore, 'saveNow')
+      .mockImplementationOnce(() => ({ ok: false, code: 'forced_failure' }))
+      .mockImplementation(() => originalWalletSave())
+
+    const wrapper = await mountContactsView()
+    await selectProfile(wrapper, profile)
+    await openDetailSheet(wrapper, 'danger')
+    const { submitDialog } = useDialog()
+    await wrapper.get('[data-testid="contacts-archive-role"]').trigger('click')
+    await flushUi()
+    submitDialog()
+    await flushUi()
+
+    expect(chatStore.getRoleProfileById(profile.id)).toMatchObject({
+      lifecycle: { state: 'active' },
+    })
+    expect(walletStore.findKnownPayeeAccountById(payee.id)?.status).toBe('active')
+    expect(wrapper.get('[data-testid="contacts-relationship-classification-status"]').text()).toContain(
+      'were restored',
+    )
+
+    wrapper.unmount()
+  })
+
+  test('requires an explicit retain choice for unregistered references', async () => {
+    const chatStore = useChatStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const { profile } = createRoleWithBinding(chatStore, {
+      roleId: '952D',
+      name: 'Unknown Reference',
+    })
+    relationshipRuntimeStore.recordRelationshipFact({
+      target: { profileId: profile.id, name: profile.name },
+      sourceModule: 'relationship_future_module',
+      sourceId: 'future_reference_1',
+      memoryKey: 'future_reference_memory',
+      factType: 'future_reference',
+      summary: 'Owned by a module that is not registered yet.',
+      metricDeltas: { trust: 1 },
+    })
+
+    const wrapper = await mountContactsView()
+    await selectProfile(wrapper, profile)
+    await openDetailSheet(wrapper, 'danger')
+    const { dialogState, submitDialog } = useDialog()
+    await wrapper.get('[data-testid="contacts-archive-role"]').trigger('click')
+    await flushUi()
+    submitDialog()
+    await flushUi()
+    await openDetailSheet(wrapper, 'danger')
+
+    expect(wrapper.get('[data-testid="contacts-impact-unsupported"]').text()).toContain(
+      'relationship_future_module',
+    )
+    await wrapper.get('[data-testid="contacts-permanent-delete-role"]').trigger('click')
+    await flushUi()
+    expect(dialogState.visible).toBe(false)
+    expect(wrapper.get('[data-testid="contacts-relationship-classification-status"]').text()).toContain(
+      'Choose to retain',
+    )
+
+    await wrapper.get('[data-testid="contacts-permanent-delete-retain-unsupported"]').setValue(true)
+    await wrapper.get('[data-testid="contacts-permanent-delete-role"]').trigger('click')
+    await flushUi()
+    expect(dialogState.title).toBe('Permanently delete person')
+    expect(chatStore.getRoleProfileById(profile.id)).toBeTruthy()
 
     wrapper.unmount()
   })
@@ -859,7 +1016,7 @@ describe('ContactsView relationship danger flows', () => {
     wrapper.unmount()
   })
 
-  test('deleting a role with linked-record cleanup removes bound single-owner module records', async () => {
+  test('permanent deletion unlinks registered source records while preserving their history', async () => {
     const chatStore = useChatStore()
     const calendarStore = useCalendarStore()
     const foodDeliveryStore = useFoodDeliveryStore()
@@ -949,25 +1106,33 @@ describe('ContactsView relationship danger flows', () => {
     const wrapper = await mountContactsView()
     await selectProfile(wrapper, profile)
     await openDetailSheet(wrapper, 'danger')
-    await wrapper.get('[data-testid="contacts-danger-include-linked-records"]').setValue(true)
-    await flushUi()
 
     const { dialogState, submitDialog, setDialogInputValue } = useDialog()
-    await wrapper.get('[data-testid="contacts-delete-role"]').trigger('click')
+    await wrapper.get('[data-testid="contacts-archive-role"]').trigger('click')
     await flushUi()
-    expect(dialogState.title).toBe('Delete role profile')
+    expect(dialogState.title).toBe('Archive person')
     submitDialog()
     await flushUi()
-    expect(dialogState.title).toBe('Confirm delete scope')
+    await openDetailSheet(wrapper, 'danger')
+    await wrapper.get('[data-testid="contacts-permanent-delete-clean-linked"]').setValue(true)
+    await flushUi()
+
+    await wrapper.get('[data-testid="contacts-permanent-delete-role"]').trigger('click')
+    await flushUi()
+    expect(dialogState.title).toBe('Permanently delete person')
     submitDialog()
     await flushUi()
-    expect(dialogState.title).toBe('Confirm role deletion')
+    expect(dialogState.title).toBe('Confirm permanent deletion')
     setDialogInputValue('954A')
     submitDialog()
     await flushUi()
 
-    expect(calendarStore.findEventById('calendar_delete_flow_1')).toBeNull()
-    expect(foodDeliveryStore.findOrderById('food_delete_flow_1')).toBeNull()
+    expect(calendarStore.findEventById('calendar_delete_flow_1')).toMatchObject({
+      relationshipBinding: { profileId: 0, contactId: 0 },
+    })
+    expect(foodDeliveryStore.findOrderById('food_delete_flow_1')).toMatchObject({
+      relationshipBinding: { profileId: 0, contactId: 0 },
+    })
     expect(relationshipRuntimeStore.summarizeEntityForTarget({ profileId: profile.id }).exists).toBe(false)
 
     wrapper.unmount()

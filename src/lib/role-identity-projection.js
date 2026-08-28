@@ -3,6 +3,7 @@ import {
   PROFILE_TEMPLATE_FIELD_PURPOSES,
 } from './profile-template-schema'
 import { buildContactsProfileProjection } from './contacts-profile-projection'
+import { isContactsProfileActive } from './contacts-profile-owner'
 import { buildRoleContinuityProjection } from './role-continuity-projection'
 
 export const ROLE_IDENTITY_PROJECTION_LIMITS = Object.freeze({
@@ -58,6 +59,7 @@ const isEligibleRoleProfile = (contact, profile) =>
   (contact?.kind || 'role') === 'role' &&
   profile &&
   typeof profile === 'object' &&
+  isContactsProfileActive(profile) &&
   profile.entityType !== CONTACTS_ENTITY_TYPES.SELF_PROFILE
 
 export const buildRoleIdentityProjection = (input = {}) => {

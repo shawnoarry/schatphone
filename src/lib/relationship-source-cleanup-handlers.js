@@ -89,6 +89,18 @@ export const createRelationshipSourceCleanupHandlers = ({
     const cleanupMode = options.cleanupMode || RELATIONSHIP_CLEANUP_MODES.DELETE_ROLE
     const recordId = sourceRecordIdFromRelationshipSourceId(sourceId)
     const existed = Boolean(walletStore?.findTransactionById?.(recordId))
+    if (cleanupMode === RELATIONSHIP_CLEANUP_MODES.PERMANENT_DELETE_PERSON) {
+      const ok =
+        !existed ||
+        walletStore.markTransactionPersonDeleted(recordId, options.profile, Date.now())
+      return {
+        ok,
+        removedCount: 0,
+        unlinkedCount: existed && ok ? 1 : 0,
+        anonymizedCount: 0,
+        updatedCount: existed && ok ? 1 : 0,
+      }
+    }
     if (cleanupMode === RELATIONSHIP_CLEANUP_MODES.DELETE_ROLE) {
       const removed = existed ? walletStore.removeTransaction(recordId) : true
       return {
@@ -106,8 +118,21 @@ export const createRelationshipSourceCleanupHandlers = ({
     return updatedSourceResult({ ok, existed })
   },
   [RELATIONSHIP_FACT_SOURCE_KEYS.WALLET_ORDER_SUPPORT]: (sourceId, ref, options = {}) => {
+    const cleanupMode = options.cleanupMode || RELATIONSHIP_CLEANUP_MODES.DELETE_ROLE
     const recordId = sourceRecordIdFromRelationshipSourceId(sourceId)
     const existed = Boolean(walletStore?.findTransactionById?.(recordId))
+    if (cleanupMode === RELATIONSHIP_CLEANUP_MODES.PERMANENT_DELETE_PERSON) {
+      const ok =
+        !existed ||
+        walletStore.markTransactionPersonDeleted(recordId, options.profile, Date.now())
+      return {
+        ok,
+        removedCount: 0,
+        unlinkedCount: existed && ok ? 1 : 0,
+        anonymizedCount: 0,
+        updatedCount: existed && ok ? 1 : 0,
+      }
+    }
     const ok =
       !existed ||
       walletStore.anonymizeTransaction(
@@ -159,6 +184,23 @@ export const createRelationshipSourceCleanupHandlers = ({
     return updatedSourceResult({ ok, existed })
   },
 })
+
+export const createRelationshipSourceCleanupRegistry = (options = {}) => {
+  const handlers = createRelationshipSourceCleanupHandlers(options)
+  return {
+    handlers,
+    ownerStoresBySourceModule: {
+      [RELATIONSHIP_FACT_SOURCE_KEYS.PHONE_CALL]: options.phoneStore || null,
+      [RELATIONSHIP_FACT_SOURCE_KEYS.SHOPPING_GIFT]: options.shoppingStore || null,
+      [RELATIONSHIP_FACT_SOURCE_KEYS.FOOD_DELIVERY_SHARED_MEAL]:
+        options.foodDeliveryStore || null,
+      [RELATIONSHIP_FACT_SOURCE_KEYS.WALLET_SHARED_TRANSFER]: options.walletStore || null,
+      [RELATIONSHIP_FACT_SOURCE_KEYS.WALLET_ORDER_SUPPORT]: options.walletStore || null,
+      [RELATIONSHIP_FACT_SOURCE_KEYS.CALENDAR_CONFIRMED_EVENT]: options.calendarStore || null,
+      [RELATIONSHIP_FACT_SOURCE_KEYS.MAP_SHARED_ROUTE]: options.mapStore || null,
+    },
+  }
+}
 
 export const sourceModuleSummaryText = (sourceModuleCounts = {}, t) => {
   const entries = Object.entries(sourceModuleCounts || {})

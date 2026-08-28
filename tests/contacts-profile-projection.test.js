@@ -55,4 +55,18 @@ describe('Contacts profile projection', () => {
       ...overrides,
     })).toMatchObject({ ok: false, reason })
   })
+
+  test('fails closed for an archived profile before exposing any field', () => {
+    const result = buildContactsProfileProjection({
+      purpose: 'event_eligibility',
+      profile: { ...profile, lifecycle: { state: 'archived', archivedAt: 1 } },
+      template,
+      expectedWorldId: 'default_world',
+      expectedProfileRevision: 3,
+      allowedEntityTypes: ['self_profile'],
+    })
+
+    expect(result).toEqual({ ok: false, reason: 'profile_archived', projection: null })
+    expect(JSON.stringify(result)).not.toContain('Manager')
+  })
 })

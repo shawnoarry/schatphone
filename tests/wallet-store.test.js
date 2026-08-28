@@ -226,6 +226,73 @@ describe('wallet store', () => {
     })
   })
 
+  test('preserves a deleted person transaction snapshot while removing live Wallet links', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+    const transfer = store.addTransaction({
+      type: 'expense',
+      title: 'Confirmed transfer',
+      amount: '66.00',
+      currency: 'CNY',
+      counterparty: 'HJ',
+      note: 'Dinner with HJ',
+      payeeAccountId: 'payee_hj',
+      recipientProfileId: 77,
+      recipientContactId: 307,
+      recipientAccountId: 'account_hj',
+      recipientInstitutionId: 'hana_bank',
+      recipientAccountLast4: '7788',
+      sourceChatId: 307,
+      sourceMessageId: 'message_hj',
+      relationshipBinding: {
+        profileId: 77,
+        contactId: 307,
+        kind: 'role',
+        name: 'HJ',
+      },
+    })
+
+    expect(
+      store.markTransactionsForDeletedProfile(
+        { id: 77, roleId: '0077', name: 'HJ' },
+        { deletedAt: Date.now() },
+      ),
+    ).toMatchObject({ requestedCount: 1, removedCount: 0, updatedCount: 1 })
+    expect(store.findTransactionById(transfer.id)).toMatchObject({
+      title: 'Confirmed transfer',
+      counterparty: 'HJ',
+      note: 'Dinner with HJ',
+      recipientAccountId: 'account_hj',
+      recipientInstitutionId: 'hana_bank',
+      recipientAccountLast4: '7788',
+      payeeAccountId: '',
+      recipientProfileId: 0,
+      recipientContactId: 0,
+      sourceChatId: 0,
+      sourceMessageId: '',
+      relationshipBinding: { profileId: 0, contactId: 0 },
+      deletedPersonReference: {
+        profileId: 77,
+        roleId: '0077',
+        deletedAt: Date.now(),
+      },
+    })
+
+    const snapshot = store.createBackupSnapshot()
+    store.resetForTesting()
+    expect(store.restoreFromBackup(snapshot)).toBe(true)
+    expect(store.findTransactionById(transfer.id)?.deletedPersonReference).toEqual({
+      profileId: 77,
+      roleId: '0077',
+      deletedAt: Date.now(),
+    })
+    expect(store.markTransactionsForDeletedProfile({})).toEqual({
+      requestedCount: 0,
+      removedCount: 0,
+      updatedCount: 0,
+    })
+  })
+
   test('records Chat transfer cards as deduped ledger expenses', () => {
     const store = useWalletStore()
     store.resetForTesting()
@@ -847,6 +914,45 @@ describe('wallet store', () => {
         entityType: 'self_profile',
       }),
     ).toEqual([])
+  })
+
+  test('suspends and restores role payees without changing their account identity', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+    const account = createDefaultRolePayeeAccounts({
+      profileId: 8,
+      roleId: 'archive-payee',
+      entityType: 'main_role',
+    })[0]
+    const payee = store.rememberRolePayeeAccount({
+      account,
+      profile: { id: 8, roleId: 'archive-payee', name: 'Archive Payee' },
+      contact: { id: 18, profileId: 8, name: 'Archive Payee' },
+    })
+
+    expect(store.suspendKnownPayeeAccountsForProfile(8)).toBe(1)
+    expect(store.findKnownPayeeAccountById(payee.id)).toMatchObject({
+      id: payee.id,
+      status: 'suspended',
+    })
+    expect(store.listKnownPayeeAccountsForProfile(8)).toEqual([])
+    expect(store.listKnownPayeeAccountsForProfile(8, { includeSuspended: true })).toHaveLength(1)
+    expect(
+      store.addRolePayeeTransfer({
+        payeeAccountId: payee.id,
+        amount: '1.00',
+      }),
+    ).toMatchObject({ ok: false, reason: 'payee_not_found' })
+
+    const snapshot = store.createBackupSnapshot()
+    store.resetForTesting()
+    expect(store.restoreFromBackup(snapshot)).toBe(true)
+    expect(store.findKnownPayeeAccountById(payee.id)?.status).toBe('suspended')
+    expect(store.restoreKnownPayeeAccountsForProfile(8)).toBe(1)
+    expect(store.findKnownPayeeAccountById(payee.id)).toMatchObject({
+      id: payee.id,
+      status: 'active',
+    })
   })
 
   test('validates same-currency role transfers, deducts the source account, and persists receipts', () => {

@@ -176,6 +176,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
     moduleAvatarOverrides,
     moduleIdentity,
     roleProfiles,
+    contactsLifecycle,
     contacts,
     chatHistory,
     conversations,
@@ -409,6 +410,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       moduleAvatarOverrides: moduleAvatarOverrides.value,
       moduleIdentity: moduleIdentity.value,
       roleProfiles: roleProfiles.value,
+      contactsLifecycle: contactsLifecycle.value,
       contacts: contacts.value,
       chatHistory: chatHistory.value,
       conversations: conversations.value,
@@ -464,7 +466,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       }
     }
 
-    if ([3, COMPLETE_BACKUP_SCHEMA_VERSION].includes(schemaVersion)) {
+    if ([3, 4, COMPLETE_BACKUP_SCHEMA_VERSION].includes(schemaVersion)) {
       const inspection = await inspectCompleteBackupPackage(payload)
       if (!inspection.ok) {
         return {
@@ -651,6 +653,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
         moduleAvatarOverrides: deepClone(moduleAvatarOverrides.value),
         moduleIdentity: deepClone(moduleIdentity.value),
         roleProfiles: deepClone(roleProfiles.value),
+        contactsLifecycle: deepClone(contactsLifecycle.value),
         contacts: deepClone(contacts.value),
         chatHistory: deepClone(chatHistory.value),
         conversations: deepClone(conversations.value),

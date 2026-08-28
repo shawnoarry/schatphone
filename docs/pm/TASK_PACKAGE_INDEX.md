@@ -1,10 +1,10 @@
 # SchatPhone Task Package Index
 
-Updated: 2026-08-26
+Updated: 2026-08-28
 
 This file is the PM-facing and handoff-facing index for all current task packages.
 
-Integrated alignment baseline: `f06a575`.
+Integrated alignment baseline: `dc26226`; working-tree Contacts V3.4 and CMG-09 status remains owned by their package handoffs until committed.
 
 Package handoffs preserve scoped milestone detail. A whole-project report may link to these statuses, but it must not replace a child task's ID, commit, validation, exclusions, or remaining stage. See `docs/process/DOCUMENT_GOVERNANCE.md`.
 
@@ -33,12 +33,12 @@ Current routing note:
 
 ## Current Alignment Check
 
-Checked against integrated baseline `f06a575` on 2026-08-26:
+Checked against integrated baseline `dc26226` on 2026-08-28:
 
 - all seven package quartets remain present and retain their own detailed milestones, validation, exclusions, and next-safe-slice records;
-- the Module Architecture handoff's top summary was corrected so completed `DCF-04` and `DCF-06` are no longer presented as open; `CMG-08` is next;
+- the Module Architecture handoff records integrated `CMG-08`, working-tree-only validated `CMG-09`, and dependent `CMG-10` without promoting the uncommitted implementation;
 - the Commerce handoff header now covers its integrated 2026-08-24 checkout/support work;
-- Chat and Contacts retain their earlier update dates because their scoped status is still correct; an alignment round does not rewrite dates merely for cosmetic freshness;
+- Chat records the CMG-09 bounded prompt-consumer contract; Contacts retains its separate lifecycle and relationship-owner detail;
 - Event and Map/Calendar handoffs already carry the current integrated scoped state;
 - uncommitted Visual/IA work remains outside integrated whole-project claims and is not flattened into this index.
 

@@ -963,6 +963,25 @@ export const useGalleryStore = defineStore('gallery', () => {
     return true
   }
 
+  const countPersonTagsForProfile = (profileId = 0) => {
+    const normalizedProfileId = String(Math.max(0, toInt(profileId, 0)))
+    if (normalizedProfileId === '0') return 0
+    return assets.value.filter((asset) => asset.personIds.includes(normalizedProfileId)).length
+  }
+
+  const unlinkPersonTagsForProfile = (profileId = 0) => {
+    const normalizedProfileId = String(Math.max(0, toInt(profileId, 0)))
+    if (normalizedProfileId === '0') return 0
+    let updatedCount = 0
+    assets.value.forEach((asset) => {
+      if (!asset.personIds.includes(normalizedProfileId)) return
+      asset.personIds = asset.personIds.filter((personId) => personId !== normalizedProfileId)
+      asset.updatedAt = Date.now()
+      updatedCount += 1
+    })
+    return updatedCount
+  }
+
   const setAssetPlace = (assetId, { placeId = '', placeText = '' } = {}) => {
     const asset = findAssetById(assetId)
     if (!asset) return false
@@ -1782,6 +1801,8 @@ export const useGalleryStore = defineStore('gallery', () => {
     replaceAssetFromFile,
     renameAsset,
     setAssetPersons,
+    countPersonTagsForProfile,
+    unlinkPersonTagsForProfile,
     setAssetPlace,
     moveAssetToCategory,
     bindAssetUsage,

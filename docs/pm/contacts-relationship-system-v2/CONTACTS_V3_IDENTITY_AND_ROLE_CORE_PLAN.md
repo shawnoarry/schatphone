@@ -1,8 +1,8 @@
 # Contacts V3 Identity And Role Core Plan / 联系人 V3 身份与角色核心规划
 
-Updated: 2026-08-27
+Updated: 2026-08-28
 
-Status: `PLANNING_ACCEPTED / CONTACTS-V3-0_DONE 2026-08-27 / CONTACTS-V3-1_DONE 2026-08-27 / CONTACTS-V3-2A_DONE 2026-08-27 / CONTACTS-V3-2B_PERSONA-2_DONE 2026-08-27 / CONTACTS-V3-3_DONE 2026-08-27 / CONTACTS-V3-4_NEXT`
+Status: `PLANNING_ACCEPTED / CONTACTS-V3-0_DONE 2026-08-27 / CONTACTS-V3-1_DONE 2026-08-27 / CONTACTS-V3-2A_DONE 2026-08-27 / CONTACTS-V3-2B_PERSONA-2_DONE 2026-08-27 / CONTACTS-V3-3_DONE 2026-08-27 / CONTACTS-V3-4_DECISION_FREEZE_COMPLETE / V3-4A_DONE 2026-08-28 / V3-4B_DONE 2026-08-28 / V3-4C_DONE 2026-08-28 / V3-5_GATED`
 
 Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 
@@ -264,11 +264,21 @@ Completion evidence:
 - add a Work Hub identity projection for role-template and affiliation selection;
 - retain visibility and world/revision fail-closed behavior.
 
-### CONTACTS-V3-4 - Role Lifecycle
+### CONTACTS-V3-4 - Role Lifecycle - `DECISION FREEZE COMPLETE / V3-4A DONE / V3-4B DONE`
 
-- move create/update/archive/restore/NPC-upgrade/delete orchestration behind the lifecycle Interface;
-- preserve existing cleanup and impact-preview behavior;
-- verify legacy backup and migration round trips.
+- use `CONTACTS_V3_4_ROLE_LIFECYCLE_DECISION_FREEZE.md` as the focused contract;
+- separate reversible archive from permanent deletion and from memory archive, relationship reset, and Chat unbind;
+- preserve complete identity/Chat/relationship/memory/account continuity through archive and restore;
+- reserve profile and role IDs through minimal tombstones and a persisted high-water mark after permanent deletion;
+- keep immutable owner history while revoking new receiving-account/payee use;
+- move lifecycle orchestration behind one Interface only in the later implementation slices;
+- preserve existing cleanup/impact-preview behavior and verify legacy backup/migration round trips.
+
+Implementation order:
+
+1. `V3-4A DONE 2026-08-28`: lifecycle carrier, archive/restore, ID reservation carrier, complete-backup v5, and fail-closed archived projections/interactions/new-target choices;
+2. `V3-4B DONE 2026-08-28`: archive-first permanent-delete coordinator, impact/cleanup coverage, Wallet revocation and retained-history unlinking, Gallery/Mini Scene unlinking, tombstone commit, ID reservation, and cross-owner rollback receipts;
+3. `V3-4C DONE 2026-08-28`: archived-people UI, archived Wallet suspension/restore, archive-first destructive flow, and desktop/mobile E2E proof.
 
 ### CONTACTS-V3-5 - Consumer Adoption
 
@@ -312,12 +322,12 @@ Contacts V3 identity foundation is not complete until:
 4. `DONE 2026-08-27`: Persona Confirmation remains bound to the exact person/world/template/profile revisions, requires an explicit decision for every row, and writes one Contacts-owned revision; fully structured manual input remains allowed to save directly.
 5. Define how a major Self Profile revision affects active Work Hub membership, formal Chat context, pending events, and already confirmed history.
 6. Decide the minimum profile completeness required for formal Chat while preserving a quick-start path.
-7. Freeze archive/restore, permanent profile-ID non-reuse, tombstone, and receiving-account revocation semantics before V3-4.
+7. `DONE 2026-08-28`: archive/restore, permanent profile/role-ID non-reuse, tombstone, receiving-account suspension/revocation, immutable-history retention, rollback, and Self Profile stop lines are frozen in `CONTACTS_V3_4_ROLE_LIFECYCLE_DECISION_FREEZE.md`; V3-4A implements the bounded data foundation, V3-4B the internal permanent-delete coordinator, and V3-4C the bounded user-facing lifecycle flow.
 
 ## 11. Next Implementation Slice
 
-`CONTACTS-V3-2A`, Persona Confirmation, and the approved `CONTACTS-V3-3` purpose-specific projections are complete. The next candidate is `CONTACTS-V3-4 Role Lifecycle`, subject to the unresolved lifecycle decisions below.
+`CONTACTS-V3-2A`, Persona Confirmation, the approved `CONTACTS-V3-3` purpose-specific projections, and V3-4A/V3-4B/V3-4C lifecycle slices are complete. V3-5 consumer adoption remains gated; the live repository queue returns to `CMG-09`.
 
 `CARD-3` added manual category/field editing to the existing WorldBook profile-template management flow. `CARD-4` renders the confirmed structure inside the existing Contacts person page, and `CARD-5` now lets the same page add person-specific categories or fields through Contacts-owned `profileExtensions`. Draft cancellation changes neither the person nor the template; person-only structure remains isolated; only explicit promotion writes one current-world template version; other people keep their previous template/version and receive no automatic values. These slices reuse the existing template IDs/versions, Contacts values, visibility rules, adaptation review, AI draft helpers, system-managed IDs, storage, and backup path; they do not create a parallel template format, silently save AI output, rewrite confirmed Self Profile values, infer old NPC importance, migrate consumers, promote Work Hub, or create a new event family.
 
-The small-slice checklist in `CONTACTS_V3_2A_EXECUTION_PLAN.md` is complete through `PERSONA-1`, `PERSONA-2`, formal Chat context, read-only Event identity, and Work Hub matching projections. User-confirmed persona values now use the same Contacts profile structure as manual values, while every consumer receives only purpose-authorized, revision-bound fields. Before `CONTACTS-V3-4`, freeze archive/restore, permanent profile-ID non-reuse, tombstone, and receiving-account revocation semantics; do not begin lifecycle implementation from this planning document alone. The later Contacts home-list four-section visual regrouping remains outside this data slice.
+The small-slice checklist in `CONTACTS_V3_2A_EXECUTION_PLAN.md` is complete through `PERSONA-1`, `PERSONA-2`, formal Chat context, read-only Event identity, Work Hub matching projections, and V3-4A/V3-4B/V3-4C role lifecycle. The later Contacts home-list visual regrouping and V3-5 consumer adoption remain outside this completed lifecycle slice.

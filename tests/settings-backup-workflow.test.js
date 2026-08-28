@@ -120,6 +120,7 @@ describe('Settings backup workflow interface', () => {
       'moduleAvatarOverrides',
       'moduleIdentity',
       'roleProfiles',
+      'contactsLifecycle',
       'contacts',
       'chatHistory',
       'conversations',
@@ -143,7 +144,7 @@ describe('Settings backup workflow interface', () => {
     ])
     expect(exported.backupMeta).toMatchObject({
       magic: 'schatphone-complete-backup',
-      schemaVersion: 4,
+      schemaVersion: 5,
       exportMode: 'metadata_only',
     })
     expect(exported.backupMeta.manifest.sectionCount).toBeGreaterThan(20)
@@ -190,6 +191,11 @@ describe('Settings backup workflow interface', () => {
         }),
       ]),
     )
+    expect(exported.contactsLifecycle).toMatchObject({
+      schemaVersion: 1,
+      profileIdHighWaterMark: expect.any(Number),
+      tombstones: [],
+    })
     expect(exported.apiReports).toEqual([
       expect.objectContaining({
         code: 'PRE_EXISTING_REPORT',
@@ -324,7 +330,7 @@ describe('Settings backup workflow interface', () => {
     const exportedBlob = createObjectURL.mock.calls[0][0]
     const exported = JSON.parse(exportedBlob.parts.join(''))
     expect(exported.backupMeta).toMatchObject({
-      schemaVersion: 4,
+      schemaVersion: 5,
       exportMode: 'metadata_with_asset_package',
     })
     expect(exported.backupMeta.galleryAssetPackage).toMatchObject({

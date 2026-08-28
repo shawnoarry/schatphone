@@ -1,5 +1,6 @@
 export const RELATIONSHIP_CLEANUP_MODES = Object.freeze({
   DELETE_ROLE: 'delete_role',
+  PERMANENT_DELETE_PERSON: 'permanent_delete_person',
   RESET_RELATIONSHIP: 'reset_relationship',
   DELETE_MEMORY_GROUP: 'delete_memory_group',
 })

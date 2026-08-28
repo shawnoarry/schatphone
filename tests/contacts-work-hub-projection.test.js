@@ -63,4 +63,13 @@ describe('Contacts Work Hub projection', () => {
       expectedProfileRevision: 4,
     }).projection.fields).toEqual([])
   })
+
+  test('fails closed for an archived matching profile', () => {
+    expect(buildContactsWorkHubProjection({
+      profile: { ...profile, lifecycle: { state: 'archived', archivedAt: 1 } },
+      template,
+      expectedWorldId: 'default_world',
+      expectedProfileRevision: 4,
+    })).toMatchObject({ ok: false, reason: 'profile_archived', projection: null })
+  })
 })

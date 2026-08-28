@@ -2369,15 +2369,13 @@ export const useShoppingStore = defineStore('shopping', () => {
   }
 
   const persistToStorage = () => {
-    writePersistedState(SHOPPING_STORAGE_KEY, createBackupSnapshot(), {
+    return writePersistedState(SHOPPING_STORAGE_KEY, createBackupSnapshot(), {
       version: SHOPPING_STORAGE_VERSION,
       migrate: migrateShoppingStorage,
     })
   }
 
-  const saveNow = () => {
-    persistToStorage()
-  }
+  const saveNow = () => persistToStorage()
 
   const resetForTesting = () => {
     products.value = []

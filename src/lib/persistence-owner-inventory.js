@@ -666,6 +666,20 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     referenceRule: 'Physically carried by Chat today, but Contacts remains the logical owner.',
   },
   {
+    id: 'contacts.profile-lifecycle-reservations',
+    logicalOwner: 'Contacts',
+    dataClass: 'Profile ID high-water mark and permanent-delete tombstone reservations',
+    physicalCarrierIds: layeredStoreCarriers,
+    storageKeys: ['store:chat'],
+    durability: 'durable-authoritative',
+    growthClass: 'bounded-history',
+    backupRequirement: 'required',
+    backupSectionId: 'contacts-lifecycle',
+    stableIdRule: 'Reserved profileId and roleId values are never reassigned in one save lineage.',
+    referenceRule:
+      'The lifecycle carrier reserves identity only; tombstones do not expose live profile content.',
+  },
+  {
     id: 'chat.directory-and-conversations',
     logicalOwner: 'Chat',
     dataClass: 'Chat directory projections and conversation state',

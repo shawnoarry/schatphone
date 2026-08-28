@@ -3,6 +3,7 @@ import {
   CHAT_SOCIAL_EVENT_TYPES,
   chatSocialEventIdForType,
 } from './chat-social-event-review'
+import { isContactsProfileActive } from './contacts-profile-owner'
 import { CONTACTS_ENTITY_TYPES } from './role-profile-schema'
 
 export const CHAT_SOCIAL_RUNTIME_GREETING_PILOT_ID =
@@ -59,7 +60,13 @@ const isEligibleRuntimeGreetingContact = (chatStore, contact) => {
     typeof chatStore?.getRoleProfileById === 'function'
       ? chatStore.getRoleProfileById(profileId)
       : null
-  if (!profile || profile.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE) return false
+  if (
+    !profile ||
+    !isContactsProfileActive(profile) ||
+    profile.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE
+  ) {
+    return false
+  }
 
   return RUNTIME_GREETING_STATES.has(readContactSocialState(chatStore, contact))
 }

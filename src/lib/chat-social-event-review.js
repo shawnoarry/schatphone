@@ -1,4 +1,5 @@
 import { CHAT_CONTACT_SOCIAL_STATES } from '../stores/chat'
+import { isContactsProfileActive } from './contacts-profile-owner'
 import { CONTACTS_ENTITY_TYPES } from './role-profile-schema'
 import {
   RELATIONSHIP_EVENT_GATE_DECISION,
@@ -325,6 +326,21 @@ export const evaluateChatSocialEventReview = ({
       targetName,
       triggerSource,
       reason: 'target_profile_missing',
+      currentChatSocialState: currentState,
+      at,
+      policy,
+      source,
+    })
+  }
+
+  if (!isContactsProfileActive(profile)) {
+    return createBlockedProposal({
+      eventType: normalizedEventType,
+      contactId: contact.id,
+      profileId: contact.profileId,
+      targetName,
+      triggerSource,
+      reason: 'target_profile_archived',
       currentChatSocialState: currentState,
       at,
       policy,

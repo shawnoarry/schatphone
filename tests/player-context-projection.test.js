@@ -80,6 +80,20 @@ const buildSnapshot = (overrides = {}) => {
 }
 
 describe('Player Context projection V1', () => {
+  test('fails closed when an imported Self Profile is archived', () => {
+    const result = buildSnapshot({
+      selfProfile: createSelfProfile({
+        lifecycle: { state: 'archived', archivedAt: 1 },
+      }),
+    })
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: 'self_profile_archived',
+      snapshot: null,
+    })
+  })
+
   test('projects only allowlisted structured Self Profile identity and owner references', () => {
     const selfProfile = createSelfProfile()
     const original = structuredClone(selfProfile)

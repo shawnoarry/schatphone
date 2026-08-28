@@ -174,6 +174,8 @@ describe('chat social event review policy', () => {
       entityType: CONTACTS_ENTITY_TYPES.SELF_PROFILE,
     })
     const normal = createRoleBinding(chatStore).contact
+    const archived = createRoleBinding(chatStore)
+    expect(chatStore.archiveRoleProfile(archived.profile.id)).toMatchObject({ ok: true })
     const selfContact = chatStore.addContact({
       kind: 'role',
       profileId: selfProfile.id,
@@ -201,6 +203,7 @@ describe('chat social event review policy', () => {
       { contactId: service.id, reason: 'target_not_role_contact' },
       { contactId: group.id, reason: 'target_not_role_contact' },
       { contactId: selfContact.id, reason: 'target_is_self_profile' },
+      { contactId: archived.contact.id, reason: 'target_profile_archived' },
       {
         contactId: normal.id,
         policy: { ...defaultPolicy, userAllowsGeneratedSocialEvents: false },

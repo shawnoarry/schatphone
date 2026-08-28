@@ -4,6 +4,7 @@ import {
   PROFILE_VALUE_SOURCE_KINDS,
   PROFILE_VISIBILITY_LEVELS,
 } from '../profile-template-schema'
+import { isContactsProfileActive } from '../contacts-profile-owner'
 
 export const PLAYER_CONTEXT_SCHEMA_VERSION = 1
 
@@ -216,6 +217,7 @@ export const buildPlayerContextSnapshotV1 = ({
   ) {
     return fail('invalid_self_profile')
   }
+  if (!isContactsProfileActive(selfProfile)) return fail('self_profile_archived')
   if (selfProfile.capabilities?.canAppearInWorldEvents !== true) {
     return fail('world_events_disabled')
   }

@@ -1,6 +1,6 @@
 # Contacts Relationship V2 And Identity Core V3 Workstreams / 通讯录关系 V2 与身份核心 V3 实施工作流
 
-Updated: 2026-08-27
+Updated: 2026-08-28
 
 This document translates the Contacts/relationship package into execution-ready workstreams.
 
@@ -15,10 +15,12 @@ Implementation order:
 3. `CONTACTS-V3-2A DONE 2026-08-27`: the category carrier, four-person-type baseline, field-purpose rules, added input types, manual WorldBook category/field editing, read-first dynamic person-page form, Contacts-owned person-specific extensions, current-world proposals, and review-only pasted-persona classification are complete;
 4. `CONTACTS-V3-2B / PERSONA-2 DONE 2026-08-27`: explicit per-item confirmation revalidates revisions and writes one rollback-safe Contacts profile revision in the same structure as manual input;
 5. `CONTACTS-V3-3 DONE 2026-08-27`: formal Chat, read-only Event Player Context, and Work Hub matching use bounded purpose-specific projections;
-6. `CONTACTS-V3-4 NEXT`: first freeze lifecycle semantics, then concentrate create/update/archive/restore/NPC-upgrade/delete behavior in the Role Lifecycle Module;
-7. `CONTACTS-V3-5`: migrate consumers while preserving Contacts V2, Chat history, relationship truth, and backup/restore behavior.
+6. `CONTACTS-V3-4 DECISION FREEZE COMPLETE 2026-08-28`: the lifecycle contract distinguishes active, reversible archive, and permanent-delete tombstones and freezes archive/restore continuity, permanent profile/role ID non-reuse, receiving-account suspension/revocation, immutable owner-history retention, cross-owner rollback, and the Self Profile stop line;
+7. `CONTACTS-V3-4A DONE 2026-08-28`: lifecycle compatibility, persisted ID high-water/tombstone reservation carrier, rollback-safe archive/restore receipts, complete-backup v5 coverage, and archived-person fail-closed Chat/Event/Work Hub/new-target behavior are implemented without changing permanent delete;
+8. `CONTACTS-V3-4B DONE 2026-08-28 / V3-4C DONE 2026-08-28`: archive-first permanent deletion is centralized behind one rollback-safe coordinator; Contacts now provides the bounded archived-people manager, read-only detail, Wallet payee suspension/restore, grouped impact and typed-ID confirmation, legacy-entry replacement, and focused desktop/mobile E2E;
+9. `CONTACTS-V3-5`: migrate consumers while preserving Contacts V2, Chat history, relationship truth, and backup/restore behavior.
 
-The owner foundation, extensible card, Persona Confirmation, and approved Chat/Event/Work Hub projections are complete. The next candidate is the V3-4 lifecycle contract freeze. It must preserve stable IDs, Chat bindings/history, profile values/extensions, relationship truth, receiving accounts, migration, complete backup/restore, cleanup impact previews, and write-failure rollback; it must not infer importance for old NPCs, move `roleProfiles` to a second persisted Store, or promote Work Hub/event implementation.
+The owner foundation, extensible card, Persona Confirmation, approved Chat/Event/Work Hub projections, and V3-4A/V3-4B/V3-4C lifecycle flow are complete. The user flow is now archive-first, preserves IDs and history, suspends/restores the same Wallet payee, exposes permanent deletion only for archived people, and restores all participants after cleanup or persistence failure. It does not infer importance for old NPCs, move `roleProfiles` to a second persisted Store, expose tombstones as live people, or promote Work Hub/event implementation.
 
 ## 1. Workstream A: Data Model And Ownership
 

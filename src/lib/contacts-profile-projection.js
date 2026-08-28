@@ -4,6 +4,7 @@ import {
   normalizeProfileExtensions,
   normalizeProfileTemplateField,
 } from './profile-template-schema'
+import { isContactsProfileActive } from './contacts-profile-owner'
 
 const LEGACY_SINGLE_WORLD_IDS = new Set(['legacy_single_world', 'default_world'])
 const DEFAULT_VISIBILITY = new Set([
@@ -43,6 +44,7 @@ export const buildContactsProfileProjection = ({
   const normalizedPurpose = normalizeText(purpose, 80)
   if (!normalizedPurpose) return fail('purpose_missing')
   if (!profile || typeof profile !== 'object') return fail('profile_missing')
+  if (!isContactsProfileActive(profile)) return fail('profile_archived')
   if (Array.isArray(allowedEntityTypes) && allowedEntityTypes.length > 0 && !allowedEntityTypes.includes(profile.entityType)) {
     return fail('entity_type_not_allowed')
   }

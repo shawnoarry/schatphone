@@ -198,6 +198,37 @@ describe('Contacts and Chat Directory boundary copy', () => {
     wrapper.unmount()
   })
 
+  test('does not offer archived profiles as new Chat targets', async () => {
+    const chatStore = useChatStore()
+    const activeProfile = chatStore.addRoleProfile({
+      roleId: '7105',
+      name: 'Active Chat Candidate',
+    })
+    const archivedProfile = chatStore.addRoleProfile({
+      roleId: '7106',
+      name: 'Archived Chat Candidate',
+    })
+    expect(chatStore.archiveRoleProfile(archivedProfile.id)).toMatchObject({ ok: true })
+
+    const router = createTestRouter()
+    await router.push('/chat-contacts')
+    await router.isReady()
+    const wrapper = mount(ChatDirectoryView, {
+      global: { plugins: [router] },
+    })
+    await flushUi()
+
+    await wrapper.get('button[aria-label="Add contact"]').trigger('click')
+    await flushUi()
+    const options = wrapper.findAll('select option').map((option) => option.text())
+    expect(options).toEqual(
+      expect.arrayContaining([expect.stringContaining(activeProfile.name)]),
+    )
+    expect(options.some((label) => label.includes(archivedProfile.name))).toBe(false)
+
+    wrapper.unmount()
+  })
+
   test('labels Chat-side relationship fields as local annotations instead of current truth', async () => {
     const chatStore = useChatStore()
     const profile = chatStore.addRoleProfile({

@@ -10,6 +10,12 @@ export const RELATIONSHIP_RUNTIME_STORAGE_VERSION = 2
 
 export const RELATIONSHIP_EVENT_PAGE_SIZE = 50
 export const RELATIONSHIP_MEMORY_PAGE_SIZE = 50
+export const RELATIONSHIP_PROMPT_READING_LIMITS = Object.freeze({
+  relevantMemoryItems: 3,
+  relevantMemoryCharacters: 720,
+  sharedExperienceItems: 2,
+  sharedExperienceCharacters: 480,
+})
 const METRIC_KEYS = ['affinity', 'trust', 'intimacy', 'tension', 'dependency']
 export const RELATIONSHIP_EVENT_STATUS = Object.freeze({
   APPLIED: 'applied',
@@ -56,6 +62,9 @@ const normalizeText = (value, fallback = '', max = 160) => {
   if (!normalized) return fallback
   return normalized.slice(0, max)
 }
+
+const terminatePromptSummary = (value) =>
+  /[.!?。！？]$/.test(value) ? value : `${value}.`
 
 const normalizeTag = (value) => normalizeText(value, '', 40).toLowerCase()
 
@@ -319,20 +328,10 @@ const isMajorRelationshipEvent = (event) => {
   return Object.values(event.metricDeltas || {}).some((delta) => Math.abs(Number(delta) || 0) >= 16)
 }
 
-const summarizeEventsForPrompt = (items = []) => {
-  if (!items.length) return 'none'
-  return items
-    .slice(0, 3)
-    .map((event) => {
-      const summary = event.summary || event.factType || 'relationship fact'
-      return `${event.sourceModule}:${event.factType} - ${summary}`
-    })
-    .join('; ')
-}
-
 const buildDefaultMemoryAggregate = (memoryKey, entityKey = '') => ({
   memoryKey,
   entityKey,
+  sharedExperienceIds: [],
   sourceModules: [],
   sourceIds: [],
   factTypes: [],
@@ -391,6 +390,39 @@ const compareMemorySummaryEntries = (left = {}, right = {}, options = {}) => {
 
 const compareRelationshipEventsByCreatedAtDesc = (left = {}, right = {}) =>
   (Number(right.createdAt) || 0) - (Number(left.createdAt) || 0)
+
+const fitPromptSummaryItems = (items = [], { limit, characterBudget } = {}) => {
+  const normalizedLimit = normalizeNonNegativeLimit(limit, 0)
+  const normalizedBudget = normalizeNonNegativeLimit(characterBudget, 0)
+  const selected = []
+  let characterCount = 0
+
+  for (const item of items) {
+    if (selected.length >= normalizedLimit) break
+    const summary = normalizeText(item?.summary, '', 1000)
+    if (!summary) continue
+    const separatorCharacters = selected.length > 0 ? 2 : 0
+    const remaining = normalizedBudget - characterCount - separatorCharacters
+    if (remaining <= 0) break
+    if (summary.length <= remaining) {
+      selected.push({ ...item, summary })
+      characterCount += separatorCharacters + summary.length
+      continue
+    }
+    if (selected.length === 0 && remaining >= 40) {
+      const truncated = `${summary.slice(0, Math.max(1, remaining - 3)).trimEnd()}...`
+      selected.push({ ...item, summary: truncated })
+      characterCount += truncated.length
+    }
+    break
+  }
+
+  return {
+    items: selected,
+    text: selected.map((item) => item.summary).join('; '),
+    characterCount,
+  }
+}
 
 const shouldIncludeArchivedMemories = (options = {}) => options.includeArchivedMemories === true
 
@@ -606,6 +638,12 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
       const existing = map.get(aggregateKey) || buildDefaultMemoryAggregate(event.memoryKey, event.entityKey)
       existing.entityKey = existing.entityKey || event.entityKey
       existing.supportingCount += 1
+      if (
+        event.sharedExperienceId &&
+        !existing.sharedExperienceIds.includes(event.sharedExperienceId)
+      ) {
+        existing.sharedExperienceIds.push(event.sharedExperienceId)
+      }
       if (event.sourceModule && !existing.sourceModules.includes(event.sourceModule)) {
         existing.sourceModules.push(event.sourceModule)
       }
@@ -660,6 +698,15 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     })
     return map
   })
+  const memoryAggregatesByEntity = computed(() => {
+    const byEntity = new Map()
+    memoryAggregateMap.value.forEach((memory) => {
+      const ownerMemories = byEntity.get(memory.entityKey) || []
+      ownerMemories.push(memory)
+      byEntity.set(memory.entityKey, ownerMemories)
+    })
+    return byEntity
+  })
 
   const pruneMemoryReviews = () => {
     const validKeys = new Set(memoryAggregateMap.value.keys())
@@ -701,8 +748,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     if (!key) return []
     const sourceModule = normalizeText(options.sourceModule, '', 60)
     const offset = normalizeOffset(options.offset)
-    return [...memoryAggregateMap.value.values()]
-      .filter((item) => item.entityKey === key)
+    return [...(memoryAggregatesByEntity.value.get(key) || [])]
       .filter((item) => !sourceModule || item.sourceModules.includes(sourceModule))
       .map((item) => {
         const review = memoryReviewMap.value.get(buildMemoryAggregateMapKey(item.entityKey, item.memoryKey)) || {}
@@ -710,6 +756,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
           ...review,
           memoryKey: item.memoryKey,
           entityKey: item.entityKey,
+          sharedExperienceIds: [...item.sharedExperienceIds],
           sourceModules: [...item.sourceModules],
           sourceIds: [...item.sourceIds],
           factTypes: [...item.factTypes],
@@ -1346,7 +1393,15 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
       target,
       Number.MAX_SAFE_INTEGER,
       { sortMode: 'recent' },
-    )
+    ).map((memory) => ({
+      ...memory,
+      // Prompt recall uses the owner summary only. Source counts/modules remain review metadata.
+      recallSummary:
+        memory.displaySummary ||
+        memory.primarySummary ||
+        memory.latestSummary ||
+        memory.memoryKey,
+    }))
     return selectMemoryRecall({
       memories,
       queryText: options.queryText,
@@ -1354,6 +1409,45 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
       characterBudget: options.characterBudget,
       includeArchived: options.includeArchivedMemories === true,
     })
+  }
+
+  const buildActiveSharedExperienceProjection = (target = {}, options = {}) => {
+    const itemLimit = Math.min(
+      RELATIONSHIP_PROMPT_READING_LIMITS.sharedExperienceItems,
+      normalizeNonNegativeLimit(
+        options.sharedExperienceLimit,
+        RELATIONSHIP_PROMPT_READING_LIMITS.sharedExperienceItems,
+      ),
+    )
+    const characterBudget = Math.min(
+      RELATIONSHIP_PROMPT_READING_LIMITS.sharedExperienceCharacters,
+      normalizeNonNegativeLimit(
+        options.sharedExperienceCharacterBudget,
+        RELATIONSHIP_PROMPT_READING_LIMITS.sharedExperienceCharacters,
+      ),
+    )
+    const seenExperienceIds = new Set()
+    const candidates = []
+    listMemoryAggregatesForTarget(target, Number.MAX_SAFE_INTEGER, { sortMode: 'recent' })
+      .filter((memory) => memory.reviewStatus !== RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED)
+      .forEach((memory) => {
+        const sharedExperienceId = memory.sharedExperienceIds.find(
+          (id) => id && !seenExperienceIds.has(id),
+        )
+        if (!sharedExperienceId) return
+        seenExperienceIds.add(sharedExperienceId)
+        candidates.push({
+          sharedExperienceId,
+          memoryKey: memory.memoryKey,
+          summary:
+            memory.displaySummary ||
+            memory.primarySummary ||
+            memory.latestSummary ||
+            memory.memoryKey,
+          updatedAt: memory.latestCreatedAt,
+        })
+      })
+    return fitPromptSummaryItems(candidates, { limit: itemLimit, characterBudget })
   }
 
   const buildPromptProjectionForTarget = (target = {}, options = {}) => {
@@ -1372,20 +1466,36 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     const metrics = snapshot.metrics
     const milestones = snapshot.milestones.map((item) => item.label).slice(0, 3).join('; ') || 'none'
     const traits = snapshot.growthTraits.slice(0, 6).join(', ') || 'none'
-    const recentEvents = summarizeEventsForPrompt(
-      snapshot.recentEvents.filter(
-        (event) =>
-          event.status === RELATIONSHIP_EVENT_STATUS.APPLIED &&
-          event.effectApplied !== false,
+    const memoryLimit = Math.min(
+      RELATIONSHIP_PROMPT_READING_LIMITS.relevantMemoryItems,
+      normalizeNonNegativeLimit(
+        options.memoryLimit,
+        RELATIONSHIP_PROMPT_READING_LIMITS.relevantMemoryItems,
+      ),
+    )
+    const memoryCharacterBudget = Math.min(
+      RELATIONSHIP_PROMPT_READING_LIMITS.relevantMemoryCharacters,
+      normalizeNonNegativeLimit(
+        options.memoryCharacterBudget,
+        RELATIONSHIP_PROMPT_READING_LIMITS.relevantMemoryCharacters,
       ),
     )
     const memoryRecall = recallMemoriesForTarget(target, {
       queryText: options.recallQuery ?? options.queryText,
-      limit: options.memoryLimit ?? 3,
-      characterBudget: options.memoryCharacterBudget,
+      limit: memoryLimit,
+      characterBudget: memoryCharacterBudget,
       includeArchivedMemories: options.includeArchivedMemories === true,
     })
-    const memories = memoryRecall.text || 'none'
+    const sharedExperienceSummaries = buildActiveSharedExperienceProjection(target, options)
+    const sharedExperienceMemoryKeys = new Set(
+      sharedExperienceSummaries.items.map((item) => item.memoryKey),
+    )
+    const relevantMemories = memoryRecall.items
+      .filter((item) => !sharedExperienceMemoryKeys.has(item.memoryKey))
+      .map((item) => item.recallText)
+      .filter(Boolean)
+      .join('; ') || 'none'
+    const activeSharedExperiences = sharedExperienceSummaries.text || 'none'
 
     return {
       text: [
@@ -1393,10 +1503,11 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
         `Stage: ${snapshot.relationshipStage}; metrics affinity/trust/intimacy/tension/dependency: ${metrics.affinity}/${metrics.trust}/${metrics.intimacy}/${metrics.tension}/${metrics.dependency}.`,
         `Milestones: ${milestones}.`,
         `Growth traits: ${traits}.`,
-        `Memory summaries: ${memories}.`,
-        `Recent relationship events: ${recentEvents}.`,
+        `Relevant role memories: ${terminatePromptSummary(relevantMemories)}`,
+        `Active shared experiences: ${terminatePromptSummary(activeSharedExperiences)}`,
       ].join('\n'),
       memoryRecall,
+      sharedExperienceSummaries,
     }
   }
 

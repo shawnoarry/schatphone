@@ -1,8 +1,8 @@
 # SchatPhone Project Iteration Plan
 
-Updated: 2026-08-26
+Updated: 2026-08-28
 
-Integrated baseline: `f06a575`
+Integrated baseline: `dc26226`
 
 This is long-range sequencing guidance. It is not an implementation board and cannot override `docs/roadmap/TODO_ROADMAP.md`.
 
@@ -18,7 +18,7 @@ The project has already passed prototype viability, basic cross-module integrati
 
 ### Phase A: Continuity Closure
 
-- complete `CMG-08`, then `CMG-09` and `CMG-10`;
+- integrate the validated `CMG-09` bounded-reading slice after completed `CMG-08`, then execute `CMG-10`;
 - preserve canonical history without unbounded prompt/list cost;
 - prove failure, reopen, backup/restore, and migration behavior.
 

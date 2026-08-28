@@ -5,6 +5,7 @@ import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { formatBytesCompact, summarizeMediaLimitPolicy, MEDIA_SIZE_SCENE } from '../lib/media-policy'
 import { pushReturnTarget } from '../lib/navigation-return'
+import { isContactsProfileActive } from '../lib/contacts-profile-owner'
 import { useChatStore } from '../stores/chat'
 import { useMapStore } from '../stores/map'
 import { GALLERY_ASSET_CATEGORIES, useGalleryStore } from '../stores/gallery'
@@ -259,10 +260,13 @@ const mapPlaceOptions = computed(() =>
 )
 
 const personOptions = computed(() =>
-  (chatStore.roleProfiles || []).slice(0, 60).map((profile) => ({
-    id: profile.id,
-    name: profile.name || `#${profile.id}`,
-  })),
+  (chatStore.roleProfiles || [])
+    .filter(isContactsProfileActive)
+    .slice(0, 60)
+    .map((profile) => ({
+      id: profile.id,
+      name: profile.name || `#${profile.id}`,
+    })),
 )
 
 /* ---------- 导入 / 添加 ---------- */

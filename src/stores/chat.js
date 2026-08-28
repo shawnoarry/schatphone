@@ -2,7 +2,11 @@ import { computed, reactive, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 import { resolveAvatarWithHierarchy, sanitizeAvatarUrl } from '../lib/avatar'
-import { createContactsProfileOwner } from '../lib/contacts-profile-owner'
+import {
+  createContactsProfileOwner,
+  isContactsProfileActive,
+  normalizeContactsProfileLifecycleState,
+} from '../lib/contacts-profile-owner'
 import { normalizeImageSource } from '../lib/image-source-contract'
 import { normalizeSharedExperienceId } from '../lib/shared-experience-contract'
 import {
@@ -1015,7 +1019,12 @@ const recalledQuotePreviewForRole = (role) =>
 
 export const useChatStore = defineStore('chat', () => {
   const roleProfiles = reactive([])
-  const profileOwner = createContactsProfileOwner({ profiles: roleProfiles, now: nowTs })
+  const contactsLifecycle = reactive(normalizeContactsProfileLifecycleState())
+  const profileOwner = createContactsProfileOwner({
+    profiles: roleProfiles,
+    lifecycleState: contactsLifecycle,
+    now: nowTs,
+  })
   const contacts = reactive([])
   const moduleAvatarOverrides = reactive(
     normalizeModuleAvatarOverrides(DEFAULT_CHAT_MODULE_AVATAR_OVERRIDES),
@@ -1218,9 +1227,16 @@ export const useChatStore = defineStore('chat', () => {
   const isChatContactBlocked = (contact) =>
     isChatRoleContact(contact) && CHAT_CONTACT_BLOCKED_STATES.has(getContactChatSocialState(contact))
 
+  const isRoleContactProfileArchived = (contact) => {
+    if (!isChatRoleContact(contact)) return false
+    const profile = getRoleProfileById(contact?.profileId)
+    return Boolean(profile && !isContactsProfileActive(profile))
+  }
+
   const canContactSendMessages = (contact) => {
     if (!contact) return false
     if (!isChatRoleContact(contact)) return true
+    if (isRoleContactProfileArchived(contact)) return false
     return getContactChatSocialState(contact) === CHAT_CONTACT_SOCIAL_STATES.CONNECTED
   }
 
@@ -1282,6 +1298,7 @@ export const useChatStore = defineStore('chat', () => {
   const setContactChatSocialState = (contactId, nextState, options = {}) => {
     const target = getRawContactById(contactId)
     if (!target || target.kind !== 'role') return false
+    if (isRoleContactProfileArchived(target)) return false
     const normalizedState = normalizeChatContactSocialState(nextState, target.kind)
     target.chatSocialState = normalizedState
     if (Object.prototype.hasOwnProperty.call(options, 'note')) {
@@ -1649,6 +1666,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   const scheduleConversationAutoInvoke = (contactId, baseAt = nowTs(), intervalSec = 0) => {
+    if (!canContactSendMessages(getRawContactById(contactId))) return 0
     const conversation = ensureConversationForContact(contactId)
     const fallbackInterval = conversation.aiPrefs?.autoInvokeIntervalSec
     const normalizedIntervalSec = clamp(
@@ -1665,6 +1683,7 @@ export const useChatStore = defineStore('chat', () => {
 
   const listAutoInvokeContactIds = () => {
     return contacts
+      .filter((contact) => canContactSendMessages(contact))
       .map((contact) => Number(contact.id))
       .filter((contactId) => Number.isFinite(contactId) && contactId > 0)
       .filter((contactId) => {
@@ -1860,6 +1879,8 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   const appendMessage = (contactId, rawMessage) => {
+    const contact = getRawContactById(contactId)
+    if (contact && isRoleContactProfileArchived(contact)) return null
     const key = conversationKeyForContact(contactId)
     ensureConversationForContact(contactId)
     const fallbackRole = rawMessage?.role === 'user' ? 'user' : 'assistant'
@@ -2370,6 +2391,92 @@ export const useChatStore = defineStore('chat', () => {
   const updateRoleProfile = (profileId, updates = {}) =>
     profileOwner.reviseProfile(profileId, updates).ok
 
+  const runPersistedProfileLifecycleMutation = (mutate) => {
+    const beforeProfiles = profileOwner.createPersistenceSnapshot()
+    const beforeLifecycle = profileOwner.createLifecyclePersistenceSnapshot()
+    const ownerReceipt = mutate()
+    if (!ownerReceipt.ok) {
+      return { ok: false, reason: ownerReceipt.code, owner: ownerReceipt }
+    }
+
+    const persistence = persistToStorage()
+    if (persistence?.ok === true) {
+      return {
+        ok: true,
+        reason: ownerReceipt.code,
+        profile: getRoleProfileById(ownerReceipt.profileId),
+        owner: ownerReceipt,
+        persistence,
+      }
+    }
+
+    const restored = profileOwner.replaceAllProfiles(beforeProfiles, {
+      lifecycleState: beforeLifecycle,
+    })
+    const rollbackPersistence = restored.ok ? persistToStorage() : null
+    return {
+      ok: false,
+      reason: 'persistence_failed',
+      profile: getRoleProfileById(ownerReceipt.profileId),
+      owner: ownerReceipt,
+      persistence: persistence || null,
+      rollback: {
+        restored: restored.ok,
+        persistence: rollbackPersistence,
+      },
+    }
+  }
+
+  const archiveRoleProfile = (profileId, input = {}) => {
+    const options = Object.prototype.hasOwnProperty.call(input, 'expectedRevision')
+      ? { expectedRevision: input.expectedRevision }
+      : {}
+    return runPersistedProfileLifecycleMutation(() =>
+      profileOwner.archiveProfile(profileId, { note: input?.note }, options),
+    )
+  }
+
+  const restoreRoleProfile = (profileId, input = {}) => {
+    const options = Object.prototype.hasOwnProperty.call(input, 'expectedRevision')
+      ? { expectedRevision: input.expectedRevision }
+      : {}
+    return runPersistedProfileLifecycleMutation(() =>
+      profileOwner.restoreProfile(profileId, options),
+    )
+  }
+
+  const commitArchivedRoleProfileDeletion = (profileId, input = {}) => {
+    const options = Object.prototype.hasOwnProperty.call(input, 'expectedRevision')
+      ? { expectedRevision: input.expectedRevision }
+      : {}
+    const ownerReceipt = profileOwner.permanentlyDeleteArchivedProfile(profileId, options)
+    if (!ownerReceipt.ok) {
+      return { ok: false, reason: ownerReceipt.code, owner: ownerReceipt }
+    }
+
+    const bindingIds = contacts
+      .filter(
+        (contact) =>
+          contact.kind === 'role' && Number(contact.profileId) === Number(ownerReceipt.profileId),
+      )
+      .map((contact) => contact.id)
+    const removedBindingCount = bindingIds.reduce(
+      (count, contactId) => count + (removeContact(contactId) ? 1 : 0),
+      0,
+    )
+    return {
+      ok: removedBindingCount === bindingIds.length,
+      reason:
+        removedBindingCount === bindingIds.length
+          ? ownerReceipt.code
+          : 'chat_binding_removal_failed',
+      owner: ownerReceipt,
+      tombstone: ownerReceipt.tombstone,
+      removedBindingCount,
+      removedConversationCount: removedBindingCount,
+    }
+  }
+
   const confirmPersonaProfileRevision = ({
     profileId,
     expectedRevision,
@@ -2478,6 +2585,7 @@ export const useChatStore = defineStore('chat', () => {
   const bindRoleProfile = (profileId, options = {}) => {
     const profile = getRoleProfileById(profileId)
     if (!profile) return null
+    if (!isContactsProfileActive(profile)) return null
     if (profile.capabilities?.canAppearInChatDirectory === false) return null
 
     const existing = contacts.find(
@@ -2728,7 +2836,7 @@ export const useChatStore = defineStore('chat', () => {
             isMain: contact.isMain,
           }))
       : DEFAULT_ROLE_PROFILES
-    const replacement = profileOwner.replaceAllProfiles(sourceProfiles)
+    const replacement = profileOwner.replaceAllProfiles(sourceProfiles, { lifecycleState: {} })
     if (!replacement.ok) return false
 
     applyModuleAvatarOverrides(DEFAULT_CHAT_MODULE_AVATAR_OVERRIDES)
@@ -2778,7 +2886,12 @@ export const useChatStore = defineStore('chat', () => {
     const normalizedContacts = Array.isArray(persisted.contacts)
       ? persisted.contacts.map((item, index) => normalizeContact(item, index))
       : DEFAULT_CONTACTS.map((item, index) => normalizeContact(item, index))
-    const sourceProfiles = Array.isArray(persisted.roleProfiles) && persisted.roleProfiles.length > 0
+    const hasLifecycleState =
+      persisted.contactsLifecycle &&
+      typeof persisted.contactsLifecycle === 'object' &&
+      !Array.isArray(persisted.contactsLifecycle)
+    const sourceProfiles = Array.isArray(persisted.roleProfiles) &&
+      (persisted.roleProfiles.length > 0 || hasLifecycleState)
       ? persisted.roleProfiles
       : normalizedContacts
           .filter((contact) => (contact.kind || 'role') === 'role')
@@ -2790,7 +2903,9 @@ export const useChatStore = defineStore('chat', () => {
             bio: contact.bio,
             isMain: contact.isMain,
           }))
-    const replacement = profileOwner.replaceAllProfiles(sourceProfiles)
+    const replacement = profileOwner.replaceAllProfiles(sourceProfiles, {
+      lifecycleState: hasLifecycleState ? persisted.contactsLifecycle : {},
+    })
     if (!replacement.ok) return false
 
     applyModuleAvatarOverrides(
@@ -2879,7 +2994,7 @@ export const useChatStore = defineStore('chat', () => {
     return hydrateFromSnapshot(persisted)
   }
 
-  const persistToStorage = () => {
+  const createBackupSnapshot = () => {
     const contactsSnapshot = contacts.map((contact) => ({ ...contact }))
     const conversationsSnapshot = Object.fromEntries(
       Object.entries(conversations).map(([key, value]) => [
@@ -2920,19 +3035,21 @@ export const useChatStore = defineStore('chat', () => {
       ]),
     )
 
-    return writePersistedState(
-      CHAT_STORAGE_KEY,
-      {
-        moduleAvatarOverrides: normalizeModuleAvatarOverrides(moduleAvatarOverrides),
-        moduleIdentity: normalizeModuleIdentity(moduleIdentity),
-        roleProfiles: profileOwner.createPersistenceSnapshot(),
-        contacts: contactsSnapshot,
-        conversations: conversationsSnapshot,
-        messagesByConversation: messagesSnapshot,
-      },
-      { version: CHAT_STORAGE_VERSION },
-    )
+    return {
+      moduleAvatarOverrides: normalizeModuleAvatarOverrides(moduleAvatarOverrides),
+      moduleIdentity: normalizeModuleIdentity(moduleIdentity),
+      roleProfiles: profileOwner.createPersistenceSnapshot(),
+      contactsLifecycle: profileOwner.createLifecyclePersistenceSnapshot(),
+      contacts: contactsSnapshot,
+      conversations: conversationsSnapshot,
+      messagesByConversation: messagesSnapshot,
+    }
   }
+
+  const persistToStorage = () =>
+    writePersistedState(CHAT_STORAGE_KEY, createBackupSnapshot(), {
+      version: CHAT_STORAGE_VERSION,
+    })
 
   const saveNow = () => {
     return persistToStorage()
@@ -2974,7 +3091,15 @@ export const useChatStore = defineStore('chat', () => {
   })()
 
   watch(
-    [moduleAvatarOverrides, moduleIdentity, roleProfiles, contacts, conversations, messagesByConversation],
+    [
+      moduleAvatarOverrides,
+      moduleIdentity,
+      roleProfiles,
+      contactsLifecycle,
+      contacts,
+      conversations,
+      messagesByConversation,
+    ],
     () => {
       if (!hasFinishedStorageHydration.value) return
       persistToStorage()
@@ -2986,6 +3111,7 @@ export const useChatStore = defineStore('chat', () => {
     moduleAvatarOverrides,
     moduleIdentity,
     roleProfiles,
+    contactsLifecycle,
     contacts,
     contactsForList,
     conversations,
@@ -3077,6 +3203,9 @@ export const useChatStore = defineStore('chat', () => {
     clearRoleEventAttachedDetailItems,
     addRoleProfile,
     updateRoleProfile,
+    archiveRoleProfile,
+    restoreRoleProfile,
+    commitArchivedRoleProfileDeletion,
     confirmPersonaProfileRevision,
     updateRoleRelationshipPremise,
     saveRoleRelationshipClassification,
@@ -3093,6 +3222,7 @@ export const useChatStore = defineStore('chat', () => {
     createWorldServiceTemplateContact,
     updateContact,
     removeContact,
+    createBackupSnapshot,
     saveNow,
     restoreFromBackup,
   }

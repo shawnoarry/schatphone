@@ -228,7 +228,7 @@ describe('chat worldbook binding visibility', () => {
     expect(systemPrompt).toContain('City etiquette: Formal greeting only. [tags: style]')
     expect(systemPrompt).toContain('Relationship runtime snapshot: Nova.')
     expect(systemPrompt).toContain('First shared meal')
-    expect(systemPrompt).toContain('food_delivery:shared_meal')
+    expect(systemPrompt).not.toContain('food_delivery:shared_meal')
     expect(systemPrompt).not.toContain('Hidden note')
     expect(systemPrompt).not.toContain('Tea rituals')
     expect(wrapper.text()).toContain('Mocked worldbook reply.')

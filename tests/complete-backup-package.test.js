@@ -4,6 +4,7 @@ import {
   COMPLETE_BACKUP_SCHEMA_VERSION,
   COMPLETE_BACKUP_SECTION_PATHS,
   COMPLETE_BACKUP_V3_SECTION_PATHS,
+  COMPLETE_BACKUP_V4_SECTION_PATHS,
   createCompleteBackupPackage,
   inspectCompleteBackupPackage,
 } from '../src/lib/complete-backup-package'
@@ -46,6 +47,20 @@ const createPayload = ({ includeMaterial = true } = {}) => {
   payload.notifications = []
   payload.apiReports = []
   payload.roleProfiles = []
+  payload.contactsLifecycle = {
+    schemaVersion: 1,
+    profileIdHighWaterMark: 12,
+    tombstones: [
+      {
+        profileId: 12,
+        roleId: 'deleted-12',
+        entityType: 'supporting_role',
+        worldId: 'world-a',
+        deletedAt: 1_786_143_000_000,
+        schemaVersion: 1,
+      },
+    ],
+  }
   payload.contacts = []
   payload.chatHistory = []
   payload.moduleIdentity = { nickname: 'Backup user', avatar: 'https://example.com/self.png' }
@@ -87,6 +102,7 @@ const createLegacyV3Package = async () => {
     packageId: 'backup-test-legacy-v3',
   })
   delete current.miniScene
+  delete current.contactsLifecycle
   current.backupMeta.schemaVersion = 3
   const sections = []
   for (const path of COMPLETE_BACKUP_V3_SECTION_PATHS) {
@@ -108,6 +124,39 @@ const createLegacyV3Package = async () => {
     binaries: current.backupMeta.manifest.binaries,
     payloadSha256: await sha256Canonical(
       Object.fromEntries(COMPLETE_BACKUP_V3_SECTION_PATHS.map((path) => [path, current[path]])),
+    ),
+  }
+  manifest.manifestSha256 = await sha256Canonical(manifest)
+  current.backupMeta.manifest = manifest
+  return current
+}
+
+const createLegacyV4Package = async () => {
+  const current = await createCompleteBackupPackage(createPayload({ includeMaterial: false }), {
+    packageId: 'backup-test-legacy-v4',
+  })
+  delete current.contactsLifecycle
+  current.backupMeta.schemaVersion = 4
+  const sections = []
+  for (const path of COMPLETE_BACKUP_V4_SECTION_PATHS) {
+    const canonical = canonicalStringify(current[path])
+    sections.push({
+      id: path,
+      path,
+      required: true,
+      byteSize: new TextEncoder().encode(canonical).byteLength,
+      sha256: await sha256Canonical(current[path]),
+    })
+  }
+  const manifest = {
+    version: 1,
+    packageId: current.backupMeta.packageId,
+    exportedAt: current.backupMeta.exportedAt,
+    sectionCount: sections.length,
+    sections,
+    binaries: current.backupMeta.manifest.binaries,
+    payloadSha256: await sha256Canonical(
+      Object.fromEntries(COMPLETE_BACKUP_V4_SECTION_PATHS.map((path) => [path, current[path]])),
     ),
   }
   manifest.manifestSha256 = await sha256Canonical(manifest)
@@ -137,6 +186,20 @@ describe('complete backup package', () => {
     expect(packaged.backupMeta.manifest.binaries.items[0].sha256).toMatch(/^[a-f0-9]{64}$/)
     expect(packaged.moduleIdentity.nickname).toBe('Backup user')
     expect(packaged.moduleAvatarOverrides.defaultContactAvatar).toContain('contact.png')
+    expect(packaged.contactsLifecycle).toEqual({
+      schemaVersion: 1,
+      profileIdHighWaterMark: 12,
+      tombstones: [
+        {
+          profileId: 12,
+          roleId: 'deleted-12',
+          entityType: 'supporting_role',
+          worldId: 'world-a',
+          deletedAt: 1_786_143_000_000,
+          schemaVersion: 1,
+        },
+      ],
+    })
     expect(packaged.user.worldSuiteInventory.resources[0]).toMatchObject({
       id: 'map.demo-city',
       ownerResourceId: 'demo-city-map',
@@ -206,5 +269,17 @@ describe('complete backup package', () => {
         expect.objectContaining({ code: 'SECTION_DIGEST_MISMATCH', detail: 'calendar' }),
       ]),
     )
+  })
+
+  test('verifies legacy v4 packages without requiring Contacts lifecycle metadata', async () => {
+    const packaged = await createLegacyV4Package()
+    const inspection = await inspectCompleteBackupPackage(packaged)
+
+    expect(inspection).toMatchObject({
+      ok: true,
+      classification: 'legacy_complete',
+      schemaVersion: 4,
+      verifiedSectionCount: COMPLETE_BACKUP_V4_SECTION_PATHS.length,
+    })
   })
 })

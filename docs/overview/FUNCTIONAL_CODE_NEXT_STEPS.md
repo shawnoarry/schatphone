@@ -1,6 +1,6 @@
 # Functional Code Next Steps
 
-Updated: 2026-08-20
+Updated: 2026-08-28
 
 > **Frozen execution status / 非执行看板**
 >
@@ -12,7 +12,7 @@ Do not restart completed Contacts 4.1, memory 4.2, World Hub 4.3, or service-acc
 
 The best next work is:
 
-1. execute the promoted roadmap 4.5-CMG plan from `DCF-05` and `CMG-01`, preserving its dependency and cross-PC handoff rules;
+1. finish the promoted roadmap 4.5-CMG plan by integrating the validated `CMG-09` bounded-reading slice and then executing dependent `CMG-10`, preserving its history and recovery rules;
 2. preserve the completed non-active IndexedDB/Book Batch 2B foundation, active Book-only reference cutover, browser evidence, and unchanged legacy fallback;
 3. keep Gallery/R2, dual write, legacy Book deletion, garbage collection, and each non-Book owner migration separately approved inside the relevant CMG retention slice;
 4. security/toolchain hardening and release-gate alignment;
@@ -157,16 +157,17 @@ Current contract status:
 
 - `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md` is architecture-accepted and Stage 1 is done;
 - the K-pop 2 + 6 + 1 Book/WorldBook content slice is already landed, and its music-show-day prose rule remains narrative input rather than executable configuration;
-- pure request/draft/artifact/policy schemas, an empty-by-default module registry, Book structured-profile/regex validation, deterministic world/profile resolution, and 22 focused tests are landed;
-- no shared runtime, popup, safe regex execution engine, built-in structured transform profile, persistence, or source Adapter is implemented.
+- pure request/draft/artifact/policy schemas, the registered Event Runtime text caller, Book structured-profile/regex validation, deterministic world/profile resolution, persistent policies/bindings/audit, and the global Text Presenter are landed;
+- `CMG-08` adds explicit complete-scene retention, same-occurrence reuse, new-revision regeneration, retained/archived World Hub paging, and removal of the historical 120-artifact cap;
+- `CMG-09` bounded retained-history indexing is validated in the current working tree but not yet integrated; no production trigger Adapter, safe regex execution engine, built-in structured transform profile, interactive HTML, or broader source Adapter is implemented.
 
-The Book Repository foundation prerequisite is complete. The next Mini Scene gate remains a separately approved persistence and policy architecture slice:
+The next active continuity gate is not another Mini Scene feature. It is the roadmap-controlled `CMG-09` integration followed by `CMG-10` migration/recovery proof:
 
-- add `mini_scene.artifact`, profile binding, content-dimension choice, and registered-module policy ownership to persistence/backup contracts;
-- freeze compatibility, restore order, migration default, and repository fixture requirements;
-- keep the caller registry empty and do not create a Store or runtime import in the contract round.
+- preserve full retained Mini Scene history while returning only requested World Hub pages;
+- preserve storage/backup compatibility and prove reopen, restore, rollback, and high-row-count behavior;
+- keep production triggers, profile-binding UI, safe transforms, HTML, and additional caller expansion separately promoted.
 
-Do not add regex execution, a Store, route, Settings UI, popup, iframe, AI call, or Calendar/Map/Chat trigger in the persistence/policy contract slice. Those remain separate stages.
+Do not use CMG reading/recovery closure to add regex execution, iframe/HTML presentation, or Calendar/Map/Chat triggers. Those remain separate stages.
 
 ## 9. Later Product Candidates
 

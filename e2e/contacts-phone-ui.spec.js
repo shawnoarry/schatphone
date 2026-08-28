@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import AxeBuilder from '@axe-core/playwright'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
 
 const systemSnapshot = {
@@ -126,6 +127,7 @@ const relationshipSnapshot = {
 const seedContactsSnapshot = async (page) => {
   await page.addInitScript(
     ({ system, chat, relationship }) => {
+      if (window.localStorage.getItem('e2e:contacts-phone-seeded') === '1') return
       window.localStorage.setItem(
         'schatphone:store:system',
         JSON.stringify({
@@ -150,6 +152,7 @@ const seedContactsSnapshot = async (page) => {
           data: relationship,
         }),
       )
+      window.localStorage.setItem('e2e:contacts-phone-seeded', '1')
     },
     { system: systemSnapshot, chat: chatSnapshot, relationship: relationshipSnapshot },
   )
@@ -162,8 +165,8 @@ const expectNoHorizontalOverflow = async (page) => {
   expect(hasOverflow).toBe(false)
 }
 
-test.beforeEach(async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
+test.beforeEach(async ({ page, isMobile }) => {
+  await page.setViewportSize(isMobile ? { width: 390, height: 844 } : { width: 1280, height: 800 })
   await seedContactsSnapshot(page)
 })
 
@@ -233,4 +236,56 @@ test('Contacts opens as a phone contact list on mobile', async ({ page }) => {
   await expect(page.getByTestId('contacts-row-3')).toContainText('World NPC')
 
   await expectNoHorizontalOverflow(page)
+})
+
+test('Contacts archives, reloads, searches, and restores one person', async ({ page, isMobile }) => {
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/contacts')
+
+  await page.getByTestId('contacts-row-2').click()
+  await page.getByTestId('contacts-open-danger-sheet').click()
+  await page.getByTestId('contacts-archive-role').click()
+  await expect(page.locator('.app-dialog-title')).toHaveText('Archive person')
+  await page.locator('.app-dialog-panel').getByRole('button', { name: 'Archive', exact: true }).click()
+
+  await expect(page.getByTestId('contacts-archived-readonly-banner')).toContainText(
+    'This person is archived',
+  )
+  await expect(page.getByTestId('contacts-start-chat')).toHaveCount(0)
+  await expectNoHorizontalOverflow(page)
+
+  await page.reload()
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/contacts?profileId=2')
+  await expect(page.getByTestId('contacts-archived-readonly-banner')).toBeVisible()
+  await page.getByTestId('contacts-profile-back').click()
+  await expect(page.getByTestId('contacts-archive-manager')).toBeVisible()
+  await expect(page.getByTestId('contacts-archive-count')).toHaveText('1')
+  await page.getByTestId('contacts-archive-search-input').fill('Classmate')
+  await expect(page.getByTestId('contacts-archive-row-2')).toContainText('Main contact')
+
+  const accessibility = await new AxeBuilder({ page })
+    .include('[data-testid="contacts-archive-manager"]')
+    .withTags(['wcag2a', 'wcag2aa'])
+    .analyze()
+  expect(accessibility.violations).toEqual([])
+
+  await page.getByTestId('contacts-archive-row-2').click()
+  await page.getByTestId('contacts-restore-role').click()
+  await expect(page.locator('.app-dialog-title')).toHaveText('Restore person')
+  await page.locator('.app-dialog-panel').getByRole('button', { name: 'Restore', exact: true }).click()
+  await expect(page.getByTestId('contacts-archived-readonly-banner')).toHaveCount(0)
+  await page.getByTestId('contacts-profile-back').click()
+  await expect(page.getByTestId('contacts-row-2')).toContainText('Main contact')
+
+  await page.reload()
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/contacts')
+  await expect(page.getByTestId('contacts-row-2')).toContainText('Main contact')
+  await expectNoHorizontalOverflow(page)
+
+  if (isMobile) {
+    await page.setViewportSize({ width: 844, height: 390 })
+    await expectNoHorizontalOverflow(page)
+  }
 })

@@ -27,6 +27,7 @@ import { buildWorldServiceTemplateGenerationRowsForPacks } from '../lib/world-pa
 import { extractWorldServiceTemplateProposals } from '../lib/world-service-template-proposals'
 import { formatApiErrorForUi } from '../lib/ai'
 import { CONTACTS_ENTITY_TYPES } from '../lib/role-profile-schema'
+import { isContactsProfileActive } from '../lib/contacts-profile-owner'
 import { resolveWorldviewText } from '../lib/world-interface'
 import { getChatAppearanceClasses } from '../lib/chat-appearance'
 import { useDialog } from '../composables/useDialog'
@@ -221,7 +222,10 @@ const boundProfileIds = computed(() =>
 )
 
 const unboundRoleProfilesRaw = computed(() =>
-  roleProfiles.value.filter((profile) => !boundProfileIds.value.has(Number(profile.id))),
+  roleProfiles.value.filter(
+    (profile) =>
+      isContactsProfileActive(profile) && !boundProfileIds.value.has(Number(profile.id)),
+  ),
 )
 
 const serviceContacts = computed(() =>

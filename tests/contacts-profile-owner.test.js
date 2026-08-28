@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
+  CONTACTS_PROFILE_LIFECYCLE_STATES,
   CONTACTS_PROFILE_OWNER_CODES,
   createContactsProfileOwner,
 } from '../src/lib/contacts-profile-owner'
@@ -7,12 +8,19 @@ import { CONTACTS_ENTITY_TYPES } from '../src/lib/profile-template-schema'
 
 const FIXED_NOW = 1_787_788_800_000
 
-const createOwner = (initialProfiles = []) => {
+const createOwner = (initialProfiles = [], initialLifecycleState = {}) => {
   const profiles = []
-  const owner = createContactsProfileOwner({ profiles, now: () => FIXED_NOW })
-  const replacement = owner.replaceAllProfiles(initialProfiles)
+  const lifecycleState = {}
+  const owner = createContactsProfileOwner({
+    profiles,
+    lifecycleState,
+    now: () => FIXED_NOW,
+  })
+  const replacement = owner.replaceAllProfiles(initialProfiles, {
+    lifecycleState: initialLifecycleState,
+  })
   expect(replacement.ok).toBe(true)
-  return { owner, profiles }
+  return { owner, profiles, lifecycleState }
 }
 
 const createProfile = (overrides = {}) => ({
@@ -266,6 +274,141 @@ describe('Contacts Profile Owner', () => {
 
     expect(conflict.code).toBe(CONTACTS_PROFILE_OWNER_CODES.ROLE_ID_CONFLICT)
     expect(created).toMatchObject({ ok: true, profileId: 10 })
+  })
+
+  test('archives and restores one non-self profile without replacing identity or profile data', () => {
+    const { owner, profiles } = createOwner([createProfile()])
+    const beforeValues = structuredClone(profiles[0].profileValues)
+    const archived = owner.archiveProfile(
+      10,
+      { note: 'Temporarily away' },
+      { expectedRevision: 3 },
+    )
+
+    expect(archived).toMatchObject({
+      ok: true,
+      code: CONTACTS_PROFILE_OWNER_CODES.PROFILE_ARCHIVED,
+      profileId: 10,
+      previousRevision: 3,
+      revision: 4,
+      profile: {
+        lifecycle: {
+          state: CONTACTS_PROFILE_LIFECYCLE_STATES.ARCHIVED,
+          archivedAt: FIXED_NOW,
+          archiveNote: 'Temporarily away',
+        },
+      },
+    })
+    expect(profiles[0].profileValues).toEqual(beforeValues)
+    expect(owner.reviseProfile(10, { bio: 'Blocked while archived' })).toMatchObject({
+      ok: false,
+      code: CONTACTS_PROFILE_OWNER_CODES.PROFILE_ARCHIVED,
+    })
+
+    const restored = owner.restoreProfile(10, { expectedRevision: 4 })
+    expect(restored).toMatchObject({
+      ok: true,
+      code: CONTACTS_PROFILE_OWNER_CODES.PROFILE_RESTORED,
+      profileId: 10,
+      previousRevision: 4,
+      revision: 5,
+      profile: {
+        roleId: '10',
+        lifecycle: {
+          state: CONTACTS_PROFILE_LIFECYCLE_STATES.ACTIVE,
+          restoredAt: FIXED_NOW,
+        },
+      },
+    })
+    expect(profiles[0].profileValues).toEqual(beforeValues)
+  })
+
+  test('rejects ordinary Self Profile lifecycle actions', () => {
+    const { owner } = createOwner([
+      createProfile({ entityType: CONTACTS_ENTITY_TYPES.SELF_PROFILE }),
+    ])
+
+    expect(owner.archiveProfile(10)).toMatchObject({
+      ok: false,
+      code: CONTACTS_PROFILE_OWNER_CODES.SELF_PROFILE_LIFECYCLE_FORBIDDEN,
+    })
+  })
+
+  test('permanently deletes only an archived profile and keeps a minimal ID tombstone', () => {
+    const { owner, profiles, lifecycleState } = createOwner([createProfile()])
+
+    expect(owner.permanentlyDeleteArchivedProfile(10, { expectedRevision: 3 })).toMatchObject({
+      ok: false,
+      code: CONTACTS_PROFILE_OWNER_CODES.PROFILE_NOT_ARCHIVED,
+    })
+    const archived = owner.archiveProfile(10, {}, { expectedRevision: 3 })
+    const deleted = owner.permanentlyDeleteArchivedProfile(10, {
+      expectedRevision: archived.revision,
+    })
+
+    expect(deleted).toMatchObject({
+      ok: true,
+      code: CONTACTS_PROFILE_OWNER_CODES.PROFILE_PERMANENTLY_DELETED,
+      profileId: 10,
+      tombstone: {
+        profileId: 10,
+        roleId: '10',
+        entityType: CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+        worldId: 'world_a',
+        deletedAt: FIXED_NOW,
+        schemaVersion: 1,
+      },
+    })
+    expect(deleted.tombstone).not.toHaveProperty('name')
+    expect(deleted.tombstone).not.toHaveProperty('profileValues')
+    expect(deleted.tombstone).not.toHaveProperty('archiveNote')
+    expect(profiles).toEqual([])
+    expect(lifecycleState.tombstones).toEqual([deleted.tombstone])
+    expect(owner.createProfile({ id: 10, roleId: 'new-role-id' })).toMatchObject({
+      ok: false,
+      code: CONTACTS_PROFILE_OWNER_CODES.PROFILE_ID_RESERVED,
+    })
+    expect(owner.createProfile({ roleId: '10' })).toMatchObject({
+      ok: false,
+      code: CONTACTS_PROFILE_OWNER_CODES.ROLE_ID_CONFLICT,
+    })
+    expect(owner.createProfile({ name: 'Next person' })).toMatchObject({
+      ok: true,
+      profileId: 11,
+    })
+  })
+
+  test('normalizes legacy profiles as active and never reuses high-water or tombstoned IDs', () => {
+    const { owner, lifecycleState } = createOwner(
+      [createProfile({ id: 9, roleId: '9', lifecycle: undefined })],
+      {
+        profileIdHighWaterMark: 20,
+        tombstones: [
+          {
+            profileId: 18,
+            roleId: '18Z',
+            entityType: CONTACTS_ENTITY_TYPES.NPC,
+            deletedAt: FIXED_NOW - 1000,
+            schemaVersion: 1,
+          },
+        ],
+      },
+    )
+
+    expect(owner.getProfileSnapshot(9).lifecycle.state).toBe(
+      CONTACTS_PROFILE_LIFECYCLE_STATES.ACTIVE,
+    )
+    expect(owner.createProfile({ id: 18, roleId: '18N', name: 'Reserved ID' })).toMatchObject({
+      ok: false,
+      code: CONTACTS_PROFILE_OWNER_CODES.PROFILE_ID_RESERVED,
+    })
+    expect(owner.createProfile({ roleId: '18Z', name: 'Reserved role ID' })).toMatchObject({
+      ok: false,
+      code: CONTACTS_PROFILE_OWNER_CODES.ROLE_ID_CONFLICT,
+    })
+    const created = owner.createProfile({ name: 'After high water' })
+    expect(created).toMatchObject({ ok: true, profileId: 21 })
+    expect(lifecycleState.profileIdHighWaterMark).toBe(21)
   })
 
   test('creates persistence copies that cannot mutate owner state', () => {

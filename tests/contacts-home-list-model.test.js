@@ -56,6 +56,7 @@ const profiles = [
 const createModel = ({
   contactList = profiles,
   query = '',
+  archivedQuery = '',
   chatBoundIds = [],
   memoryCounts = {},
   eventCounts = {},
@@ -63,6 +64,7 @@ const createModel = ({
   useContactsHomeListModel({
     roleProfiles: ref(contactList),
     contactsSearchQuery: ref(query),
+    archivedSearchQuery: ref(archivedQuery),
     t,
     isChatBound: (profile) => chatBoundIds.includes(profile.id),
     getRelationshipSnapshot: (profile) => ({
@@ -78,6 +80,43 @@ const createModel = ({
   })
 
 describe('Contacts home list model interface', () => {
+  test('keeps archived people out of default groups, search, and recent shortcuts', () => {
+    const archived = {
+      ...profiles[1],
+      lifecycle: { state: 'archived', archivedAt: 1 },
+    }
+    const model = createModel({
+      contactList: [profiles[0], archived, profiles[2]],
+      query: 'Ada',
+      chatBoundIds: [archived.id],
+    })
+
+    expect(model.filteredMainProfiles.value).toEqual([])
+    expect(model.recentInteractionContacts.value).toEqual([])
+    expect(model.selfProfiles.value.map((item) => item.id)).toEqual([1])
+    expect(model.npcRoleProfiles.value.map((item) => item.id)).toEqual([3])
+    expect(model.archivedProfiles.value.map((item) => item.id)).toEqual([2])
+  })
+
+  test('lists archived people separately and searches their profile data', () => {
+    const older = {
+      ...profiles[1],
+      lifecycle: { state: 'archived', archivedAt: 10 },
+    }
+    const newer = {
+      ...profiles[4],
+      lifecycle: { state: 'archived', archivedAt: 20 },
+    }
+    const model = createModel({
+      contactList: [older, newer, profiles[2]],
+      archivedQuery: 'blue mars',
+    })
+
+    expect(model.archivedProfiles.value.map((item) => item.id)).toEqual([5, 2])
+    expect(model.isArchivedSearchActive.value).toBe(true)
+    expect(model.filteredArchivedProfiles.value.map((item) => item.id)).toEqual([2])
+  })
+
   test('keeps supporting roles in the existing secondary list until visual regrouping', () => {
     const model = createModel()
 
