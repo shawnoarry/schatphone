@@ -6,6 +6,7 @@ import { nextTick } from 'vue'
 import SettingsView from '../src/views/SettingsView.vue'
 import { FOOD_DELIVERY_ORDER_EVENT_TYPE, useFoodDeliveryStore } from '../src/stores/foodDelivery'
 import { SIMULATION_SURPRISE_MODE, useSimulationStore } from '../src/stores/simulation'
+import { resolveOptionalEventPolicy } from '../src/lib/simulation/event-policy'
 import { useSystemStore } from '../src/stores/system'
 
 const DummyView = { template: '<div />' }
@@ -191,7 +192,9 @@ describe('SettingsView general section', () => {
     await wrapper.get('[data-testid="settings-ringtone-toggle"]').trigger('click')
     await flushUi()
     expect(store.settings.appearance.ringtoneEnabled).toBe(false)
-    expect(wrapper.get('[data-testid="settings-ringtone-preview"]').attributes('disabled')).toBeDefined()
+    expect(
+      wrapper.get('[data-testid="settings-ringtone-preview"]').attributes('disabled'),
+    ).toBeDefined()
 
     wrapper.unmount()
   })
@@ -244,15 +247,31 @@ describe('SettingsView general section', () => {
     wrapper.unmount()
   })
 
-  test('edits foreground simulation tick controls from the automation subpage without running events', async () => {
+  test('opens dedicated event settings from the Settings landing page', async () => {
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+
+    const { wrapper } = await mountSettingsView()
+    expect(wrapper.get('[data-testid="settings-events-entry"]').text()).toContain('Events')
+
+    await wrapper.get('[data-testid="settings-events-entry"]').trigger('click')
+    await flushUi()
+
+    expect(wrapper.text()).toContain('Event activity')
+    expect(wrapper.find('[data-testid="settings-simulation-runtime-controls"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  test('edits foreground simulation tick controls from the event subpage without running events', async () => {
     const systemStore = useSystemStore()
     const simulationStore = useSimulationStore()
     systemStore.settings.system.language = 'en-US'
     simulationStore.resetForTesting()
 
-    const { wrapper } = await mountSettingsView('/settings?menu=automation')
+    const { wrapper } = await mountSettingsView('/settings?menu=events')
 
-    expect(wrapper.text()).toContain('Foreground event tick / 事件前台 Tick')
+    expect(wrapper.text()).toContain('Checks while using the app')
     expect(wrapper.text()).toContain('Role proactive contact candidate')
 
     await wrapper.get('[data-testid="settings-simulation-foreground-tick-enabled"]').setValue(true)
@@ -261,19 +280,20 @@ describe('SettingsView general section', () => {
     await wrapper.get('[data-testid="settings-simulation-foreground-tick-enabled"]').setValue(true)
     await wrapper.get('[data-testid="settings-simulation-foreground-tick-interval"]').setValue('0')
     await wrapper.get('[data-testid="settings-simulation-foreground-tick-interval"]').setValue('15')
-    await wrapper.get('[data-testid="settings-simulation-foreground-tick-runtime"]').trigger('click')
-    await wrapper.get('button.w-full').trigger('click')
+    await wrapper
+      .get('[data-testid="settings-simulation-foreground-tick-runtime"]')
+      .trigger('click')
     await flushUi()
 
     expect(simulationStore.settings.foregroundSessionTickEnabled).toBe(true)
     expect(simulationStore.settings.foregroundSessionTickIntervalMs).toBe(15 * 60 * 1000)
     expect(simulationStore.eventLogCount).toBe(0)
-    expect(wrapper.get('[data-testid="settings-simulation-foreground-tick-runtime"]').text()).toContain(
-      '15',
-    )
-    expect(wrapper.get('[data-testid="settings-simulation-foreground-tick-runtime"]').text()).toContain(
-      'Role proactive contact candidates',
-    )
+    expect(
+      wrapper.get('[data-testid="settings-simulation-foreground-tick-runtime"]').text(),
+    ).toContain('15')
+    expect(
+      wrapper.get('[data-testid="settings-simulation-foreground-tick-runtime"]').text(),
+    ).toContain('Role proactive contact candidates')
 
     wrapper.unmount()
   })
@@ -284,10 +304,10 @@ describe('SettingsView general section', () => {
     systemStore.settings.system.language = 'en-US'
     simulationStore.resetForTesting()
 
-    const { wrapper } = await mountSettingsView('/settings?menu=automation')
+    const { wrapper } = await mountSettingsView('/settings?menu=events')
 
     expect(wrapper.get('[data-testid="settings-simulation-runtime-controls"]').text()).toContain(
-      'Surprise Mode',
+      'Random event frequency',
     )
     expect(wrapper.get('[data-testid="settings-simulation-runtime-controls"]').text()).toContain(
       'Chat role contact events',
@@ -299,22 +319,56 @@ describe('SettingsView general section', () => {
       'Map journey events',
     )
 
-    await wrapper.get('[data-testid="settings-simulation-surprise-mode"]').setValue(SIMULATION_SURPRISE_MODE.OFF)
-    await wrapper.get('[data-testid="settings-simulation-module-events-chat"]').setValue(false)
-    await wrapper.get('[data-testid="settings-simulation-module-events-food_delivery"]').setValue(false)
-    await wrapper.get('[data-testid="settings-simulation-module-events-map"]').setValue(false)
-    await wrapper.get('[data-testid="settings-simulation-module-events-chat"]').setValue(true)
-    await wrapper.get('button.w-full').trigger('click')
+    await wrapper
+      .get('[data-testid="settings-simulation-surprise-mode"]')
+      .setValue(SIMULATION_SURPRISE_MODE.OFF)
     await flushUi()
 
-    expect(simulationStore.settings.surpriseMode).toBe(SIMULATION_SURPRISE_MODE.OFF)
-    expect(simulationStore.isModuleEventsEnabled('chat')).toBe(true)
+    expect(
+      resolveOptionalEventPolicy({
+        simulationStore,
+        moduleKey: 'map',
+        probabilityByIntensity: { off: 0, low: 0.3, balanced: 0.55, high: 1 },
+      }),
+    ).toMatchObject({ allowed: false, reason: 'surprise_mode_off', probability: 0 })
+
+    await wrapper
+      .get('[data-testid="settings-simulation-surprise-mode"]')
+      .setValue(SIMULATION_SURPRISE_MODE.HIGH)
+    await wrapper.get('[data-testid="settings-simulation-module-events-chat"]').setValue(false)
+    await wrapper
+      .get('[data-testid="settings-simulation-module-events-food_delivery"]')
+      .setValue(false)
+    await wrapper.get('[data-testid="settings-simulation-module-events-map"]').setValue(false)
+    await flushUi()
+
+    expect(
+      resolveOptionalEventPolicy({
+        simulationStore,
+        moduleKey: 'map',
+        probabilityByIntensity: { off: 0, low: 0.3, balanced: 0.55, high: 1 },
+      }),
+    ).toMatchObject({ allowed: false, reason: 'module_events_disabled', probability: 1 })
+
+    await wrapper.get('[data-testid="settings-simulation-module-events-map"]').setValue(true)
+    await flushUi()
+
+    expect(
+      resolveOptionalEventPolicy({
+        simulationStore,
+        moduleKey: 'map',
+        probabilityByIntensity: { off: 0, low: 0.3, balanced: 0.55, high: 1 },
+      }),
+    ).toMatchObject({ allowed: true, reason: 'event_policy_allowed', probability: 1 })
+
+    expect(simulationStore.settings.surpriseMode).toBe(SIMULATION_SURPRISE_MODE.HIGH)
+    expect(simulationStore.isModuleEventsEnabled('chat')).toBe(false)
     expect(simulationStore.isModuleEventsEnabled('food_delivery')).toBe(false)
-    expect(simulationStore.isModuleEventsEnabled('map')).toBe(false)
+    expect(simulationStore.isModuleEventsEnabled('map')).toBe(true)
     expect(simulationStore.eventLogCount).toBe(0)
-    expect(wrapper.get('[data-testid="settings-simulation-surprise-mode-runtime"]').text()).toContain(
-      'Foreground Tick skips random and session event checks',
-    )
+    expect(
+      wrapper.get('[data-testid="settings-simulation-surprise-mode-runtime"]').text(),
+    ).toContain('Events still respect cooldowns')
 
     wrapper.unmount()
   })
@@ -334,23 +388,23 @@ describe('SettingsView general section', () => {
       reason: 'eligible_non_random',
     })
 
-    const { wrapper, router } = await mountSettingsView('/settings?menu=automation')
+    const { wrapper, router } = await mountSettingsView('/settings?menu=events')
 
-    expect(wrapper.get('[data-testid="settings-simulation-foreground-tick-coverage"]').text()).toContain(
-      'Food Delivery safety events',
-    )
-    expect(wrapper.get('[data-testid="settings-simulation-foreground-tick-coverage"]').text()).toContain(
-      'Role proactive contact candidate',
-    )
-    expect(wrapper.get('[data-testid="settings-simulation-module-event-row-chat"]').text()).toContain(
-      '6-hour cooldown',
-    )
-    expect(wrapper.get('[data-testid="settings-simulation-module-event-row-chat"]').text()).toContain(
-      '1 candidate per day',
-    )
-    expect(wrapper.get('[data-testid="settings-simulation-foreground-tick-latest"]').text()).toContain(
-      'Chat role greeting request',
-    )
+    expect(
+      wrapper.get('[data-testid="settings-simulation-foreground-tick-coverage"]').text(),
+    ).toContain('Food Delivery safety events')
+    expect(
+      wrapper.get('[data-testid="settings-simulation-foreground-tick-coverage"]').text(),
+    ).toContain('Role proactive contact candidate')
+    expect(
+      wrapper.get('[data-testid="settings-simulation-module-event-row-chat"]').text(),
+    ).toContain('6-hour cooldown')
+    expect(
+      wrapper.get('[data-testid="settings-simulation-module-event-row-chat"]').text(),
+    ).toContain('1 candidate per day')
+    expect(
+      wrapper.get('[data-testid="settings-simulation-foreground-tick-latest"]').text(),
+    ).toContain('Chat role greeting request')
 
     await wrapper.get('[data-testid="settings-open-world-hub"]').trigger('click')
     await flushUi()
@@ -407,7 +461,9 @@ describe('SettingsView general section', () => {
     expect(wrapper.get('[data-testid="settings-simulation-tick-card"]').text()).toContain(
       '外卖安全事件已执行',
     )
-    expect(systemStore.apiReports[0].message).toMatch(/外卖安全事件已执行|Food Delivery safety event executed/)
+    expect(systemStore.apiReports[0].message).toMatch(
+      /外卖安全事件已执行|Food Delivery safety event executed/,
+    )
     expect(wrapper.get('[data-testid="settings-simulation-event-log-card"]').text()).toContain(
       'food_delivery.random_order_pilot.v1',
     )
@@ -417,7 +473,9 @@ describe('SettingsView general section', () => {
     expect(wrapper.get('[data-testid="settings-simulation-event-log-card"]').text()).toContain(
       '已触发',
     )
-    expect(wrapper.findAll('[data-testid="settings-simulation-event-log-item"]').length).toBeGreaterThan(0)
+    expect(
+      wrapper.findAll('[data-testid="settings-simulation-event-log-item"]').length,
+    ).toBeGreaterThan(0)
 
     wrapper.unmount()
   })

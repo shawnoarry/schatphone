@@ -124,6 +124,19 @@ describe('Activity Session checkpoint events', () => {
     })
 
     expect(pending.record).toMatchObject({ status: 'pending', presentationMode: 'text' })
+    expect(pending.record.provenance.policySnapshot).toEqual({
+      schemaVersion: 1,
+      moduleKey: ACTIVITY_SESSION_EVENT_MODULE_KEY,
+      moduleEventsEnabled: true,
+      intensity: SIMULATION_SURPRISE_MODE.HIGH,
+      presentationMode: ACTIVITY_SESSION_EVENT_PRESENTATION_MODE.TEXT,
+      probability: 1,
+      allowed: true,
+      reason: 'event_policy_allowed',
+    })
+    expect(fixture.simulationStore.eventLogs[0].policySnapshot).toEqual(
+      pending.record.provenance.policySnapshot,
+    )
     expect(resolved).toMatchObject({ ok: true, code: 'ACTIVITY_SESSION_EVENT_RESOLVED' })
     expect(resolved.record).toMatchObject({
       status: 'resolved',
@@ -159,6 +172,13 @@ describe('Activity Session checkpoint events', () => {
     expect(noEvent.record).toMatchObject({
       status: 'no_event',
       reason: 'module_events_disabled',
+      provenance: {
+        policySnapshot: {
+          moduleEventsEnabled: false,
+          allowed: false,
+          reason: 'module_events_disabled',
+        },
+      },
     })
     expect(disabled.activitySessionStore.findSessionById(disabled.session.id).eventResolutions).toEqual([])
 

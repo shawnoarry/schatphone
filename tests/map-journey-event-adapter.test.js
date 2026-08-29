@@ -80,6 +80,13 @@ describe('Map journey checkpoint event adapter', () => {
           variantId: 'map.journey.route_condition.sci_fi.corridor_check.v1',
           worldContextId: 'world_context_sci_fi_test',
           activeWorldBookIds: ['book_sci_fi'],
+          policySnapshot: {
+            moduleKey: 'map',
+            moduleEventsEnabled: true,
+            intensity: SIMULATION_SURPRISE_MODE.HIGH,
+            probability: 1,
+            allowed: true,
+          },
         },
       },
     })
@@ -89,6 +96,12 @@ describe('Map journey checkpoint event adapter', () => {
       targetId: 'map_journey_event_test',
       status: 'triggered',
       variantId: 'map.journey.route_condition.sci_fi.corridor_check.v1',
+      policySnapshot: {
+        moduleKey: 'map',
+        intensity: SIMULATION_SURPRISE_MODE.HIGH,
+        probability: 1,
+        allowed: true,
+      },
     })
 
     expect(
@@ -254,6 +267,12 @@ describe('Map journey checkpoint event adapter', () => {
       },
       provenance: {
         variantId: 'map.journey.route_condition.apocalypse.passage_check.v1',
+        policySnapshot: {
+          moduleKey: 'map',
+          intensity: SIMULATION_SURPRISE_MODE.HIGH,
+          probability: 1,
+          allowed: true,
+        },
       },
     })
 

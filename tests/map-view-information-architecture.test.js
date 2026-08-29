@@ -219,7 +219,7 @@ describe('MapView information architecture', () => {
     expect(wrapper.get('[data-testid="map-place-enter"]').exists()).toBe(true)
   })
 
-  test('previews the event surface at any entered place without persisting runtime history', async () => {
+  test('settles a test event once and reopens its persisted result for the same place session', async () => {
     const mapStore = useMapStore()
     const simulationStore = useSimulationStore()
     const place = mapStore.activeMapPlaces.find((item) => item.placeId === 'address:1')
@@ -234,19 +234,84 @@ describe('MapView information architecture', () => {
     await wrapper.get('[data-testid="map-place-preview-event"]').trigger('click')
     await nextTick()
     expect(wrapper.get('[data-testid="map-event-surface-sheet"]').text()).toMatch(
-      /测试预览|Test preview/,
+      /测试事件|Test event/,
     )
+    for (
+      let index = 0;
+      index < 10 && wrapper.find('[data-testid="map-event-preview-advance"]').exists();
+      index += 1
+    ) {
+      await wrapper.get('[data-testid="map-event-preview-advance"]').trigger('click')
+      await nextTick()
+    }
     expect(wrapper.get('[data-testid="map-event-choices"]').findAll('button')).toHaveLength(3)
-    expect(simulationStore.eventInstances).toHaveLength(0)
+    expect(wrapper.get('[data-testid="map-event-choices"]').text()).toMatch(
+      /稳妥.*平衡.*冒险|Safer.*Balanced.*Riskier/,
+    )
+    expect(simulationStore.eventInstances).toHaveLength(1)
+    expect(simulationStore.eventInstances[0].lifecycle).toBe('active')
 
     await wrapper.get('[data-testid="map-event-choice-check_equipment"]').trigger('click')
     await nextTick()
     expect(wrapper.get('[data-testid="map-event-consequence"]').exists()).toBe(true)
-    expect(simulationStore.eventInstances).toHaveLength(0)
+    expect(wrapper.get('[data-testid="map-event-consequence"]').text()).toMatch(
+      /出色|稳妥|波折|Strong|Steady|Setback/,
+    )
+    expect(simulationStore.eventInstances).toHaveLength(1)
+    expect(simulationStore.eventInstances[0]).toMatchObject({
+      lifecycle: 'resolved',
+      choices: { selectedId: 'check_equipment' },
+      outcome: { requestState: 'validated' },
+    })
+    expect(simulationStore.eventLogs).toHaveLength(1)
+    expect(simulationStore.eventLogs[0].settlement).toMatchObject({
+      instanceId: simulationStore.eventInstances[0].id,
+      choiceId: 'check_equipment',
+      randomKind: 'd100',
+      rangeMin: 1,
+      rangeMax: 100,
+      provenance: 'client_runtime',
+      canonicalMutation: 'none',
+    })
+    expect(simulationStore.eventLogs[0].settlement.roll).toBeGreaterThanOrEqual(1)
+    expect(simulationStore.eventLogs[0].settlement.roll).toBeLessThanOrEqual(100)
+    const settledRoll = simulationStore.eventLogs[0].settlement.roll
+    simulationStore.eventLogs.splice(0)
+    expect(simulationStore.eventLogs).toHaveLength(0)
 
-    await wrapper.get('[data-testid="map-event-return"]').trigger('click')
+    await wrapper.get('[data-testid="map-event-complete"]').trigger('click')
     await nextTick()
     expect(wrapper.get('[data-testid="map-place-detail-sheet"]').text()).toContain('家')
+    expect(wrapper.get('[data-testid="map-place-event-preview"]').text()).toMatch(
+      /测试事件已完成|Test event completed/,
+    )
+    expect(wrapper.get('[data-testid="map-place-preview-event"]').text()).toMatch(
+      /查看结果|Review/,
+    )
+
+    await wrapper.get('[data-testid="map-place-preview-event"]').trigger('click')
+    await nextTick()
+    expect(simulationStore.eventLogs).toHaveLength(1)
+    expect(wrapper.get('[data-testid="map-event-settlement-roll"]').text()).toContain(
+      `D100 ${settledRoll}`,
+    )
+    expect(wrapper.get('[data-testid="map-event-settlement-choice"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-event-settlement-outcome"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-event-settlement-final"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="map-event-choices"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="map-event-complete"]').trigger('click')
+    await nextTick()
+
+    await wrapper.get('[data-testid="map-place-leave"]').trigger('click')
+    await nextTick()
+    await wrapper.get('[data-testid="map-place-enter"]').trigger('click')
+    await nextTick()
+    expect(wrapper.get('[data-testid="map-place-event-preview"]').text()).toMatch(
+      /测试事件|Test event/,
+    )
+    expect(wrapper.get('[data-testid="map-place-event-preview"]').text()).not.toMatch(
+      /测试事件已完成|Test event completed/,
+    )
   })
 
   test('allows explicit place entry from a mobile-scale nearby position', async () => {

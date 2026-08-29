@@ -43,8 +43,10 @@ import { MAP_JOURNEY_EVENT_PROPOSAL_STATUS } from '../lib/simulation/adapters/ma
 import {
   MAP_PLACE_ENTRY_RADIUS_KM,
   createMapPlaceSessionEventPreview,
+  createMapPlaceSessionEventPreviewId,
+  createMapPlaceSessionEventPreviewSettlement,
   projectMapPlaceSessionEventSurface,
-  resolveMapPlaceSessionEventInstance,
+  resolveMapPlaceSessionEventPreview,
 } from '../lib/simulation/adapters/map-place-session-events'
 import { buildMusicIntegrationRoute } from '../lib/music-module-interface'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
@@ -234,6 +236,16 @@ const isSelectedPlaceInside = computed(() => {
     placeSession.value?.placeId === placeId,
   )
 })
+
+const selectedPlacePreviewInstance = computed(() => {
+  if (!isSelectedPlaceInside.value) return null
+  const instanceId = createMapPlaceSessionEventPreviewId(placeSession.value)
+  return instanceId ? simulationStore.getEventInstance(instanceId) : null
+})
+
+const isSelectedPlaceEventPreviewCompleted = computed(
+  () => selectedPlacePreviewInstance.value?.lifecycle === 'resolved',
+)
 
 const isSelectedPlaceJourneyDestination = computed(() => {
   if (!isJourneyPlanningLocked.value || !selectedMapPlace.value) return false
@@ -910,6 +922,33 @@ const selectedEventMedia = computed(() => (
     : null
 ))
 
+const selectedEventSettlement = computed(() => {
+  const logId = selectedEventInstance.value?.runtime?.outcomeLogId
+  if (!logId) return null
+  return simulationStore.eventLogs.find((log) => log.id === logId)?.settlement ||
+    createMapPlaceSessionEventPreviewSettlement(selectedEventInstance.value)
+})
+
+const ensurePreviewSettlementLog = (instance) => {
+  const settlement = createMapPlaceSessionEventPreviewSettlement(instance)
+  if (!settlement || simulationStore.eventLogs.some((log) => log.id === instance.runtime.outcomeLogId)) {
+    return settlement
+  }
+  simulationStore.recordEventLog({
+    id: instance.runtime.outcomeLogId,
+    eventId: instance.templateRef.id,
+    moduleKey: 'map',
+    targetId: instance.place.placeId,
+    adapterKey: instance.outcome.adapterKey,
+    triggerSource: 'manual',
+    status: 'triggered',
+    reason: `map_preview_${settlement.outcomeId}`,
+    settlement,
+    at: settlement.settledAt,
+  })
+  return settlement
+}
+
 const openSelectedPlaceEvent = () => {
   if (!selectedPlaceEventInvitation.value || placeEventApplying.value) return
   placeEventApplying.value = true
@@ -933,14 +972,20 @@ const openSelectedPlaceEventPreview = () => {
   const place = selectedMapPlace.value
   const placeId = place?.placeId || place?.id || ''
   if (!placeId) return
-  const result = createMapPlaceSessionEventPreview({
-    session: placeSession.value,
-    mapPack: activeMapPack.value,
-    place,
-    locale: systemLanguage.value,
-  })
+  const existing = selectedPlacePreviewInstance.value
+  const result = existing
+    ? { ok: true, instance: existing }
+    : createMapPlaceSessionEventPreview({
+        session: placeSession.value,
+        mapPack: activeMapPack.value,
+        place,
+        locale: systemLanguage.value,
+      })
   if (!result.ok || !result.instance) return
-  previewEventInstance.value = result.instance
+  const stored = existing || simulationStore.upsertEventInstance(result.instance)
+  if (!stored) return
+  ensurePreviewSettlementLog(stored)
+  previewEventInstance.value = stored
   eventReturnPlaceId.value = placeId
   selectedMapPlace.value = null
   selectedEventStackIds.value = []
@@ -969,12 +1014,16 @@ const resolveSelectedPlaceEvent = (choiceId) => {
   placeEventApplying.value = true
   try {
     if (isSelectedEventPreview.value) {
-      const result = resolveMapPlaceSessionEventInstance({
+      const result = resolveMapPlaceSessionEventPreview({
         instance: previewEventInstance.value,
         session: placeSession.value,
         choiceId,
       })
-      if (result.ok && result.instance) previewEventInstance.value = result.instance
+      if (result.ok && result.instance) {
+        const stored = simulationStore.upsertEventInstance(result.instance)
+        previewEventInstance.value = stored || simulationStore.getEventInstance(result.instance.id)
+        if (previewEventInstance.value) ensurePreviewSettlementLog(previewEventInstance.value)
+      }
       return
     }
     mapStore.resolvePlaceSessionEventChoice(selectedEventInstance.value.id, choiceId)
@@ -2981,7 +3030,18 @@ onBeforeUnmount(() => {
       :entry-action="selectedPlaceEntryAction"
       :anchor="selectedPlaceAnchor"
       :event-invitation="selectedPlaceEventInvitation"
-      :event-preview-available="isDevelopment && isSelectedPlaceInside && !selectedPlaceEventInvitation"
+      :event-preview-available="
+        isDevelopment &&
+        isSelectedPlaceInside &&
+        !selectedPlaceEventInvitation &&
+        !isSelectedPlaceEventPreviewCompleted
+      "
+      :event-preview-completed="
+        isDevelopment &&
+        isSelectedPlaceInside &&
+        !selectedPlaceEventInvitation &&
+        isSelectedPlaceEventPreviewCompleted
+      "
       :can-manage="selectedMapPlace.source === 'user'"
       :pin-visible="selectedPlacePinVisible"
       :t="t"
@@ -3002,6 +3062,7 @@ onBeforeUnmount(() => {
       :surface="selectedEventSurface"
       :stack="selectedEventStack"
       :instance="selectedEventInstance"
+      :settlement="selectedEventSettlement"
       :place-name="selectedEventPlace ? mapPlaceName(selectedEventPlace) : ''"
       :media="selectedEventMedia"
       :preview="isSelectedEventPreview"

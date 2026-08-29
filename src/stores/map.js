@@ -67,10 +67,12 @@ import {
   MAP_JOURNEY_EVENT_OUTCOME,
   runMapJourneyCheckpointEvent,
 } from '../lib/simulation/adapters/map-journey-events'
+import { resolveOptionalEventPolicy } from '../lib/simulation/event-policy'
 import {
   MAP_EVENT_POSITION_PROVENANCE,
   MAP_PLACE_SESSION_CHECKPOINT_ID,
   MAP_PLACE_ENTRY_RADIUS_KM,
+  MAP_PLACE_EVENT_PREVIEW_WORLD_CONTEXT_ID,
   MAP_PLACE_SESSION_RECORD_TYPE,
   MAP_PLACE_SESSION_STATE,
   clusterMapEventSurfacePins,
@@ -1512,6 +1514,7 @@ export const useMapStore = defineStore('map', () => {
       .filter(
         (instance) =>
           instance?.templateRef?.id === KPOP_REALISM_ARRIVAL_BRIEFING_TEMPLATE_ID &&
+          instance.world?.worldContextId !== MAP_PLACE_EVENT_PREVIEW_WORLD_CONTEXT_ID &&
           instance.lifecycle !== EVENT_INSTANCE_LIFECYCLE.DISMISSED,
       )
       .map((instance) => {
@@ -3352,6 +3355,7 @@ export const useMapStore = defineStore('map', () => {
       (instance) =>
         instance.templateRef?.id === KPOP_REALISM_ARRIVAL_BRIEFING_TEMPLATE_ID &&
         instance.world?.variantPackId === KPOP_REALISM_EVENT_PACK_ID &&
+        instance.world?.worldContextId !== MAP_PLACE_EVENT_PREVIEW_WORLD_CONTEXT_ID &&
         instance.source?.recordId === checkpoint.sessionId &&
         instance.source?.recordRevision === checkpoint.revision &&
         instance.lifecycle !== EVENT_INSTANCE_LIFECYCLE.DISMISSED,
@@ -3390,15 +3394,20 @@ export const useMapStore = defineStore('map', () => {
       bookStore: getBookStore(),
       locale,
     })
+    const policy = resolveOptionalEventPolicy({
+      simulationStore,
+      moduleKey: 'map',
+      probabilityByIntensity: { off: 0, low: 1, balanced: 1, high: 1 },
+    })
     const dayKey = new Date(Math.max(0, Number(at) || Date.now())).toISOString().slice(0, 10)
-    return evaluateMapPlaceSessionEventInvitation({
+    const result = evaluateMapPlaceSessionEventInvitation({
       session: checkpoint,
       currentLocation: currentLocation.value,
       place,
       locale,
       worldContextFamily: worldContext.genreTags[0] || 'daily',
-      moduleEnabled: simulationStore.isModuleEventsEnabled('map'),
-      intensity: simulationStore.surpriseMode,
+      moduleEnabled: policy?.moduleEventsEnabled,
+      intensity: policy?.intensity,
       cooldownActive: simulationStore.isCoolingDown(template.id, {
         targetId: checkpoint.placeId,
         at,
@@ -3409,6 +3418,7 @@ export const useMapStore = defineStore('map', () => {
         limit: template.trigger.dailyLimit,
       }),
     })
+    return { ...result, policySnapshot: policy }
   }
 
   const expandPlaceSessionEvent = ({ locale = 'zh-CN', now = Date.now() } = {}) => {
@@ -3498,6 +3508,7 @@ export const useMapStore = defineStore('map', () => {
       triggerSource: 'condition',
       status: 'triggered',
       reason: 'place_session_event_eligible',
+      policySnapshot: invitationResult.policySnapshot,
       cooldownMs: template.trigger.cooldownMs,
       dailyLimit: template.trigger.dailyLimit,
       at: now,

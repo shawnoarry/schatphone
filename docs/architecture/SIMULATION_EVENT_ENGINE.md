@@ -211,7 +211,7 @@ Concrete V1 proposal sources:
 
 ### Surprise Mode
 
-A user-level control for random event intensity. It is visible in `设置 / Settings -> AI 自动响应 / AI Automation`.
+A user-level control for random event intensity. It is visible in `设置 / Settings -> 事件 / Events`.
 
 Minimum reserved levels:
 
@@ -595,7 +595,7 @@ The shared event foundation now exists in code.
 Already landed:
 
 - `src/stores/simulation.js` persists event logs, cooldowns, daily counters, module enable flags, and Surprise Mode
-- `Settings -> AI Automation` exposes Foreground Tick, Surprise Mode, and current module event permissions without becoming a broad World Hub or Cheats editor
+- `Settings -> Events` exposes foreground checks, random-event frequency, current module event permissions, and supported presentation controls without becoming a broad World Hub or Cheats editor; `Settings -> AI Automation` remains separate and owns autonomous AI-call policy
 - `src/stores/simulation.js` also persists generated Chat social proposals and applies them only through Chat-owned actions after audit or approval
 - `src/lib/chat-social-runtime-source.js` selects conservative role greeting candidates for the foreground/session tick without direct Chat writes
 - `src/lib/simulation/random.js` provides injected/seeded helpers

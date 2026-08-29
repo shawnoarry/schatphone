@@ -5,6 +5,7 @@ const props = defineProps({
   surface: { type: Object, default: null },
   stack: { type: Array, default: () => [] },
   instance: { type: Object, default: null },
+  settlement: { type: Object, default: null },
   placeName: { type: String, default: '' },
   media: { type: Object, default: null },
   preview: { type: Boolean, default: false },
@@ -14,6 +15,8 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'select-surface', 'choose', 'dismiss'])
 const sheetRef = ref(null)
+const previewBeatIndex = ref(0)
+const sceneImageReady = ref(false)
 
 const showsStack = computed(() => !props.surface && props.stack.length > 0)
 const copy = computed(() => props.instance?.text?.normalizedCopy || null)
@@ -26,9 +29,35 @@ const consequence = computed(() => {
   const outcomeId = props.instance?.choices?.outcomeId
   return outcomeId ? copy.value?.consequenceByOutcomeId?.[outcomeId] || '' : ''
 })
+const selectedChoiceLabel = computed(() => {
+  const choiceId = props.instance?.choices?.selectedId
+  return choiceId ? copy.value?.choiceLabels?.[choiceId] || '' : ''
+})
+const previewOutcomeLabel = computed(() => {
+  const outcomeId = props.instance?.choices?.outcomeId
+  if (outcomeId === 'preview_strong') return props.t('出色', 'Strong')
+  if (outcomeId === 'preview_steady') return props.t('稳妥', 'Steady')
+  if (outcomeId === 'preview_setback') return props.t('波折', 'Setback')
+  return ''
+})
+const settlementToneClass = computed(() => {
+  if (!props.settlement) return ''
+  if (props.instance?.choices?.outcomeId === 'preview_setback') return 'is-settlement-negative'
+  if (props.instance?.choices?.outcomeId === 'preview_steady') return 'is-settlement-neutral'
+  return 'is-settlement-positive'
+})
+const settlementIconClass = computed(() =>
+  props.instance?.choices?.outcomeId === 'preview_setback'
+    ? 'fas fa-triangle-exclamation'
+    : props.instance?.choices?.outcomeId === 'preview_steady'
+      ? 'fas fa-minus'
+      : 'fas fa-check',
+)
 const statusLabel = computed(() =>
   props.preview
-    ? props.t('测试预览', 'Test preview')
+    ? isActive.value
+      ? props.t('测试事件', 'Test event')
+      : props.t('测试结果', 'Test result')
     : props.surface
     ? props.t(props.surface.copy.statusLabelZh, props.surface.copy.statusLabelEn)
     : props.t('地点事件', 'Place events'),
@@ -42,6 +71,45 @@ const mediaLabel = computed(() => {
   if (!props.media) return props.t('场景示意', 'Scene fallback')
   return props.t(props.media.labelZh || '地点影像', props.media.labelEn || 'Place image')
 })
+const previewBeats = computed(() => {
+  if (!copy.value) return []
+  return [
+    copy.value.opening
+      ? { id: 'opening', kind: 'opening', text: copy.value.opening }
+      : null,
+    copy.value.environment
+      ? { id: 'environment', kind: 'environment', text: copy.value.environment }
+      : null,
+    ...(copy.value.dialogue || []).map((beat, index) => ({
+      id: `dialogue-${beat.speakerRef || 'speaker'}-${index}`,
+      kind: 'dialogue',
+      text: beat.text,
+    })),
+  ].filter(Boolean)
+})
+const currentPreviewBeat = computed(() => previewBeats.value[previewBeatIndex.value] || null)
+const previewSequenceComplete = computed(
+  () => previewBeats.value.length === 0 || previewBeatIndex.value >= previewBeats.value.length - 1,
+)
+const previewProgressPercent = computed(() =>
+  previewBeats.value.length > 0
+    ? ((previewBeatIndex.value + 1) / previewBeats.value.length) * 100
+    : 100,
+)
+const showsChoices = computed(() => isActive.value && (!props.preview || previewSequenceComplete.value))
+
+const advancePreviewBeat = () => {
+  if (previewSequenceComplete.value) return
+  previewBeatIndex.value += 1
+}
+
+const onSceneImageLoad = () => {
+  sceneImageReady.value = true
+}
+
+const onSceneImageError = () => {
+  sceneImageReady.value = false
+}
 
 watch(
   () => props.surface?.id || props.stack.map((item) => item.id).join(':'),
@@ -50,6 +118,20 @@ watch(
     sheetRef.value?.focus()
   },
   { immediate: true },
+)
+
+watch(
+  [() => props.surface?.id, () => props.preview],
+  () => {
+    previewBeatIndex.value = 0
+  },
+)
+
+watch(
+  mediaUrl,
+  () => {
+    sceneImageReady.value = false
+  },
 )
 </script>
 
@@ -104,16 +186,18 @@ watch(
 
       <template v-else-if="surface && instance && copy">
         <div class="map-event-scene" :class="{ 'has-media': mediaUrl }">
+          <div v-if="!mediaUrl || !sceneImageReady" class="map-event-scene-fallback" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
           <img
             v-if="mediaUrl"
-            class="map-event-scene-image"
+            :class="['map-event-scene-image', { 'is-ready': sceneImageReady }]"
             :src="mediaUrl"
             :alt="mediaAlt"
             data-testid="map-event-scene-image"
+            @load="onSceneImageLoad"
+            @error="onSceneImageError"
           />
-          <div v-else class="map-event-scene-fallback" aria-hidden="true">
-            <span></span><span></span><span></span>
-          </div>
           <div class="map-event-scene-shade" aria-hidden="true"></div>
           <div class="map-event-scene-caption">
             <span
@@ -149,7 +233,39 @@ watch(
             }}</span>
           </div>
 
-          <div class="map-event-surface-copy">
+          <div v-if="preview && isActive" class="map-event-preview-sequence">
+            <span class="map-event-story-kicker">{{ t('测试 · 场景', 'TEST · SCENE') }}</span>
+            <div class="map-event-preview-progress" aria-hidden="true">
+              <span>
+                {{ String(previewBeatIndex + 1).padStart(2, '0') }}
+                /
+                {{ String(previewBeats.length).padStart(2, '0') }}
+              </span>
+              <i :style="{ '--beat-progress': `${previewProgressPercent}%` }"></i>
+            </div>
+            <div class="map-event-preview-beat" aria-live="polite" aria-atomic="true">
+              <p
+                v-if="currentPreviewBeat"
+                :key="currentPreviewBeat.id"
+                :class="`is-${currentPreviewBeat.kind}`"
+                data-testid="map-event-preview-beat"
+              >
+                {{ currentPreviewBeat.text }}
+              </p>
+            </div>
+            <button
+              v-if="!previewSequenceComplete"
+              type="button"
+              class="map-event-preview-advance"
+              data-testid="map-event-preview-advance"
+              @click="advancePreviewBeat"
+            >
+              <span>{{ t('继续', 'Continue') }}</span>
+              <i class="fas fa-chevron-down" aria-hidden="true"></i>
+            </button>
+          </div>
+
+          <div v-else class="map-event-surface-copy">
             <span class="map-event-story-kicker">{{
               preview
                 ? t('测试 · 场景', 'TEST · SCENE')
@@ -173,15 +289,34 @@ watch(
 
           <div
             v-if="consequence"
-            class="map-event-surface-consequence"
+            :class="['map-event-surface-consequence', settlementToneClass]"
             data-testid="map-event-consequence"
             role="status"
           >
-            <i class="fas fa-check" aria-hidden="true"></i>
-            <p>{{ consequence }}</p>
+            <i :class="settlementIconClass" aria-hidden="true"></i>
+            <div>
+              <div v-if="settlement" class="map-event-settlement-summary">
+                <span v-if="selectedChoiceLabel" data-testid="map-event-settlement-choice">
+                  <small>{{ t('你的选择', 'Your choice') }}</small>
+                  <strong>{{ selectedChoiceLabel }}</strong>
+                </span>
+                <span v-if="settlement.roll" data-testid="map-event-settlement-roll">
+                  <small>{{ t('本次判定', 'This check') }}</small>
+                  <strong>D100 {{ settlement.roll }}</strong>
+                </span>
+                <span v-if="previewOutcomeLabel" data-testid="map-event-settlement-outcome">
+                  <small>{{ t('结果', 'Outcome') }}</small>
+                  <strong>{{ previewOutcomeLabel }}</strong>
+                </span>
+              </div>
+              <p>{{ consequence }}</p>
+              <small v-if="settlement" data-testid="map-event-settlement-final">
+                {{ t('结果已固定，不会重复判定', 'Result locked; this check will not run again') }}
+              </small>
+            </div>
           </div>
 
-          <div v-if="isActive" class="map-event-surface-choices" data-testid="map-event-choices">
+          <div v-if="showsChoices" class="map-event-surface-choices" data-testid="map-event-choices">
             <button
               v-for="(choiceId, index) in instance.choices.allowedIds"
               :key="choiceId"
@@ -206,6 +341,16 @@ watch(
           >
             <i class="fas fa-door-open" aria-hidden="true"></i>
             <span>{{ t('暂时离开现场', 'Leave for now') }}</span>
+          </button>
+          <button
+            v-else-if="consequence"
+            type="button"
+            class="map-event-surface-dismiss is-complete"
+            data-testid="map-event-complete"
+            @click="emit('close')"
+          >
+            <i class="fas fa-location-dot" aria-hidden="true"></i>
+            <span>{{ t('返回地点', 'Return to place') }}</span>
           </button>
         </div>
       </template>
@@ -370,10 +515,17 @@ watch(
   background: #1a2426;
 }
 .map-event-scene-image {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.map-event-scene-image.is-ready {
+  opacity: 1;
   animation: map-event-camera-settle 7s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 .map-event-scene-fallback {
@@ -460,6 +612,47 @@ watch(
   font-weight: 750;
   line-height: 1.5;
 }
+.map-event-surface-consequence > div {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+.map-event-surface-consequence strong,
+.map-event-surface-consequence small {
+  overflow-wrap: anywhere;
+}
+.map-event-surface-consequence strong {
+  color: #f0d38e;
+  font-size: 11px;
+}
+.map-event-settlement-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.map-event-settlement-summary > span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  border-left: 1px solid rgba(213, 182, 111, 0.32);
+  padding-left: 8px;
+}
+.map-event-settlement-summary > span:first-child {
+  border-left: 0;
+  padding-left: 0;
+}
+.map-event-settlement-summary small {
+  color: rgba(247, 243, 236, 0.58);
+  font-size: 9px;
+}
+.map-event-settlement-summary strong {
+  font-size: 11px;
+  line-height: 1.35;
+}
+.map-event-surface-consequence small {
+  color: rgba(247, 243, 236, 0.7);
+  font-size: 10px;
+}
 
 .map-event-story-panel .map-event-surface-stale,
 .map-event-story-panel .map-event-surface-consequence {
@@ -507,10 +700,97 @@ watch(
   font-weight: 850;
 }
 
+.map-event-preview-sequence {
+  margin-top: 15px;
+}
+.map-event-preview-progress {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  color: rgba(247, 243, 236, 0.56);
+  font-size: 9px;
+  font-weight: 850;
+}
+.map-event-preview-progress i {
+  position: relative;
+  height: 1px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.16);
+}
+.map-event-preview-progress i::after {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--beat-progress);
+  background: #d5b66f;
+  content: '';
+  transition: width 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.map-event-preview-beat {
+  display: grid;
+  min-height: 128px;
+  align-items: end;
+  padding: 18px 0 8px;
+}
+.map-event-preview-beat p {
+  overflow-wrap: anywhere;
+  animation: map-event-beat-enter 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.map-event-preview-beat p.is-opening {
+  font-family: Georgia, 'Noto Serif CJK SC', serif;
+  font-size: 20px;
+  font-weight: 650;
+  line-height: 1.52;
+}
+.map-event-preview-beat p.is-environment,
+.map-event-preview-beat p.is-dialogue {
+  color: rgba(247, 243, 236, 0.86);
+  font-family: Georgia, 'Noto Serif CJK SC', serif;
+  font-size: 17px;
+  line-height: 1.62;
+}
+.map-event-preview-advance {
+  display: inline-flex;
+  min-width: 96px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid rgba(213, 182, 111, 0.58);
+  color: #f7f3ec;
+  font-size: 11px;
+  font-weight: 850;
+}
+.map-event-preview-advance i {
+  color: #d5b66f;
+  font-size: 9px;
+}
+.map-event-preview-advance:hover,
+.map-event-preview-advance:focus-visible {
+  border-color: #f0d38e;
+  color: #fff;
+}
+
 .map-event-surface-consequence {
   border-color: rgba(122, 188, 158, 0.42);
   background: rgba(31, 92, 65, 0.42);
   color: #d8f6e7;
+}
+.map-event-surface-consequence.is-settlement-positive strong {
+  color: #bfead4;
+}
+.map-event-surface-consequence.is-settlement-neutral {
+  border-color: rgba(213, 182, 111, 0.52);
+  background: rgba(100, 77, 28, 0.5);
+  color: #fff1c9;
+}
+.map-event-surface-consequence.is-settlement-negative {
+  border-color: rgba(220, 126, 111, 0.58);
+  background: rgba(112, 43, 36, 0.5);
+  color: #ffe0da;
+}
+.map-event-surface-consequence.is-settlement-negative strong {
+  color: #ffd0c8;
 }
 
 .map-event-surface-choices {
@@ -623,6 +903,17 @@ button:focus-visible {
   }
 }
 
+@keyframes map-event-beat-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 @media (min-width: 720px) {
   .map-event-surface-sheet {
     margin-bottom: 18px;
@@ -647,15 +938,32 @@ button:focus-visible {
   .map-event-surface-opening {
     font-size: 17px;
   }
+  .map-event-settlement-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .map-event-settlement-summary > span:first-child {
+    grid-column: 1 / -1;
+  }
+  .map-event-settlement-summary > span:nth-child(2) {
+    border-left: 0;
+    padding-left: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .map-event-scene-image {
     animation: none;
     transform: none;
+    transition: none;
   }
   .map-event-surface-choices button {
     transition: none;
+  }
+  .map-event-preview-progress i::after {
+    transition: none;
+  }
+  .map-event-preview-beat p {
+    animation: none;
   }
 }
 </style>

@@ -395,4 +395,19 @@ describe('MapPlaceFocusSheet', () => {
     await wrapper.get('[data-testid="map-place-preview-event"]').trigger('click')
     expect(wrapper.emitted('preview-event')).toHaveLength(1)
   })
+
+  test('presents a completed development preview as a read-only result review', async () => {
+    const wrapper = createWrapper({
+      entryAction: 'leave',
+      eventPreviewCompleted: true,
+    })
+
+    expect(wrapper.get('[data-testid="map-place-event-preview"]').text()).toContain(
+      'Test event completed',
+    )
+    expect(wrapper.get('[data-testid="map-place-preview-event"]').text()).toContain('Review')
+    expect(wrapper.get('[data-testid="map-place-preview-event"]').text()).not.toContain('Replay')
+    await wrapper.get('[data-testid="map-place-preview-event"]').trigger('click')
+    expect(wrapper.emitted('preview-event')).toHaveLength(1)
+  })
 })

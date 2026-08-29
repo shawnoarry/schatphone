@@ -48,6 +48,7 @@ import {
   advanceEventInstanceV2,
   createEventInstanceV2,
 } from '../lib/simulation/event-instance-v2'
+import { normalizeEventPolicySnapshot } from '../lib/simulation/event-policy'
 import { getBuiltInCommerceEventTemplate } from '../lib/simulation/commerce-event-templates'
 import {
   createEventNotebookRefKey,
@@ -379,6 +380,22 @@ const normalizeEventLog = (rawLog, index = 0) => {
     Date.now() - index,
   )
 
+  const rawSettlement = rawLog.settlement
+  const settlement = rawSettlement && typeof rawSettlement === 'object'
+    ? {
+        instanceId: normalizeText(rawSettlement.instanceId, '', 220),
+        choiceId: normalizeText(rawSettlement.choiceId, '', 160),
+        outcomeId: normalizeText(rawSettlement.outcomeId, '', 160),
+        randomKind: normalizeText(rawSettlement.randomKind, '', 40),
+        roll: Math.max(0, Math.floor(Number(rawSettlement.roll) || 0)),
+        rangeMin: Math.max(0, Math.floor(Number(rawSettlement.rangeMin) || 0)),
+        rangeMax: Math.max(0, Math.floor(Number(rawSettlement.rangeMax) || 0)),
+        provenance: normalizeText(rawSettlement.provenance, '', 80),
+        canonicalMutation: normalizeText(rawSettlement.canonicalMutation, '', 40),
+        settledAt: normalizeTimestamp(rawSettlement.settledAt, at),
+      }
+    : null
+
   return {
     id: normalizeText(rawLog.id, '', 180) || `simulation_event_legacy_${at}_${index}`,
     eventId,
@@ -392,6 +409,10 @@ const normalizeEventLog = (rawLog, index = 0) => {
     variantPackId: normalizeText(rawLog.variantPackId, '', 180),
     worldContextId: normalizeText(rawLog.worldContextId, '', 180),
     activeWorldBookIds: normalizeTextList(rawLog.activeWorldBookIds, 24, 160),
+    policySnapshot: normalizeEventPolicySnapshot(rawLog.policySnapshot),
+    ...(settlement?.instanceId && settlement.choiceId && settlement.outcomeId
+      ? { settlement }
+      : {}),
     at,
   }
 }

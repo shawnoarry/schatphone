@@ -1,4 +1,5 @@
 import { evaluateConditions } from './condition-evaluator'
+import { normalizeEventPolicySnapshot } from './event-policy'
 import { evaluateRandomGate } from './random'
 
 const normalizeText = (value, fallback = '', max = 160) => {
@@ -156,6 +157,7 @@ export const createEventExecutionLogInput = (
     variant,
     variantPack,
     worldContext,
+    policySnapshot,
   } = {},
 ) => ({
   eventId: normalizeText(template.id || evaluation.eventId, '', 160),
@@ -173,6 +175,7 @@ export const createEventExecutionLogInput = (
     : Array.isArray(variantPack?.activeWorldBookIds)
       ? variantPack.activeWorldBookIds
       : [],
+  policySnapshot: normalizeEventPolicySnapshot(policySnapshot),
   at,
 })
 
@@ -189,6 +192,7 @@ export const runEventAdapter = ({
   variant,
   variantPack,
   worldContext,
+  policySnapshot,
 } = {}) => {
   const evaluation = evaluateEventTemplate(template, context, {
     triggerSource,
@@ -208,6 +212,7 @@ export const runEventAdapter = ({
       variant,
       variantPack,
       worldContext,
+      policySnapshot,
     })
   }
 
@@ -223,6 +228,7 @@ export const runEventAdapter = ({
       variant,
       variantPack,
       worldContext,
+      policySnapshot,
     })
   }
 
@@ -245,6 +251,7 @@ export const runEventAdapter = ({
       variant,
       variantPack,
       worldContext,
+      policySnapshot,
     })
   }
 
@@ -259,6 +266,7 @@ export const runEventAdapter = ({
       variant,
       variantPack,
       worldContext,
+      policySnapshot,
     })
     const log = simulationStore?.recordEventLog?.(failedLogInput) || failedLogInput
     return {
@@ -286,6 +294,7 @@ export const runEventAdapter = ({
     variant,
     variantPack,
     worldContext,
+    policySnapshot,
   })
   const log =
     simulationStore?.recordEventTrigger?.({

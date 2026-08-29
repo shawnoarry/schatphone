@@ -55,6 +55,74 @@ const EVENT_CHOICE_OUTCOME = Object.freeze({
   check_equipment: 'equipment_checked',
   wait_for_staff: 'wait_acknowledged',
 })
+export const MAP_PLACE_EVENT_PREVIEW_OUTCOME = Object.freeze({
+  STRONG: 'preview_strong',
+  STEADY: 'preview_steady',
+  SETBACK: 'preview_setback',
+})
+export const MAP_PLACE_EVENT_PREVIEW_ROLL_KIND = 'd100'
+export const MAP_PLACE_EVENT_PREVIEW_WORLD_CONTEXT_ID = 'world_context_development_preview'
+const PREVIEW_CHOICE_RISK = Object.freeze({
+  review_brief: Object.freeze({ strongMax: 20, steadyMax: 90 }),
+  check_equipment: Object.freeze({ strongMax: 35, steadyMax: 80 }),
+  wait_for_staff: Object.freeze({ strongMax: 50, steadyMax: 70 }),
+})
+const PREVIEW_COPY = Object.freeze({
+  zh: Object.freeze({
+    title: '现场临时调整',
+    opening: '你刚进入现场，一条临时调整打乱了原本清楚的安排。',
+    environment: '信息还没有完全传开，而留给你判断下一步的时间并不多。',
+    choiceLabels: Object.freeze({
+      review_brief: '先观察情况 · 稳妥',
+      check_equipment: '主动询问 · 平衡',
+      wait_for_staff: '立即行动 · 冒险',
+    }),
+    consequences: Object.freeze({
+      review_brief: Object.freeze({
+        preview_strong: '出色 · 你从现场节奏里看出了关键变化，在最合适的时机做好了准备。',
+        preview_steady: '稳妥 · 你弄清了大致秩序，没有被这次临时调整打乱。',
+        preview_setback: '波折 · 你观察得太久，错过了最从容的准备窗口。',
+      }),
+      check_equipment: Object.freeze({
+        preview_strong: '出色 · 你问到了真正掌握安排的人，提前获得了完整信息。',
+        preview_steady: '稳妥 · 你得到足够的说明，可以按新的安排继续。',
+        preview_setback: '波折 · 几个回答彼此不一致，你反而需要重新确认情况。',
+      }),
+      wait_for_staff: Object.freeze({
+        preview_strong: '出色 · 你的判断正好踩中变化节奏，抢先占据了主动。',
+        preview_steady: '稳妥 · 决定虽然仓促，但你还是及时跟上了新的安排。',
+        preview_setback: '波折 · 你行动得太早，被随后发生的调整打乱了步骤。',
+      }),
+    }),
+  }),
+  en: Object.freeze({
+    title: 'A last-minute change',
+    opening: 'Just after you arrive, a last-minute change disrupts what had seemed like a clear plan.',
+    environment: 'The full update has not reached everyone, and there is little time to decide what to do next.',
+    choiceLabels: Object.freeze({
+      review_brief: 'Observe first · Safer',
+      check_equipment: 'Ask directly · Balanced',
+      wait_for_staff: 'Act now · Riskier',
+    }),
+    consequences: Object.freeze({
+      review_brief: Object.freeze({
+        preview_strong: 'Strong · You read the room correctly and prepare at exactly the right moment.',
+        preview_steady: 'Steady · You understand enough of the new order to continue without being thrown off.',
+        preview_setback: 'Setback · You wait too long and lose the most comfortable preparation window.',
+      }),
+      check_equipment: Object.freeze({
+        preview_strong: 'Strong · You find the person with the full picture and get the useful details early.',
+        preview_steady: 'Steady · You get enough information to continue under the revised plan.',
+        preview_setback: 'Setback · The answers conflict, leaving you with more uncertainty than before.',
+      }),
+      wait_for_staff: Object.freeze({
+        preview_strong: 'Strong · Your quick read is right, and acting early puts you ahead of the change.',
+        preview_steady: 'Steady · The decision is rushed, but you still keep pace with the new plan.',
+        preview_setback: 'Setback · You move too soon and the next adjustment forces you to retrace your steps.',
+      }),
+    }),
+  }),
+})
 const ELIGIBLE_PLACE_CATEGORY_IDS = new Set([
   'broadcast_station',
   'entertainment_agency',
@@ -458,6 +526,50 @@ export const evaluateMapPlaceSessionEventInvitation = ({
   }
 }
 
+export const createMapPlaceSessionEventPreviewId = (rawSession = {}) => {
+  const session = normalizeMapPlaceSession(rawSession)
+  if (!session.sessionId || session.revision <= 0) return ''
+  return `event_instance_preview_${session.sessionId}_${session.revision}`.slice(0, 220)
+}
+
+const createMapPlaceSessionEventPreviewSettlementId = (instanceId, roll) =>
+  `map_preview_settlement_${MAP_PLACE_EVENT_PREVIEW_ROLL_KIND}_${roll}_${instanceId}`.slice(0, 180)
+
+export const readMapPlaceSessionEventPreviewRoll = (rawInstance = {}) => {
+  const outcomeLogId = normalizeEventText(rawInstance.runtime?.outcomeLogId, '', 180)
+  const match = outcomeLogId.match(/^map_preview_settlement_d100_(\d{1,3})_/)
+  if (!match) return 0
+  const roll = Number(match[1])
+  return Number.isInteger(roll) && roll >= 1 && roll <= 100 ? roll : 0
+}
+
+export const createMapPlaceSessionEventPreviewSettlement = (rawInstance = {}) => {
+  const instance = normalizeEventInstanceV1(rawInstance)
+  const roll = instance ? readMapPlaceSessionEventPreviewRoll(instance) : 0
+  if (
+    !instance ||
+    !instance.id.startsWith('event_instance_preview_') ||
+    instance.world.worldContextId !== MAP_PLACE_EVENT_PREVIEW_WORLD_CONTEXT_ID ||
+    instance.lifecycle !== EVENT_INSTANCE_LIFECYCLE.RESOLVED ||
+    !instance.choices.selectedId ||
+    !instance.choices.outcomeId ||
+    !instance.runtime.outcomeLogId ||
+    roll <= 0
+  ) return null
+  return {
+    instanceId: instance.id,
+    choiceId: instance.choices.selectedId,
+    outcomeId: instance.choices.outcomeId,
+    randomKind: MAP_PLACE_EVENT_PREVIEW_ROLL_KIND,
+    roll,
+    rangeMin: 1,
+    rangeMax: 100,
+    provenance: 'client_runtime',
+    canonicalMutation: 'none',
+    settledAt: instance.timestamps.resolvedAt,
+  }
+}
+
 export const createMapPlaceSessionEventPreview = ({
   session: rawSession,
   mapPack = {},
@@ -476,8 +588,8 @@ export const createMapPlaceSessionEventPreview = ({
     return { ok: false, instance: null, reason: 'preview_source_unavailable' }
   }
 
-  const previewId = `event_instance_preview_${session.sessionId}_${session.revision}`
-  return materializeLocalEventInstanceV1({
+  const previewId = createMapPlaceSessionEventPreviewId(session)
+  const result = materializeLocalEventInstanceV1({
     instanceId: previewId,
     source: {
       moduleKey: 'map',
@@ -488,7 +600,7 @@ export const createMapPlaceSessionEventPreview = ({
       checkpointAt: session.enteredAt,
     },
     world: {
-      worldContextId: 'world_context_development_preview',
+      worldContextId: MAP_PLACE_EVENT_PREVIEW_WORLD_CONTEXT_ID,
       worldPackId: session.worldPackId,
       mapPackId: session.mapPackId,
       mapPackVersion: session.mapPackVersion || mapPack.version || 1,
@@ -523,6 +635,131 @@ export const createMapPlaceSessionEventPreview = ({
     seed: previewId,
     now,
   })
+  if (!result.ok || !result.instance) return result
+  const previewCopy = locale.toLowerCase().startsWith('zh') ? PREVIEW_COPY.zh : PREVIEW_COPY.en
+  const instance = normalizeEventInstanceV1({
+    ...result.instance,
+    text: {
+      ...result.instance.text,
+      normalizedCopy: {
+        ...result.instance.text.normalizedCopy,
+        title: previewCopy.title,
+        opening: previewCopy.opening,
+        environment: previewCopy.environment,
+        choiceLabels: previewCopy.choiceLabels,
+        consequenceByOutcomeId: {
+          [MAP_PLACE_EVENT_PREVIEW_OUTCOME.STRONG]: previewCopy.consequences.review_brief.preview_strong,
+          [MAP_PLACE_EVENT_PREVIEW_OUTCOME.STEADY]: previewCopy.consequences.review_brief.preview_steady,
+          [MAP_PLACE_EVENT_PREVIEW_OUTCOME.SETBACK]: previewCopy.consequences.review_brief.preview_setback,
+        },
+      },
+    },
+  })
+  return instance ? { ...result, instance } : { ok: false, instance: null, reason: 'preview_invalid' }
+}
+
+const normalizePreviewRoll = (random) => {
+  const value = Number(typeof random === 'function' ? random() : Math.random())
+  const bounded = Number.isFinite(value) ? Math.min(Math.max(value, 0), 0.999999999) : 0.5
+  return Math.floor(bounded * 100) + 1
+}
+
+const resolvePreviewOutcomeId = (choiceId, roll) => {
+  const risk = PREVIEW_CHOICE_RISK[choiceId]
+  if (!risk) return ''
+  if (roll <= risk.strongMax) return MAP_PLACE_EVENT_PREVIEW_OUTCOME.STRONG
+  if (roll <= risk.steadyMax) return MAP_PLACE_EVENT_PREVIEW_OUTCOME.STEADY
+  return MAP_PLACE_EVENT_PREVIEW_OUTCOME.SETBACK
+}
+
+export const resolveMapPlaceSessionEventPreview = ({
+  instance: rawInstance,
+  session,
+  choiceId,
+  random = Math.random,
+  now = Date.now(),
+} = {}) => {
+  const instance = normalizeEventInstanceV1(rawInstance)
+  const normalizedChoiceId = normalizeEventId(choiceId)
+  if (!instance) {
+    return { ok: false, code: MAP_PLACE_SESSION_EVENT_RESULT.SOURCE_STALE, instance: null }
+  }
+  if (instance.lifecycle === EVENT_INSTANCE_LIFECYCLE.RESOLVED) {
+    return {
+      ok: true,
+      code: 'EVENT_PREVIEW_ALREADY_RESOLVED',
+      canonicalMutation: 'none',
+      instance,
+      choiceId: instance.choices.selectedId,
+      outcomeId: instance.choices.outcomeId,
+      roll: readMapPlaceSessionEventPreviewRoll(instance),
+      replayed: false,
+    }
+  }
+  if (instance.lifecycle !== EVENT_INSTANCE_LIFECYCLE.ACTIVE) {
+    return { ok: false, code: MAP_PLACE_SESSION_EVENT_RESULT.SOURCE_STALE, instance }
+  }
+  if (!instance.choices.allowedIds.includes(normalizedChoiceId)) {
+    return { ok: false, code: MAP_PLACE_SESSION_EVENT_RESULT.CHOICE_UNSUPPORTED, instance }
+  }
+  const canonicalOutcomeId = EVENT_CHOICE_OUTCOME[normalizedChoiceId] || ''
+  const ownerResult = validateMapPlaceSessionEventResolution(
+    {
+      authorization: 'event_runtime_choice',
+      eventInstanceId: instance.id,
+      sessionId: instance.presence.placeSessionId,
+      sessionRevision: instance.presence.placeSessionRevision,
+      mapPackId: instance.world.mapPackId,
+      placeId: instance.place.placeId,
+      choiceId: normalizedChoiceId,
+      outcomeId: canonicalOutcomeId,
+    },
+    session,
+  )
+  if (!ownerResult.ok) return { ...ownerResult, instance }
+
+  const roll = normalizePreviewRoll(random)
+  const outcomeId = resolvePreviewOutcomeId(normalizedChoiceId, roll)
+  const outcomeLogId = createMapPlaceSessionEventPreviewSettlementId(instance.id, roll)
+  const copy = instance.text.normalizedCopy
+  const languageKey = copy.locale?.toLowerCase().startsWith('zh') ? 'zh' : 'en'
+  const consequence = PREVIEW_COPY[languageKey].consequences[normalizedChoiceId][outcomeId]
+  const timestamp = Math.max(instance.timestamps.updatedAt, normalizeTimestamp(now, Date.now()))
+  const resolved = normalizeEventInstanceV1({
+    ...instance,
+    lifecycle: EVENT_INSTANCE_LIFECYCLE.RESOLVED,
+    runtime: { ...instance.runtime, outcomeLogId },
+    text: {
+      ...instance.text,
+      normalizedCopy: {
+        ...copy,
+        consequenceByOutcomeId: {
+          ...copy.consequenceByOutcomeId,
+          [outcomeId]: consequence,
+        },
+      },
+    },
+    choices: { ...instance.choices, selectedId: normalizedChoiceId, outcomeId },
+    outcome: {
+      ...instance.outcome,
+      requestState: 'validated',
+      ownerResultCode: ownerResult.code,
+      ownerResultRef: `${session.sessionId}:${session.revision}`,
+    },
+    timestamps: { ...instance.timestamps, resolvedAt: timestamp, updatedAt: timestamp },
+  })
+  if (!resolved) {
+    return { ok: false, code: MAP_PLACE_SESSION_EVENT_RESULT.OUTCOME_UNSUPPORTED, instance }
+  }
+  return {
+    ...ownerResult,
+    canonicalMutation: 'none',
+    instance: resolved,
+    choiceId: normalizedChoiceId,
+    outcomeId,
+    roll,
+    replayed: false,
+  }
 }
 
 export const validateMapPlaceSessionEventResolution = (

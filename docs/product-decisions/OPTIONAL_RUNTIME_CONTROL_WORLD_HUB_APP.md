@@ -1,6 +1,6 @@
 # Optional Runtime Control / World Hub App
 
-Updated: 2026-08-12
+Updated: 2026-08-29
 
 ## Decision
 
@@ -50,6 +50,7 @@ World Hub is a coordination layer, not the owner of domain records.
 - event execution remains in simulation/runtime files.
 - relationship truth remains in `src/stores/relationshipRuntime.js`.
 - domain records still belong to their own modules, such as Calendar, Wallet, Shopping, Food Delivery, Map, or Contacts.
+- ordinary event frequency, module permission, supported presentation, and foreground-check configuration lives in `设置 > 事件 / Settings > Events`; World Hub reviews event history and pending decisions instead of duplicating those baseline controls.
 
 ## Acceptance Rules
 

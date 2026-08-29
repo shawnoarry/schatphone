@@ -1,6 +1,6 @@
 # Event Runtime Product Boundary / 事件运行时语义边界
 
-Updated: 2026-08-18
+Updated: 2026-08-29
 
 ## 1. Core Rule
 
@@ -20,6 +20,7 @@ Owns:
 - cooldowns
 - caps
 - trigger policy
+- normalized optional-event policy snapshots covering module permission, intensity, family probability, and presentation mode
 - adapter orchestration
 - Event Surface Projection normalization and registered-host capability rules
 - reusable event-template eligibility and normalized Event Instance lifecycle/provenance once separately implemented
@@ -74,6 +75,10 @@ Does not own:
 - Cheats authority merely because both belong to the hidden runtime-control family
 
 Current high-risk gate presets are contracts only. They do not trigger events, mutate module records, or turn World Hub into an editor.
+
+Settings may expose only event controls that cross the Event Policy Interface and have behavior tests. Presentation policy changes the visible form, not event eligibility or canonical outcome. Result-mode, consequence-severity, reroll, and interactive-HTML controls remain unavailable until their separate runtime and safety Interfaces exist.
+
+The product-facing home for implemented baseline controls is `设置 > 事件 / Settings > Events`. AI Automation owns autonomous AI calls and must not duplicate event policy controls. World Hub remains the review/history surface rather than the ordinary configuration entry.
 
 Friend/block/refusal social events use the same boundary: event runtime records and reviews generated proposals; World Hub approves or dismisses high-risk proposals; Chat applies confirmed channel state; Contacts displays snapshots; relationship runtime records confirmed relationship continuity only after the event is accepted.
 

@@ -9,6 +9,8 @@ import {
   createEmptyMapPlaceSession,
   createMapEventSurfaceHostRegistry,
   createMapPlaceSessionEventPreview,
+  createMapPlaceSessionEventPreviewSettlement,
+  readMapPlaceSessionEventPreviewRoll,
   createMapPlaceSessionCheckpointV1,
   createMapPositionEvidence,
   enterMapPlaceSession,
@@ -17,6 +19,7 @@ import {
   projectMapPlaceSessionEventSurface,
   resolveMapEventPlaceSemantics,
   resolveMapPlaceSessionEventInstance,
+  resolveMapPlaceSessionEventPreview,
   validateMapPlaceSessionEventResolution,
 } from '../src/lib/simulation/adapters/map-place-session-events'
 import { materializeLocalEventInstanceV1 } from '../src/lib/simulation/event-instance-materializer'
@@ -307,19 +310,112 @@ describe('EVE-2C Map place-session boundary', () => {
       capabilityIds: ['rest'],
     })
 
-    const resolved = resolveMapPlaceSessionEventInstance({
+    const resolved = resolveMapPlaceSessionEventPreview({
       instance: preview.instance,
       session,
       choiceId: 'check_equipment',
+      random: () => 0.1,
       now: NOW + 1_000,
     })
     expect(resolved).toMatchObject({
       ok: true,
+      roll: 11,
+      outcomeId: 'preview_strong',
       instance: {
         lifecycle: 'resolved',
-        choices: { selectedId: 'check_equipment', outcomeId: 'equipment_checked' },
+        choices: { selectedId: 'check_equipment', outcomeId: 'preview_strong' },
       },
     })
+    expect(resolved.instance.text.normalizedCopy.consequenceByOutcomeId.preview_strong).toContain(
+      'Strong',
+    )
+  })
+
+  test('uses distinct d100 risk bands for safer, balanced, and riskier preview choices', () => {
+    const place = createPlace({ id: 'preview-risk-place' })
+    const session = enterSession(place)
+    const createPreview = () => createMapPlaceSessionEventPreview({
+      session,
+      mapPack: { id: place.mapPackId, version: 1, coordinateKind: 'canvas' },
+      place,
+      locale: 'en',
+      now: NOW,
+    }).instance
+
+    expect(resolveMapPlaceSessionEventPreview({
+      instance: createPreview(), session, choiceId: 'review_brief', random: () => 0.49,
+    })).toMatchObject({ roll: 50, outcomeId: 'preview_steady' })
+    expect(resolveMapPlaceSessionEventPreview({
+      instance: createPreview(), session, choiceId: 'check_equipment', random: () => 0.84,
+    })).toMatchObject({ roll: 85, outcomeId: 'preview_setback' })
+    expect(resolveMapPlaceSessionEventPreview({
+      instance: createPreview(), session, choiceId: 'wait_for_staff', random: () => 0.49,
+    })).toMatchObject({ roll: 50, outcomeId: 'preview_strong' })
+    expect(resolveMapPlaceSessionEventPreview({
+      instance: createPreview(), session, choiceId: 'wait_for_staff', random: () => 0.74,
+    })).toMatchObject({ roll: 75, outcomeId: 'preview_setback' })
+  })
+
+  test('keeps one preview roll and returns the original settlement when resolution is attempted again', () => {
+    const place = createPlace({ id: 'preview-one-roll-place' })
+    const session = enterSession(place)
+    const preview = createMapPlaceSessionEventPreview({
+      session,
+      mapPack: { id: place.mapPackId, version: 1, coordinateKind: 'canvas' },
+      place,
+      locale: 'en',
+      now: NOW,
+    }).instance
+    const random = vi.fn(() => 0.84)
+
+    const first = resolveMapPlaceSessionEventPreview({
+      instance: preview,
+      session,
+      choiceId: 'check_equipment',
+      random,
+      now: NOW + 1_000,
+    })
+    const repeated = resolveMapPlaceSessionEventPreview({
+      instance: first.instance,
+      session,
+      choiceId: 'wait_for_staff',
+      random,
+      now: NOW + 2_000,
+    })
+
+    expect(random).toHaveBeenCalledTimes(1)
+    expect(readMapPlaceSessionEventPreviewRoll(first.instance)).toBe(85)
+    expect(createMapPlaceSessionEventPreviewSettlement(first.instance)).toEqual({
+      instanceId: first.instance.id,
+      choiceId: 'check_equipment',
+      outcomeId: 'preview_setback',
+      randomKind: 'd100',
+      roll: 85,
+      rangeMin: 1,
+      rangeMax: 100,
+      provenance: 'client_runtime',
+      canonicalMutation: 'none',
+      settledAt: NOW + 1_000,
+    })
+    expect(repeated).toMatchObject({
+      ok: true,
+      code: 'EVENT_PREVIEW_ALREADY_RESOLVED',
+      canonicalMutation: 'none',
+      choiceId: 'check_equipment',
+      outcomeId: 'preview_setback',
+      roll: 85,
+      replayed: false,
+      instance: first.instance,
+    })
+
+    expect(createMapPlaceSessionEventPreviewSettlement({
+      ...first.instance,
+      id: 'event_instance_production_like',
+    })).toBeNull()
+    expect(createMapPlaceSessionEventPreviewSettlement({
+      ...first.instance,
+      world: { ...first.instance.world, worldContextId: 'world_context_production' },
+    })).toBeNull()
   })
 
   test('registers one Map host and projects geographic plus fictional anchors', () => {

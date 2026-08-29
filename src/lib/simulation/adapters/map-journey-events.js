@@ -1,5 +1,9 @@
 import { runEventAdapter } from '../event-engine'
 import {
+  normalizeEventPolicySnapshot,
+  resolveOptionalEventPolicy,
+} from '../event-policy'
+import {
   createBuiltInVariantPack,
   selectEventVariant,
 } from '../event-variants'
@@ -36,6 +40,12 @@ export const MAP_JOURNEY_EVENT_ELIGIBLE_CHECKPOINT_IDS = Object.freeze([
 const ELIGIBLE_CHECKPOINT_IDS = new Set(MAP_JOURNEY_EVENT_ELIGIBLE_CHECKPOINT_IDS)
 const OUTCOME_IDS = new Set(Object.values(MAP_JOURNEY_EVENT_OUTCOME))
 const PROPOSAL_STATUS_IDS = new Set(Object.values(MAP_JOURNEY_EVENT_PROPOSAL_STATUS))
+const MAP_JOURNEY_EVENT_PROBABILITY_BY_INTENSITY = Object.freeze({
+  off: 0,
+  low: 0.3,
+  balanced: 0.55,
+  high: 1,
+})
 
 const normalizeText = (value, fallback = '', max = 240) => {
   if (typeof value !== 'string') return fallback
@@ -160,19 +170,6 @@ const MAP_JOURNEY_BUILT_IN_VARIANTS = Object.freeze({
   [MAP_JOURNEY_ROUTE_CONDITION_EVENT_ID]: MAP_JOURNEY_ROUTE_CONDITION_VARIANTS,
 })
 
-const getSurpriseMode = (simulationStore) => {
-  const value = simulationStore?.surpriseMode
-  if (value && typeof value === 'object' && 'value' in value) return value.value
-  return value || simulationStore?.settings?.surpriseMode || 'low'
-}
-
-const getProbabilityForSurpriseMode = (mode) => {
-  if (mode === 'high') return 1
-  if (mode === 'balanced') return 0.55
-  if (mode === 'low') return 0.3
-  return 0
-}
-
 const createProposalId = (journeyId, checkpointId) =>
   `map_journey_event_${journeyId}_${checkpointId}`
     .replace(/[^a-zA-Z0-9_.-]/g, '_')
@@ -202,6 +199,7 @@ const normalizeProposalProvenance = (rawProvenance = {}) => {
     variantPackId: normalizeText(provenance.variantPackId, '', 180),
     worldContextId: normalizeText(provenance.worldContextId, '', 180),
     activeWorldBookIds: normalizeTextList(provenance.activeWorldBookIds, null, 24),
+    policySnapshot: normalizeEventPolicySnapshot(provenance.policySnapshot),
   }
 }
 
@@ -384,7 +382,11 @@ export const runMapJourneyCheckpointEvent = ({
   const context = buildMapJourneyCheckpointEventContext(snapshot)
   const journey = context.journey
   const normalizedNow = normalizeTimestamp(now)
-  const surpriseMode = getSurpriseMode(simulationStore)
+  const policy = resolveOptionalEventPolicy({
+    simulationStore,
+    moduleKey: MAP_JOURNEY_EVENT_MODULE_KEY,
+    probabilityByIntensity: MAP_JOURNEY_EVENT_PROBABILITY_BY_INTENSITY,
+  })
   const variantResolution = resolveMapJourneyEventVariant({
     worldContext,
     variantPack,
@@ -402,21 +404,12 @@ export const runMapJourneyCheckpointEvent = ({
       now: normalizedNow,
     })
   }
-  if (simulationStore?.isModuleEventsEnabled?.(MAP_JOURNEY_EVENT_MODULE_KEY) === false) {
+  if (!policy?.allowed) {
     return recordSkippedAttempt({
       simulationStore,
       snapshot: journey,
       ...variantResolution,
-      reason: 'module_events_disabled',
-      now: normalizedNow,
-    })
-  }
-  if (surpriseMode === 'off') {
-    return recordSkippedAttempt({
-      simulationStore,
-      snapshot: journey,
-      ...variantResolution,
-      reason: 'surprise_mode_off',
+      reason: policy?.reason || 'module_events_disabled',
       now: normalizedNow,
     })
   }
@@ -442,7 +435,7 @@ export const runMapJourneyCheckpointEvent = ({
       : normalizeRandomValue(randomValue)
   const template = {
     ...MAP_JOURNEY_ROUTE_CONDITION_TEMPLATE,
-    probability: getProbabilityForSurpriseMode(surpriseMode),
+    probability: policy.probability,
   }
   const variant = variantResolution.variant || MAP_JOURNEY_ROUTE_CONDITION_VARIANTS[0]
   const buildProposal = () =>
@@ -470,6 +463,7 @@ export const runMapJourneyCheckpointEvent = ({
         variantPackId: variantResolution.variantPack.id,
         worldContextId: variantResolution.worldContext.id,
         activeWorldBookIds: variantResolution.worldContext.activeWorldBookIds,
+        policySnapshot: policy,
       },
       createdAt: normalizedNow,
     })
@@ -493,6 +487,7 @@ export const runMapJourneyCheckpointEvent = ({
     variant,
     variantPack: variantResolution.variantPack,
     worldContext: variantResolution.worldContext,
+    policySnapshot: policy,
   })
 
   if (result.ok && result.adapterResult && result.log?.id) {

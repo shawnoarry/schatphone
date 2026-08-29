@@ -15,6 +15,7 @@ const emit = defineEmits([
   'open-worldbook',
   'open-general',
   'open-software-update',
+  'open-events',
   'open-automation',
   'open-notification',
   'open-sound',
@@ -121,6 +122,16 @@ const { t } = useI18n()
       icon-class="bg-green-500"
       data-testid="settings-software-update-entry"
       @select="emit('open-software-update')"
+    />
+    <SettingsMenuItem
+      title-zh="事件"
+      title-en="Events"
+      subtitle-zh="随机频率、模块权限与呈现方式"
+      subtitle-en="Frequency, app permissions and presentation"
+      icon="fas fa-dice"
+      icon-class="bg-amber-500"
+      data-testid="settings-events-entry"
+      @select="emit('open-events')"
     />
     <SettingsMenuItem
       title-zh="AI 自动响应"

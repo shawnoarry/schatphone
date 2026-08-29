@@ -341,7 +341,7 @@ test.describe('EVE-2C Map K-pop place-session events', () => {
     expect(pageErrors).toEqual([])
   })
 
-  test('opens a non-persistent development preview at an ordinary entered place', async ({ page }) => {
+  test('settles a development preview once and restores the same receipt after reload', async ({ page }, testInfo) => {
     const pageErrors = []
     page.on('pageerror', (error) => pageErrors.push(error.message))
     await mockOpenFreeMapStyle(page)
@@ -362,11 +362,91 @@ test.describe('EVE-2C Map K-pop place-session events', () => {
     await expect(page.getByTestId('map-place-event-invitation')).toHaveCount(0)
     await expect(page.getByTestId('map-place-event-preview')).toBeVisible()
     await page.getByTestId('map-place-preview-event').click()
-    await expect(page.getByTestId('map-event-surface-sheet')).toContainText(/Test preview|测试预览/)
+    await expect(page.getByTestId('map-event-surface-sheet')).toContainText(/Test event|测试事件/)
+    await expect(page.getByTestId('map-event-choices')).toHaveCount(0)
+    await expect
+      .poll(() => page.getByTestId('map-event-scene-image').evaluate((image) => image.naturalWidth))
+      .toBeGreaterThan(0)
+    await expect(page.getByTestId('map-event-scene-image')).toHaveClass(/is-ready/)
+    await captureVisualEvidence(page, testInfo, 'preview-first-beat')
+    const advance = page.getByTestId('map-event-preview-advance')
+    for (let index = 0; index < 10 && (await advance.count()) > 0; index += 1) {
+      await advance.click()
+    }
     await expect(page.getByTestId('map-event-choices').getByRole('button')).toHaveCount(3)
+    await expect(page.getByTestId('map-event-choices')).toContainText(/Safer|稳妥/)
+    await expect(page.getByTestId('map-event-choices')).toContainText(/Balanced|平衡/)
+    await expect(page.getByTestId('map-event-choices')).toContainText(/Riskier|冒险/)
+    await expectNoHorizontalOverflow(page, 'map-event-surface-sheet')
+    await captureVisualEvidence(page, testInfo, 'preview-choices')
     await page.getByTestId('map-event-choice-wait_for_staff').click()
     await expect(page.getByTestId('map-event-consequence')).toBeVisible()
-    expect((await readPersistedData(page, 'schatphone:store:simulation')).eventInstances).toEqual([])
+    await expect(page.getByTestId('map-event-settlement-roll')).toContainText(/D100 \d{1,3}/)
+    await expect(page.getByTestId('map-event-settlement-choice')).toBeVisible()
+    await expect(page.getByTestId('map-event-settlement-outcome')).toBeVisible()
+    await expect(page.getByTestId('map-event-settlement-final')).toBeVisible()
+    await expect(page.getByTestId('map-event-consequence')).toContainText(
+      /Strong|Steady|Setback|出色|稳妥|波折/,
+    )
+    await expectNoHorizontalOverflow(page, 'map-event-surface-sheet')
+    await captureVisualEvidence(page, testInfo, 'preview-result')
+    const firstSettlement = await readPersistedData(page, 'schatphone:store:simulation')
+    expect(firstSettlement.eventInstances).toHaveLength(1)
+    expect(firstSettlement.eventInstances[0]).toMatchObject({
+      lifecycle: 'resolved',
+      choices: { selectedId: 'wait_for_staff' },
+      outcome: { requestState: 'validated' },
+    })
+    expect(firstSettlement.eventLogs).toHaveLength(1)
+    expect(firstSettlement.eventLogs[0].settlement).toMatchObject({
+      instanceId: firstSettlement.eventInstances[0].id,
+      choiceId: 'wait_for_staff',
+      randomKind: 'd100',
+      rangeMin: 1,
+      rangeMax: 100,
+      provenance: 'client_runtime',
+      canonicalMutation: 'none',
+    })
+    await expect(page.getByTestId('map-event-complete')).toContainText(/Return to place|返回地点/)
+    await page.getByTestId('map-event-complete').click()
+    await expect(page.getByTestId('map-event-surface-sheet')).toHaveCount(0)
+    await expect(page.getByTestId('map-place-event-preview')).toContainText(
+      /Test event completed|测试事件已完成/,
+    )
+    await expect(page.getByTestId('map-place-preview-event')).toContainText(/Review|查看结果/)
+    await page.getByTestId('map-place-preview-event').click()
+    await expect(page.getByTestId('map-event-surface-sheet')).toContainText(/Test result|测试结果/)
+    await expect(page.getByTestId('map-event-settlement-roll')).toContainText(
+      `D100 ${firstSettlement.eventLogs[0].settlement.roll}`,
+    )
+    await expect(page.getByTestId('map-event-choices')).toHaveCount(0)
+    await page.reload()
+    await unlockToHome(page)
+    await navigateInsideUnlockedApp(page, '/map')
+    await page.getByTestId('map-destination-search').fill('家')
+    const restoredHomeResult = page
+      .getByTestId('map-local-place-results')
+      .locator('.map-place-result')
+      .filter({ hasText: '家' })
+      .first()
+    await expect(restoredHomeResult).toBeVisible()
+    await restoredHomeResult.click()
+    await expect(page.getByTestId('map-place-event-preview')).toContainText(
+      /Test event completed|测试事件已完成/,
+    )
+    await page.getByTestId('map-place-preview-event').click()
+    await expect(page.getByTestId('map-event-surface-sheet')).toContainText(/Test result|测试结果/)
+    await expect(page.getByTestId('map-event-settlement-roll')).toContainText(
+      `D100 ${firstSettlement.eventLogs[0].settlement.roll}`,
+    )
+    const restoredSettlement = await readPersistedData(page, 'schatphone:store:simulation')
+    expect(restoredSettlement.eventInstances).toHaveLength(1)
+    expect(restoredSettlement.eventLogs).toHaveLength(1)
+    expect(restoredSettlement.eventLogs[0].settlement).toEqual(firstSettlement.eventLogs[0].settlement)
+    await page.getByTestId('map-event-return').click()
+    await expect(page.getByTestId('map-place-event-preview')).toContainText(
+      /Test event completed|测试事件已完成/,
+    )
     expect(pageErrors).toEqual([])
   })
 

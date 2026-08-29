@@ -1,24 +1,9 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { mount } from '@vue/test-utils'
-import SettingsAutomationSection from '../src/components/settings/SettingsAutomationSection.vue'
+import SettingsEventSection from '../src/components/settings/SettingsEventSection.vue'
 
 const baseProps = {
-  aiAutomation: {
-    masterEnabled: false,
-    modules: {
-      chat: { enabled: true, priority: 10 },
-      map: { enabled: false, priority: 20 },
-      shopping: { enabled: false, priority: 30 },
-    },
-    notifyOnlyMode: true,
-    quietHoursEnabled: false,
-    quietHoursStart: '23:00',
-    quietHoursEnd: '07:00',
-    conflictCooldownSec: 30,
-    dedupeWindowSec: 120,
-  },
-  automationRuntimePolicy: { notifyOnly: true, quietHoursActive: false },
   simulationSettings: {
     surpriseMode: 'high',
     foregroundSessionTickEnabled: false,
@@ -68,13 +53,13 @@ const baseProps = {
   ],
 }
 
-describe('Settings automation event controls', () => {
+describe('Settings event controls', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
   })
 
   test('keeps module permission separate from Activity Session presentation mode', async () => {
-    const wrapper = mount(SettingsAutomationSection, { props: baseProps })
+    const wrapper = mount(SettingsEventSection, { props: baseProps })
     const permission = wrapper.get(
       '[data-testid="settings-simulation-module-events-activity_session"]',
     )
@@ -94,14 +79,10 @@ describe('Settings automation event controls', () => {
   })
 
   test('renders Mini Scene settings only for registered caller rows', async () => {
-    const wrapper = mount(SettingsAutomationSection, { props: baseProps })
-    const presentation = wrapper.get(
-      '[data-testid="settings-mini-scene-presentation-simulation"]',
-    )
+    const wrapper = mount(SettingsEventSection, { props: baseProps })
+    const presentation = wrapper.get('[data-testid="settings-mini-scene-presentation-simulation"]')
     await presentation.setValue('off')
-    expect(wrapper.emitted('update-mini-scene-presentation-mode')).toEqual([
-      ['simulation', 'off'],
-    ])
+    expect(wrapper.emitted('update-mini-scene-presentation-mode')).toEqual([['simulation', 'off']])
 
     await wrapper.setProps({ miniScenePresentationControls: [] })
     expect(wrapper.find('[data-testid="settings-mini-scene-presentation-controls"]').exists()).toBe(

@@ -10,6 +10,10 @@ import {
   ACTIVITY_SESSION_EVENT_STATUS,
   createActivitySessionEventRecordId,
 } from '../../activity-session-event-interface'
+import {
+  normalizeEventPolicySnapshot,
+  resolveOptionalEventPolicy,
+} from '../event-policy'
 import { evaluateRandomGate } from '../random'
 
 export const ACTIVITY_SESSION_EVENT_COOLDOWN_MS = 30 * 60 * 1000
@@ -21,6 +25,12 @@ const PRESENTATION_MODES = new Set(Object.values(ACTIVITY_SESSION_EVENT_PRESENTA
 const RESOLUTION_MODES = new Set(Object.values(ACTIVITY_SESSION_EVENT_RESOLUTION_MODE))
 const OUTCOMES = new Set(Object.values(ACTIVITY_SESSION_EVENT_OUTCOME))
 const LIVE_SESSION_STATUSES = new Set(['running', 'paused'])
+const ACTIVITY_SESSION_EVENT_PROBABILITY_BY_INTENSITY = Object.freeze({
+  off: 0,
+  low: 0.35,
+  balanced: 0.65,
+  high: 1,
+})
 
 const normalizeText = (value, fallback = '', max = 220) => {
   if (typeof value !== 'string') return fallback
@@ -35,28 +45,6 @@ const normalizeTimestamp = (value, fallback = 0) => {
 }
 
 const createDayKey = (at) => new Date(normalizeTimestamp(at, Date.now())).toISOString().slice(0, 10)
-
-const getSurpriseMode = (simulationStore) => {
-  const value = simulationStore?.surpriseMode
-  if (value && typeof value === 'object' && 'value' in value) return value.value
-  return normalizeText(value || simulationStore?.settings?.surpriseMode, 'low', 40)
-}
-
-const getPresentationMode = (simulationStore) => {
-  const mode = simulationStore?.getEventPresentationMode?.(
-    ACTIVITY_SESSION_EVENT_MODULE_KEY,
-  )
-  return PRESENTATION_MODES.has(mode)
-    ? mode
-    : ACTIVITY_SESSION_EVENT_PRESENTATION_MODE.OFF
-}
-
-const probabilityForSurpriseMode = (mode) => {
-  if (mode === 'high') return 1
-  if (mode === 'balanced') return 0.65
-  if (mode === 'low') return 0.35
-  return 0
-}
 
 const localCopy = Object.freeze({
   titleZh: '留一点恢复缓冲吗？',
@@ -180,6 +168,7 @@ export const normalizeActivitySessionEventRecord = (rawRecord, index = 0) => {
       resolutionLogId: normalizeText(rawRecord.provenance?.resolutionLogId, '', 220),
       randomValue: Math.min(1, Math.max(0, Number(rawRecord.provenance?.randomValue) || 0)),
       probability: Math.min(1, Math.max(0, Number(rawRecord.provenance?.probability) || 0)),
+      policySnapshot: normalizeEventPolicySnapshot(rawRecord.provenance?.policySnapshot),
     },
     createdAt,
     expiresAt: normalizeTimestamp(
@@ -263,7 +252,7 @@ export const listActivitySessionEventCheckpointSnapshots = (
 const recordEventLog = (simulationStore, input) =>
   simulationStore?.recordEventLog?.(input) || input
 
-const createRecord = ({ snapshot, status, presentationMode, reason, gate, log, now }) =>
+const createRecord = ({ snapshot, status, presentationMode, reason, gate, log, policy, now }) =>
   normalizeActivitySessionEventRecord({
     id: createActivitySessionEventRecordId(snapshot.activitySessionId, snapshot.checkpointId),
     status,
@@ -278,12 +267,13 @@ const createRecord = ({ snapshot, status, presentationMode, reason, gate, log, n
       runtimeLogId: log?.id || '',
       randomValue: gate?.randomValue || 0,
       probability: gate?.probability || 0,
+      policySnapshot: policy,
     },
     createdAt: now,
     updatedAt: now,
   })
 
-const persistNoEvent = ({ simulationStore, snapshot, presentationMode, reason, gate, now }) => {
+const persistNoEvent = ({ simulationStore, snapshot, presentationMode, reason, gate, policy, now }) => {
   const log = recordEventLog(simulationStore, {
     id: `${createActivitySessionEventRecordId(snapshot.activitySessionId, snapshot.checkpointId)}::eligibility`,
     eventId: ACTIVITY_SESSION_EVENT_ID,
@@ -293,6 +283,7 @@ const persistNoEvent = ({ simulationStore, snapshot, presentationMode, reason, g
     triggerSource: 'random',
     status: 'skipped',
     reason,
+    policySnapshot: policy,
     at: now,
   })
   const record = createRecord({
@@ -302,6 +293,7 @@ const persistNoEvent = ({ simulationStore, snapshot, presentationMode, reason, g
     reason,
     gate,
     log,
+    policy,
     now,
   })
   return simulationStore?.upsertActivitySessionEventRecord?.(record) || record
@@ -331,6 +323,7 @@ const failPendingRecord = ({ simulationStore, record, reason, now }) => {
     triggerSource: 'system',
     status: 'failed',
     reason,
+    policySnapshot: record.provenance?.policySnapshot,
     at: now,
   })
   return simulationStore?.upsertActivitySessionEventRecord?.({
@@ -444,6 +437,7 @@ export const resolveActivitySessionCheckpointEvent = ({
         : 'manual',
     status: 'triggered',
     reason: normalizedOutcome,
+    policySnapshot: record.provenance?.policySnapshot,
     at: normalizedNow,
   })
   const resolved = simulationStore?.upsertActivitySessionEventRecord?.({
@@ -492,9 +486,17 @@ export const runActivitySessionCheckpointEvent = ({
   const existing = simulationStore?.getActivitySessionEventRecord?.(recordId)
   if (existing) return { ok: true, code: 'ACTIVITY_SESSION_EVENT_ALREADY_EVALUATED', record: existing }
 
-  const presentationMode = getPresentationMode(simulationStore)
-  const surpriseMode = getSurpriseMode(simulationStore)
-  if (simulationStore?.isModuleEventsEnabled?.(ACTIVITY_SESSION_EVENT_MODULE_KEY) === false) {
+  const policy = resolveOptionalEventPolicy({
+    simulationStore,
+    moduleKey: ACTIVITY_SESSION_EVENT_MODULE_KEY,
+    probabilityByIntensity: ACTIVITY_SESSION_EVENT_PROBABILITY_BY_INTENSITY,
+    presentationModuleKey: ACTIVITY_SESSION_EVENT_MODULE_KEY,
+    presentationFallback: ACTIVITY_SESSION_EVENT_PRESENTATION_MODE.OFF,
+  })
+  const presentationMode = PRESENTATION_MODES.has(policy?.presentationMode)
+    ? policy.presentationMode
+    : ACTIVITY_SESSION_EVENT_PRESENTATION_MODE.OFF
+  if (!policy?.allowed) {
     return {
       ok: true,
       code: 'ACTIVITY_SESSION_EVENT_NO_EVENT',
@@ -502,20 +504,8 @@ export const runActivitySessionCheckpointEvent = ({
         simulationStore,
         snapshot: normalizedSnapshot,
         presentationMode,
-        reason: 'module_events_disabled',
-        now: normalizedNow,
-      }),
-    }
-  }
-  if (surpriseMode === 'off') {
-    return {
-      ok: true,
-      code: 'ACTIVITY_SESSION_EVENT_NO_EVENT',
-      record: persistNoEvent({
-        simulationStore,
-        snapshot: normalizedSnapshot,
-        presentationMode,
-        reason: 'surprise_mode_off',
+        reason: policy?.reason || 'module_events_disabled',
+        policy,
         now: normalizedNow,
       }),
     }
@@ -534,6 +524,7 @@ export const runActivitySessionCheckpointEvent = ({
         snapshot: normalizedSnapshot,
         presentationMode,
         reason: 'cooldown_active',
+        policy,
         now: normalizedNow,
       }),
     }
@@ -554,13 +545,14 @@ export const runActivitySessionCheckpointEvent = ({
         snapshot: normalizedSnapshot,
         presentationMode,
         reason: 'daily_limit_reached',
+        policy,
         now: normalizedNow,
       }),
     }
   }
 
   const gate = evaluateRandomGate({
-    probability: probabilityForSurpriseMode(surpriseMode),
+    probability: policy.probability,
     randomValue,
     seed: seed || recordId,
   })
@@ -574,6 +566,7 @@ export const runActivitySessionCheckpointEvent = ({
         presentationMode,
         reason: gate.reason,
         gate,
+        policy,
         now: normalizedNow,
       }),
     }
@@ -588,6 +581,7 @@ export const runActivitySessionCheckpointEvent = ({
     triggerSource: 'random',
     status: 'triggered',
     reason: 'eligible_random_passed',
+    policySnapshot: policy,
     at: normalizedNow,
   })
   const pending = simulationStore?.upsertActivitySessionEventRecord?.(
@@ -598,6 +592,7 @@ export const runActivitySessionCheckpointEvent = ({
       reason: 'awaiting_resolution',
       gate,
       log,
+      policy,
       now: normalizedNow,
     }),
   )

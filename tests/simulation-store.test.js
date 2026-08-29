@@ -178,6 +178,40 @@ describe('simulation store', () => {
     expect(restoredFromStorage.createBackupSnapshot().settings.surpriseMode).toBe(SIMULATION_SURPRISE_MODE.OFF)
   })
 
+  test('preserves optional one-roll settlement receipts across storage hydration', () => {
+    const store = useSimulationStore()
+    store.resetForTesting()
+    const log = store.recordEventLog({
+      id: 'map_preview_settlement_d100_37_event_instance_preview_test',
+      eventId: 'map.production_arrival_briefing.v1',
+      moduleKey: 'map',
+      targetId: 'quiet-home',
+      triggerSource: SIMULATION_TRIGGER_SOURCE.MANUAL,
+      status: SIMULATION_EVENT_STATUS.TRIGGERED,
+      reason: 'map_preview_preview_steady',
+      settlement: {
+        instanceId: 'event_instance_preview_test',
+        choiceId: 'check_equipment',
+        outcomeId: 'preview_steady',
+        randomKind: 'd100',
+        roll: 37,
+        rangeMin: 1,
+        rangeMax: 100,
+        provenance: 'client_runtime',
+        canonicalMutation: 'none',
+        settledAt: Date.now(),
+      },
+      at: Date.now(),
+    })
+    store.saveNow()
+
+    setActivePinia(createPinia())
+    const restored = useSimulationStore()
+    expect(restored.eventLogs).toHaveLength(1)
+    expect(restored.eventLogs[0]).toEqual(log)
+    expect(restored.createBackupSnapshot().eventLogs[0].settlement).toEqual(log.settlement)
+  })
+
   test('creates, updates, deletes, and restores event-scoped review notes without mutating sources', () => {
     const store = useSimulationStore()
     store.resetForTesting()

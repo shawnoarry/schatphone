@@ -29,6 +29,7 @@ const props = defineProps({
   },
   eventInvitation: { type: Object, default: null },
   eventPreviewAvailable: { type: Boolean, default: false },
+  eventPreviewCompleted: { type: Boolean, default: false },
   canManage: { type: Boolean, default: false },
   pinVisible: { type: Boolean, default: true },
   t: { type: Function, required: true },
@@ -529,26 +530,36 @@ onBeforeUnmount(() => {
         </section>
 
         <section
-          v-else-if="eventPreviewAvailable"
-          class="map-place-event-invitation is-preview"
+          v-else-if="eventPreviewAvailable || eventPreviewCompleted"
+          :class="['map-place-event-invitation', 'is-preview', { 'is-complete': eventPreviewCompleted }]"
           data-testid="map-place-event-preview"
           aria-labelledby="map-place-event-preview-title"
         >
           <span class="map-place-event-invitation-icon" aria-hidden="true">
-            <i class="fas fa-flask"></i>
+            <i :class="eventPreviewCompleted ? 'fas fa-check' : 'fas fa-flask'"></i>
           </span>
           <div>
-            <h3 id="map-place-event-preview-title">{{ t('测试事件', 'Test event') }}</h3>
-            <p>{{ t('跳过前置条件，直接预览互动', 'Preview the interaction without prerequisites') }}</p>
+            <h3 id="map-place-event-preview-title">
+              {{ eventPreviewCompleted ? t('测试事件已完成', 'Test event completed') : t('测试事件', 'Test event') }}
+            </h3>
+            <p>{{
+              eventPreviewCompleted
+                ? t('本次进入已经获得结果', 'This visit already has a result')
+                : t('跳过前置条件，直接预览互动', 'Preview the interaction without prerequisites')
+            }}</p>
           </div>
           <button
             type="button"
-            :aria-label="t('打开测试事件', 'Open test event')"
-            :title="t('打开测试事件', 'Open test event')"
+            :aria-label="eventPreviewCompleted ? t('查看测试事件结果', 'Review test event result') : t('打开测试事件', 'Open test event')"
+            :title="eventPreviewCompleted ? t('查看测试事件结果', 'Review test event result') : t('打开测试事件', 'Open test event')"
             data-testid="map-place-preview-event"
             @click="emit('preview-event')"
           >
-            <i class="fas fa-chevron-right" aria-hidden="true"></i>
+            <template v-if="eventPreviewCompleted">
+              <i class="fas fa-receipt" aria-hidden="true"></i>
+              <span>{{ t('查看结果', 'Review') }}</span>
+            </template>
+            <i v-else class="fas fa-chevron-right" aria-hidden="true"></i>
           </button>
         </section>
       </div>
@@ -961,6 +972,19 @@ onBeforeUnmount(() => {
 .map-place-event-invitation.is-preview .map-place-event-invitation-icon { background: #17664f; }
 .map-place-event-invitation.is-preview p { color: #5b7167; }
 .map-place-event-invitation.is-preview button { color: #17664f; }
+.map-place-event-invitation.is-complete {
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  border-style: solid;
+}
+.map-place-event-invitation.is-complete button {
+  display: inline-flex;
+  width: auto;
+  min-width: 44px;
+  gap: 6px;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 850;
+}
 
 .map-place-focus-actions { position: relative; z-index: 2; display: grid; min-width: 0; grid-template-columns: repeat(3, 40px); align-items: center; justify-content: end; gap: 7px; margin-top: 11px; border-top: 1px solid #e3e8e5; background: rgba(252, 253, 252, 0.98); padding-top: 10px; }
 .map-place-focus-primary,

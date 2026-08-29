@@ -26,6 +26,7 @@ import SettingsAboutInfoCard from '../components/settings/SettingsAboutInfoCard.
 import SettingsAutomationSection from '../components/settings/SettingsAutomationSection.vue'
 import SettingsBackupSection from '../components/settings/SettingsBackupSection.vue'
 import SettingsCallAudioSection from '../components/settings/SettingsCallAudioSection.vue'
+import SettingsEventSection from '../components/settings/SettingsEventSection.vue'
 import SettingsGeneralSection from '../components/settings/SettingsGeneralSection.vue'
 import SettingsHapticsSection from '../components/settings/SettingsHapticsSection.vue'
 import SettingsLandingSection from '../components/settings/SettingsLandingSection.vue'
@@ -35,10 +36,7 @@ import SettingsRingtoneSection from '../components/settings/SettingsRingtoneSect
 import SettingsSoftwareUpdateSection from '../components/settings/SettingsSoftwareUpdateSection.vue'
 import SettingsStorageDiagnosticsSection from '../components/settings/SettingsStorageDiagnosticsSection.vue'
 import SettingsSubPageHeader from '../components/settings/SettingsSubPageHeader.vue'
-import {
-  SCHATPHONE_BUILD_CHANNEL,
-  SOFTWARE_UPDATE_RELEASE_NOTES,
-} from '../lib/app-update'
+import { SCHATPHONE_BUILD_CHANNEL, SOFTWARE_UPDATE_RELEASE_NOTES } from '../lib/app-update'
 import { runSimulationEventTick } from '../lib/simulation/event-tick-runner'
 import { getSimulationEventReasonCopy } from '../lib/simulation/event-reason-labels'
 import {
@@ -138,8 +136,9 @@ const globalSoundEffectsSettings = computed(() =>
 )
 const globalSoundEffectsProfile = computed(
   () =>
-    soundEffectsProfileOptions.value.find((profile) => profile.id === globalSoundEffectsSettings.value.profile) ||
-    soundEffectsProfileOptions.value[0],
+    soundEffectsProfileOptions.value.find(
+      (profile) => profile.id === globalSoundEffectsSettings.value.profile,
+    ) || soundEffectsProfileOptions.value[0],
 )
 
 const ringtoneOptions = computed(() =>
@@ -166,7 +165,9 @@ const globalCallAudioSettings = computed(() =>
 )
 const globalCallAudioProfile = computed(
   () =>
-    callAudioProfileOptions.value.find((profile) => profile.id === globalCallAudioSettings.value.profile) ||
+    callAudioProfileOptions.value.find(
+      (profile) => profile.id === globalCallAudioSettings.value.profile,
+    ) ||
     callAudioProfileOptions.value[0] ||
     getCallAudioProfile(DEFAULT_CALL_AUDIO_PROFILE),
 )
@@ -250,22 +251,17 @@ const {
 const simulationTickResultLabel = computed(() => {
   const result = simulationTickLastResult.value
   if (!result) return t('尚未运行', 'Not run yet')
-  const reason = typeof result.reason === 'string' && result.reason.trim()
-    ? result.reason.trim()
-    : result.ok
-      ? 'triggered'
-      : 'no_event_triggered'
+  const reason =
+    typeof result.reason === 'string' && result.reason.trim()
+      ? result.reason.trim()
+      : result.ok
+        ? 'triggered'
+        : 'no_event_triggered'
   const reasonCopy = getSimulationEventReasonCopy(reason)
   if (result.ok) {
-    return t(
-      `已触发事件：${reasonCopy.zh}`,
-      `Triggered event: ${reasonCopy.en}`,
-    )
+    return t(`已触发事件：${reasonCopy.zh}`, `Triggered event: ${reasonCopy.en}`)
   }
-  return t(
-    `本次未触发：${reasonCopy.zh}`,
-    `No event triggered: ${reasonCopy.en}`,
-  )
+  return t(`本次未触发：${reasonCopy.zh}`, `No event triggered: ${reasonCopy.en}`)
 })
 
 const simulationModuleLabel = (moduleKey = '') => {
@@ -316,8 +312,10 @@ const simulationEventLabel = (eventId = '') => {
     return t('Chat 角色取消拉黑', 'Chat role unblocked user')
   if (eventId === 'food_delivery.random_order_pilot.v1')
     return t('外卖随机订单 Pilot', 'Food Delivery random order pilot')
-  if (eventId === 'food_delivery.eta_update.v1') return t('外卖 ETA 更新', 'Food Delivery ETA update')
-  if (eventId === 'food_delivery.rider_delay.v1') return t('外卖骑手延迟', 'Food Delivery rider delay')
+  if (eventId === 'food_delivery.eta_update.v1')
+    return t('外卖 ETA 更新', 'Food Delivery ETA update')
+  if (eventId === 'food_delivery.rider_delay.v1')
+    return t('外卖骑手延迟', 'Food Delivery rider delay')
   if (eventId === 'food_delivery.restaurant_cancelled.v1')
     return t('外卖商家取消', 'Food Delivery restaurant cancelled')
   if (eventId === 'food_delivery.address_change.v1')
@@ -345,8 +343,9 @@ const simulationEventTargetLabel = (log = {}) => {
 }
 
 const simulationEventVariantLabel = (log = {}) => {
-  const parts = [log.worldContextId, log.variantId, log.variantPackId]
-    .filter((item) => typeof item === 'string' && item.trim())
+  const parts = [log.worldContextId, log.variantId, log.variantPackId].filter(
+    (item) => typeof item === 'string' && item.trim(),
+  )
   return parts.join(' · ')
 }
 
@@ -382,11 +381,12 @@ const runSimulationTickDiagnostic = async () => {
     simulationTickLastResult.value = result
     simulationTickLastRunAt.value = Date.now()
     const ok = result?.ok === true
-    const reason = typeof result?.reason === 'string' && result.reason.trim()
-      ? result.reason.trim()
-      : ok
-        ? 'triggered'
-        : 'skipped'
+    const reason =
+      typeof result?.reason === 'string' && result.reason.trim()
+        ? result.reason.trim()
+        : ok
+          ? 'triggered'
+          : 'skipped'
     const reasonCopy = getSimulationEventReasonCopy(reason)
     const pilotCount = Array.isArray(result?.pilotResults) ? result.pilotResults.length : 0
 
@@ -398,14 +398,8 @@ const runSimulationTickDiagnostic = async () => {
       model: `pilots:${pilotCount}`,
       code: ok ? 'SIMULATION_TICK_TRIGGERED' : 'SIMULATION_TICK_SKIPPED',
       message: ok
-        ? t(
-            `事件 tick 已触发：${reasonCopy.zh}。`,
-            `Simulation tick triggered: ${reasonCopy.en}.`,
-          )
-        : t(
-            `事件 tick 未触发：${reasonCopy.zh}。`,
-            `Simulation tick skipped: ${reasonCopy.en}.`,
-          ),
+        ? t(`事件 tick 已触发：${reasonCopy.zh}。`, `Simulation tick triggered: ${reasonCopy.en}.`)
+        : t(`事件 tick 未触发：${reasonCopy.zh}。`, `Simulation tick skipped: ${reasonCopy.en}.`),
       createdAt: simulationTickLastRunAt.value,
     })
 
@@ -429,7 +423,15 @@ const goHome = () => {
 
 const normalizeSettingsMenuFromQuery = (value) => {
   const raw = typeof value === 'string' ? value.trim() : ''
-  const allowed = new Set(['general', 'notification', 'automation', 'about', 'software-update', 'sound'])
+  const allowed = new Set([
+    'general',
+    'notification',
+    'events',
+    'automation',
+    'about',
+    'software-update',
+    'sound',
+  ])
   return allowed.has(raw) ? raw : ''
 }
 
@@ -472,7 +474,8 @@ const saveGeneralSettings = () => {
   settings.value.system.backupReminderIntervalHours = normalizeBackupReminderIntervalHours(
     settings.value.system.backupReminderIntervalHours,
   )
-  settings.value.system.backupReminderEnabled = settings.value.system.backupReminderEnabled !== false
+  settings.value.system.backupReminderEnabled =
+    settings.value.system.backupReminderEnabled !== false
   systemStore.saveNow()
   generalSaved.value = true
   if (generalSavedTimerId) clearTimeout(generalSavedTimerId)
@@ -598,9 +601,7 @@ const automationRuntimePolicy = computed(() =>
 
 const simulationForegroundTickIntervalMinutes = computed(() => {
   const intervalMs = Number(simulationStore.settings?.foregroundSessionTickIntervalMs)
-  const safeIntervalMs = Number.isFinite(intervalMs) && intervalMs > 0
-    ? intervalMs
-    : 10 * 60 * 1000
+  const safeIntervalMs = Number.isFinite(intervalMs) && intervalMs > 0 ? intervalMs : 10 * 60 * 1000
   return Math.max(1, Math.round(safeIntervalMs / 60_000))
 })
 
@@ -654,9 +655,9 @@ const simulationForegroundTickCoverageItems = computed(() => [
 const isSimulationForegroundTickLog = (log = {}) => {
   const eventId = typeof log.eventId === 'string' ? log.eventId : ''
   return (
-    eventId === 'simulation.session_tick.v1'
-    || eventId.startsWith('food_delivery.')
-    || eventId.startsWith('chat.social.')
+    eventId === 'simulation.session_tick.v1' ||
+    eventId.startsWith('food_delivery.') ||
+    eventId.startsWith('chat.social.')
   )
 }
 
@@ -716,8 +717,10 @@ const simulationSurpriseModeOptions = computed(() => [
 const simulationSurpriseModeCurrentOption = computed(() => {
   const mode = simulationStore.settings?.surpriseMode || SIMULATION_SURPRISE_MODE.LOW
   return (
-    simulationSurpriseModeOptions.value.find((option) => option.value === mode)
-    || simulationSurpriseModeOptions.value.find((option) => option.value === SIMULATION_SURPRISE_MODE.LOW)
+    simulationSurpriseModeOptions.value.find((option) => option.value === mode) ||
+    simulationSurpriseModeOptions.value.find(
+      (option) => option.value === SIMULATION_SURPRISE_MODE.LOW,
+    )
   )
 })
 
@@ -772,10 +775,7 @@ const simulationModuleEventControls = computed(() => [
   {
     id: 'map',
     moduleKey: 'map',
-    label: t(
-      '地图行程途中事件 / Map journey events',
-      'Map journey events / 地图行程途中事件',
-    ),
+    label: t('地图行程途中事件 / Map journey events', 'Map journey events / 地图行程途中事件'),
     enabled: simulationStore.isModuleEventsEnabled('map'),
     status: simulationStore.isModuleEventsEnabled('map')
       ? t('允许 / Allowed', 'Allowed / 允许')
@@ -788,10 +788,7 @@ const simulationModuleEventControls = computed(() => [
   {
     id: ACTIVITY_SESSION_EVENT_MODULE_KEY,
     moduleKey: ACTIVITY_SESSION_EVENT_MODULE_KEY,
-    label: t(
-      '活动专注事件 / Activity Session events',
-      'Activity Session events / 活动专注事件',
-    ),
+    label: t('活动专注事件 / Activity Session events', 'Activity Session events / 活动专注事件'),
     enabled: simulationStore.isModuleEventsEnabled(ACTIVITY_SESSION_EVENT_MODULE_KEY),
     status: simulationStore.isModuleEventsEnabled(ACTIVITY_SESSION_EVENT_MODULE_KEY)
       ? t('允许 / Allowed', 'Allowed / 允许')
@@ -962,7 +959,10 @@ const openWorldHub = () => {
 const openNetworkReports = (moduleKey = 'all', levelKey = 'all') => {
   const normalizedModule = typeof moduleKey === 'string' ? moduleKey.trim() : 'all'
   const normalizedLevel = typeof levelKey === 'string' ? levelKey.trim() : 'all'
-  if ((!normalizedModule || normalizedModule === 'all') && (!normalizedLevel || normalizedLevel === 'all')) {
+  if (
+    (!normalizedModule || normalizedModule === 'all') &&
+    (!normalizedLevel || normalizedLevel === 'all')
+  ) {
     router.push({
       path: '/network',
       query: buildReturnSourceQuery('settings', route),
@@ -1023,8 +1023,13 @@ if (initialMenu) {
 
 <template>
   <div class="settings-shell w-full h-full bg-[#f2f2f7] flex flex-col text-black">
-    <div class="settings-header pt-12 pb-4 px-4 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-200 flex items-center">
-      <button @click="goHome" class="settings-nav-button mr-2 text-blue-500 flex items-center gap-1 text-sm font-medium">
+    <div
+      class="settings-header pt-12 pb-4 px-4 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-200 flex items-center"
+    >
+      <button
+        @click="goHome"
+        class="settings-nav-button mr-2 text-blue-500 flex items-center gap-1 text-sm font-medium"
+      >
         <i class="fas fa-chevron-left"></i> {{ t('主页', 'Home') }}
       </button>
       <h1 class="text-2xl font-bold flex-1">{{ t('设置', 'Settings') }}</h1>
@@ -1037,6 +1042,7 @@ if (initialMenu) {
         @open-worldbook="openWorldBook"
         @open-general="openSubPage('general')"
         @open-software-update="openSubPage('software-update')"
+        @open-events="openSubPage('events')"
         @open-automation="openSubPage('automation')"
         @open-notification="openSubPage('notification')"
         @open-sound="openSubPage('sound')"
@@ -1050,7 +1056,9 @@ if (initialMenu) {
         class="space-y-2 scroll-mt-4"
         data-testid="settings-backup-focus"
       >
-        <div class="settings-section-label px-1 text-[11px] text-gray-500 font-medium">{{ t('数据与安全', 'Data & Security') }}</div>
+        <div class="settings-section-label px-1 text-[11px] text-gray-500 font-medium">
+          {{ t('数据与安全', 'Data & Security') }}
+        </div>
         <SettingsBackupSection
           :backup-copy-tone="backupCopyTone"
           :backup-include-asset-package="backupIncludeAssetPackage"
@@ -1077,7 +1085,10 @@ if (initialMenu) {
         @change="importData"
       />
 
-      <div v-if="activeMenu === 'sound'" class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
+      <div
+        v-if="activeMenu === 'sound'"
+        class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in"
+      >
         <SettingsSubPageHeader
           title-zh="声音与触感"
           title-en="Sounds & Haptics"
@@ -1133,7 +1144,10 @@ if (initialMenu) {
         </div>
       </div>
 
-      <div v-if="activeMenu === 'general'" class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
+      <div
+        v-if="activeMenu === 'general'"
+        class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in"
+      >
         <SettingsGeneralSection
           :language="settings.system.language"
           :timezone="settings.system.timezone"
@@ -1146,12 +1160,17 @@ if (initialMenu) {
           @update-language="settings.system.language = $event"
           @update-timezone="settings.system.timezone = $event"
           @update-backup-reminder-enabled="settings.system.backupReminderEnabled = $event"
-          @update-backup-reminder-interval-hours="settings.system.backupReminderIntervalHours = $event"
+          @update-backup-reminder-interval-hours="
+            settings.system.backupReminderIntervalHours = $event
+          "
           @save="saveGeneralSettings"
         />
       </div>
 
-      <div v-if="activeMenu === 'software-update'" class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
+      <div
+        v-if="activeMenu === 'software-update'"
+        class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in"
+      >
         <SettingsSubPageHeader
           title-zh="软件更新"
           title-en="Software Update"
@@ -1173,7 +1192,10 @@ if (initialMenu) {
         </div>
       </div>
 
-      <div v-if="activeMenu === 'automation'" class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
+      <div
+        v-if="activeMenu === 'automation'"
+        class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in"
+      >
         <SettingsSubPageHeader
           title-zh="AI 自动响应"
           title-en="AI Automation"
@@ -1183,6 +1205,24 @@ if (initialMenu) {
           <SettingsAutomationSection
             :ai-automation="settings.aiAutomation"
             :automation-runtime-policy="automationRuntimePolicy"
+            :automation-saved="automationSaved"
+            @update-automation-field="updateAutomationField"
+            @update-module-enabled="updateAutomationModuleEnabled"
+            @update-module-priority="updateAutomationModulePriority"
+            @open-chat-automation="openChatAutomation"
+            @open-network-reports="openNetworkReports"
+            @save-automation-settings="saveAutomationSettings"
+          />
+        </div>
+      </div>
+
+      <div
+        v-if="activeMenu === 'events'"
+        class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in"
+      >
+        <SettingsSubPageHeader title-zh="事件" title-en="Events" @close="closeSubPage" />
+        <div class="settings-subpage-scroll p-4 space-y-4 overflow-y-auto no-scrollbar">
+          <SettingsEventSection
             :simulation-settings="simulationStore.settings"
             :simulation-foreground-tick-interval-minutes="simulationForegroundTickIntervalMinutes"
             :simulation-foreground-tick-runtime-label="simulationForegroundTickRuntimeLabel"
@@ -1193,30 +1233,24 @@ if (initialMenu) {
             :simulation-module-event-controls="simulationModuleEventControls"
             :simulation-event-presentation-controls="simulationEventPresentationControls"
             :mini-scene-presentation-controls="miniScenePresentationControls"
-            :automation-saved="automationSaved"
-            @update-automation-field="updateAutomationField"
-            @update-module-enabled="updateAutomationModuleEnabled"
-            @update-module-priority="updateAutomationModulePriority"
             @update-simulation-foreground-tick-enabled="updateSimulationForegroundTickEnabled"
-            @update-simulation-foreground-tick-interval-minutes="updateSimulationForegroundTickIntervalMinutes"
+            @update-simulation-foreground-tick-interval-minutes="
+              updateSimulationForegroundTickIntervalMinutes
+            "
             @update-simulation-surprise-mode="updateSimulationSurpriseMode"
             @update-simulation-module-events-enabled="updateSimulationModuleEventsEnabled"
             @update-simulation-event-presentation-mode="updateSimulationEventPresentationMode"
             @update-mini-scene-presentation-mode="updateMiniScenePresentationMode"
-            @open-chat-automation="openChatAutomation"
             @open-world-hub="openWorldHub"
-            @open-network-reports="openNetworkReports"
-            @save-automation-settings="saveAutomationSettings"
           />
         </div>
       </div>
 
-      <div v-if="activeMenu === 'notification'" class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
-        <SettingsSubPageHeader
-          title-zh="通知"
-          title-en="Notifications"
-          @close="closeSubPage"
-        />
+      <div
+        v-if="activeMenu === 'notification'"
+        class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in"
+      >
+        <SettingsSubPageHeader title-zh="通知" title-en="Notifications" @close="closeSubPage" />
         <div class="settings-subpage-scroll p-4 space-y-4 overflow-y-auto no-scrollbar">
           <SettingsPushSection
             :settings="settings"
@@ -1253,12 +1287,11 @@ if (initialMenu) {
         </div>
       </div>
 
-      <div v-if="activeMenu === 'about'" class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
-        <SettingsSubPageHeader
-          title-zh="关于"
-          title-en="About"
-          @close="closeSubPage"
-        />
+      <div
+        v-if="activeMenu === 'about'"
+        class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in"
+      >
+        <SettingsSubPageHeader title-zh="关于" title-en="About" @close="closeSubPage" />
         <div class="settings-subpage-scroll p-4 space-y-4 overflow-y-auto no-scrollbar">
           <SettingsAboutInfoCard />
           <SettingsStorageDiagnosticsSection

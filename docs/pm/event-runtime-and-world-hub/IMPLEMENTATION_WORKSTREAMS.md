@@ -1,6 +1,6 @@
 # Event Runtime And World Hub Implementation Workstreams / 事件运行时与世界中枢实施工作流
 
-Updated: 2026-08-21
+Updated: 2026-08-29
 
 ## 1. Workstream A: Event Engine Foundation
 
@@ -9,8 +9,13 @@ Updated: 2026-08-21
 - condition evaluator
 - simulation store
 - adapter seams
+- shared optional-event policy Interface for module permission, intensity, family probability, presentation mode, and immutable audit snapshots
 - body-free Map-pack current/history reference projection for World Suite safety; Event Runtime retains every event body and exposes only stable reference IDs plus `mapPackId`
 - landed Chat social-event review seam for role-initiated greeting, refusal, block, restore, and unblock proposals, including Chat AI output and the narrow foreground/session runtime greeting source
+
+Current landed guardrail:
+
+- Event Policy V1 is consumed by Activity Session, the retained Map Journey compatibility Adapter, and the production Map place invitation. New runtime logs and the durable Activity Session/Map Journey pilot records preserve normalized policy snapshots. The dedicated `Settings > Events` page exposes only the existing persisted frequency, module-permission, supported presentation, and foreground-check controls; UI-to-policy tests prove their behavior. Outcome mode, consequence severity, reroll, pause-all persistence, and interactive HTML remain unimplemented and absent from the UI.
 
 ## 2. Workstream B: Relationship Runtime
 
