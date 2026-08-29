@@ -72,6 +72,7 @@ Mini Scene foundation: Event Runtime remains the shared Module's only functional
 10. `NOTIFICATION_WORKPLACE_FANDOM_TICKETS_TRAVEL_SHELL_PLAN.md` for the accepted next shell sequence, system Notification Center entry model, Organization Workplace boundary, unified fandom authorization, Tickets, and Travel decomposition
 11. `NEXT_EVENT_PRODUCTION_PLAN_AFTER_SHELL_PORTFOLIO.md` for the accepted Work Hub-first production order, internal-organization versus external-opportunity boundary, ordinary organization loop, and first proposed Work Hub-native event chain; this is a planning gate, not implementation authorization
 12. `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md` when work touches Self Profile eligibility, dynamic world incidents/arcs, forum/social/news propagation, claims, or clues
+13. `ARBITRARY_WORLD_RUNTIME_DISCUSSION_2026-08-29.md` for the non-authoritative discussion of arbitrary user-authored worlds, world switching, model/code responsibility, semantic failure modes, and possible validation experiments; it is not a contract, roadmap item, or implementation authorization
 
 Also read when needed:
 
