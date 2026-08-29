@@ -1,6 +1,6 @@
 # Map Place Media Inventory
 
-Updated: 2026-08-28
+Updated: 2026-08-29
 
 ## Purpose
 
@@ -22,14 +22,14 @@ hero completion; they do not freeze aspect ratio, crop, focal point, or derivati
 
 | Scope | Place count | Place-specific media now | Remaining place-specific decisions | Acquisition rule |
 | --- | ---: | ---: | ---: | --- |
-| Seoul built-in catalog | 106 | 104 places with reviewed real-photo media | 2 | exact-photo first for identity-sensitive places; representative or generated assets allowed for everyday facilities |
+| Seoul built-in catalog | 106 | 106 places with reviewed real-photo media | 0 | exact-photo first for identity-sensitive places; representative or generated assets allowed for everyday facilities |
 | Fictional built-in catalog | 7 | 0 generated reconstructions | 7 | project-authored generation |
 | User-created places | unbounded | depends on user import/generation | one per created place when desired | user media first, optional generation |
-| **Fixed built-in target** | **113** | **104** | **9** | use tiered acquisition for Seoul; generate fictional places |
+| **Fixed built-in target** | **113** | **106** | **7** | Seoul photo coverage complete; generate fictional places |
 
 The existing shared Seoul and fictional/category fallbacks fill the image slot but are not counted as place-specific completion.
 
-One hundred of the 104 Seoul places with reviewed media currently have an approved exact-photo hero. The other four have reviewed detail media but still require a card-hero decision, so six Seoul hero decisions remain after including the two places without reviewed media. Detail-only coverage may be grade-B area context or a grade-A exact-place/context image whose selected composition is useful in the gallery but not suitable as the card identity image.
+All 106 Seoul places now have a reviewed real-photo card decision. One hundred four use grade-A exact-photo heroes. CU BGF Headquarters Store and GS25 Gangnam Central use user-selected, source-traced same-brand photographs as grade-D brand representatives; their card copy explicitly says the image is not the recorded branch. Existing detail galleries remain intact and continue to distinguish exact-place/context imagery from grade-B area views.
 
 ## Seoul Search Plan
 
@@ -56,7 +56,7 @@ These places have a named building, venue, campus, park, transport facility, or 
 | Banks | 4 | Bank of Korea Main Building; KB Kookmin Bank New Headquarters; Shinhan Bank Head Office; Woori Bank Head Office |
 | Public-safety institutions | 4 | Korean National Police Agency; Seoul Metropolitan Police Agency; Seoul Fire and Disaster Headquarters; Gangnam Fire Station |
 
-Current media coverage inside this group is complete at 79 places. Seventy-six grade-A heroes now also include JK Plastic Surgery alongside the earlier Batch 09 additions. Three places remain detail-only: SM Entertainment HQ has exact tower context plus its earlier Seongsu area view, E-Mart Wangsimni has exact parking-entry context, and THE PLUS Plastic Surgery has an exact interior reception view. These three cards remain on category fallback until a card-suitable exact/generated hero is separately approved.
+Current media coverage inside this group is complete at 79 places, and all 79 now have grade-A heroes. The hero-completion round promotes SM Entertainment HQ, E-Mart Wangsimni, and THE PLUS Plastic Surgery from detail-only coverage using the user-selected D Tower entrance, Bitplex/E-Mart building panorama, and THE PLUS branded reception wall. Their earlier detail galleries remain unchanged.
 
 ### Detail area-atmosphere candidates: 27 places
 
@@ -72,11 +72,11 @@ These records describe a district, residential area, street cluster, privacy-sen
 | Pharmacy districts | 3 | Jongno 5-ga Pharmacy Street; Namdaemun Pharmacy District; Gangnam Station Pharmacy District |
 | Restaurant branches | 5 | Myeongdong Kyoja Main Store; London Bagel Museum Anguk; Knotted Cheongdam; Kyochon Chicken Yeoksam No. 1; EGGDROP Gangnam Woosung |
 
-Current usable coverage inside this group is 25 places. Batch 11 promotes Myeongdong Kyoja, Namdaemun Pharmacy District, London Bagel Museum Anguk, Hongdae, Sanggye Jugong, Acro River Park, Hannam The Hill, and Club FF to exact-photo heroes and adds their selected detail slides. The Sillim residential area remains detail-only with one verified local area photograph. Batch 09 supplies five exact heroes, while Batch 10 adds exact heroes and galleries for Soonsoo Cheongdam, 7-Eleven Myeongdong, Club NB2, Club Aura, LH Gangnam Complex 3, Mokdong New Town, Jongno 5-ga Pharmacy Street, Gangnam Station Pharmacy District, Knotted Cheongdam, Kyochon Chicken Yeoksam No. 1, and EGGDROP Gangnam Woosung. Only CU BGF Headquarters Store and the GS25 record still lack reviewed real media; three card-hero decisions remain in this group.
+Current usable coverage inside this group is complete at 27 places. Batch 11 promotes Myeongdong Kyoja, Namdaemun Pharmacy District, London Bagel Museum Anguk, Hongdae, Sanggye Jugong, Acro River Park, Hannam The Hill, and Club FF to exact-photo heroes and adds their selected detail slides. The hero-completion round adds a grade-A district hero for the Sillim residential-area record and grade-D source-traced brand representatives for CU BGF Headquarters Store and GS25 Gangnam Central. Batch 09 supplies five exact heroes, while Batch 10 adds exact heroes and galleries for Soonsoo Cheongdam, 7-Eleven Myeongdong, Club NB2, Club Aura, LH Gangnam Complex 3, Mokdong New Town, Jongno 5-ga Pharmacy Street, Gangnam Station Pharmacy District, Knotted Cheongdam, Kyochon Chicken Yeoksam No. 1, and EGGDROP Gangnam Woosung.
 
 An exact source-traced photo may satisfy the card hero when the source page proves the branch, facade, or documented interior and the image passes identity and crop review. A truthful grade B remains valuable detail context, but it cannot be promoted into the card merely because an exact photo is unavailable.
 
-For CU, GS25, 7-Eleven, pharmacies, gas stations, and later equivalent everyday records, exact-branch photography is not a completion requirement. The preferred low-cost sequence is: reuse an already reviewed same-brand asset; use one source-traced representative brand/store photo; generate one reusable brand/category visual; then retain the generic category fallback. Shared or generated imagery must be labeled as representative or generated and must not claim to show the recorded address. Batch 11 therefore does not continue repeated exact-store searches for CU BGF Headquarters Store or the GS25 record.
+For CU, GS25, 7-Eleven, pharmacies, gas stations, and later equivalent everyday records, exact-branch photography is not a completion requirement. The preferred low-cost sequence is: reuse an already reviewed same-brand asset; use one source-traced representative brand/store photo; generate one reusable brand/category visual; then retain the generic category fallback. Shared or generated imagery must be labeled as representative or generated and must not claim to show the recorded address. The hero-completion round applies this rule to CU and GS25 with explicit `品牌代表图 / Brand representative` labels and alt/truth copy naming that the images are not the recorded branches.
 
 ## Media Adaptation Record
 

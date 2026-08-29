@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "baseUrl": "https://cloudflare-imgbed-7z3.pages.dev",
-  "updatedAt": "2026-08-28T17:59:05.677Z",
+  "updatedAt": "2026-08-29T21:19:41.684Z",
   "assets": [
     {
       "batchId": "migration-2026-08-11",
@@ -5091,6 +5091,18 @@
       "verifiedAt": "2026-08-23T08:55:17.795Z"
     },
     {
+      "batchId": "map-place-media-hero-completion-20260829",
+      "path": "output/imagegen/map-place-media-search-20260828/reviewed-runtime-hero-completion/seoul-cu-bgf-hq-brand-representative-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-cu-bgf-hq-brand-representative-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-cu-bgf-hq-brand-representative-v1.webp",
+      "bytes": 176620,
+      "sha256": "5ca02ffa0010d9e854c5dfe57d57814a2096db721ac1144f6a1e61fec1104fdc",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-29T21:19:41.675Z"
+    },
+    {
       "batchId": "map-place-media-runtime-path-repair-20260828",
       "path": "output/imagegen/map-place-media-search-20260827/reviewed-runtime-batch-09/seoul-cube-hq-gallery-01-v1.webp",
       "aliasPaths": [],
@@ -5233,6 +5245,18 @@
       "sha256": "3e1bb4508ff8fe475a20745e522855051739e971a4482e33f0b69edab29d94fd",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-28T17:58:58.473Z"
+    },
+    {
+      "batchId": "map-place-media-hero-completion-20260829",
+      "path": "output/imagegen/map-place-media-search-20260828/reviewed-runtime-hero-completion/seoul-emart-wangsimni-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-emart-wangsimni-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-emart-wangsimni-hero-v1.webp",
+      "bytes": 123072,
+      "sha256": "761027c22adaa2f4367bd20bb90843aca2f4f6c3d5f557f3ed5982dd93360559",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-29T21:19:41.170Z"
     },
     {
       "batchId": "map-place-media-gallery-expansion-20260822",
@@ -5521,6 +5545,18 @@
       "sha256": "3687768d635c5383820820eb8bbbf037d3b8172d727776a467a19b83af981a69",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-23T11:57:58.999Z"
+    },
+    {
+      "batchId": "map-place-media-hero-completion-20260829",
+      "path": "output/imagegen/map-place-media-search-20260828/reviewed-runtime-hero-completion/seoul-gs25-gangnam-central-brand-representative-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gs25-gangnam-central-brand-representative-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gs25-gangnam-central-brand-representative-v1.webp",
+      "bytes": 100566,
+      "sha256": "a23d6c49d1e6db5ef3323a9cd593893c2c45103c04574fe4cfb49b1baff57b3e",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-29T21:19:41.260Z"
     },
     {
       "batchId": "map-place-media-integration-20260822",
@@ -7287,6 +7323,18 @@
       "verifiedAt": "2026-08-15T05:53:14.018Z"
     },
     {
+      "batchId": "map-place-media-hero-completion-20260829",
+      "path": "output/imagegen/map-place-media-search-20260828/reviewed-runtime-hero-completion/seoul-sillim-one-room-district-hero-v2.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-sillim-one-room-district-hero-v2.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-sillim-one-room-district-hero-v2.webp",
+      "bytes": 224770,
+      "sha256": "04f25e99ee090ced4e20e4b55aa3687debb565a58d25150db377d12e35966a2b",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-29T21:19:41.402Z"
+    },
+    {
       "batchId": "map-place-media-batch-06-v2-20260823",
       "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-06/seoul-sk-seorin-gallery-01-v1.webp",
       "aliasPaths": [],
@@ -7381,6 +7429,18 @@
       "sha256": "dc86566f95d5c4a5e283b70cc6b82149c0fdd3af48cc7320cdb51ef4fd076a8a",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-15T05:53:14.999Z"
+    },
+    {
+      "batchId": "map-place-media-hero-completion-20260829",
+      "path": "output/imagegen/map-place-media-search-20260828/reviewed-runtime-hero-completion/seoul-sm-hq-hero-v2.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-sm-hq-hero-v2.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-sm-hq-hero-v2.webp",
+      "bytes": 290382,
+      "sha256": "3876bab63d32caacac5e14d42f5045c0bf383893abbd46985f3c1bfe5bf0ee87",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-29T21:19:40.864Z"
     },
     {
       "batchId": "map-place-media-batch-10-20260827",
@@ -7525,6 +7585,18 @@
       "sha256": "91bb22ed29fc65cd0c0b9d3f9ed7ac8feec48a1f31f622e587d9b8e54fc3d74c",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-28T17:59:05.419Z"
+    },
+    {
+      "batchId": "map-place-media-hero-completion-20260829",
+      "path": "output/imagegen/map-place-media-search-20260828/reviewed-runtime-hero-completion/seoul-the-plus-plastic-surgery-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-the-plus-plastic-surgery-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-the-plus-plastic-surgery-hero-v1.webp",
+      "bytes": 46244,
+      "sha256": "84ceaadb4f87597dfd3b7e61fc11ea750ed04c2dee966771a1812a0a78b8e461",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-29T21:19:41.092Z"
     },
     {
       "batchId": "map-place-media-times-square-gallery-20260822",

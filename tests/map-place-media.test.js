@@ -154,12 +154,19 @@ const APPROVED_HERO_BATCH_11_IDS = [
   'seoul-club-ff',
 ]
 
-const AREA_DETAIL_ONLY_PLACE_IDS = [
+const HERO_COMPLETION_EXACT_IDS = [
   'seoul-sm-hq',
   'seoul-sillim-one-room-district',
   'seoul-emart-wangsimni',
   'seoul-the-plus-plastic-surgery',
 ]
+
+const HERO_COMPLETION_BRAND_REPRESENTATIVE_IDS = [
+  'seoul-cu-bgf-hq',
+  'seoul-gs25-gangnam-central',
+]
+
+const AREA_DETAIL_ONLY_PLACE_IDS = []
 
 const INTEGRATED_GALLERY_COUNTS = {
   'seoul-gwanghwamun': 4,
@@ -222,7 +229,7 @@ const INTEGRATED_GALLERY_COUNTS = {
   'seoul-lotte-department-main': 3,
   'seoul-lotte-avenuel-world-tower': 3,
   'seoul-myeongdong-kyoja-main': 3,
-  'seoul-sillim-one-room-district': 2,
+  'seoul-sillim-one-room-district': 3,
   'seoul-namdaemun-pharmacy-district': 4,
   'seoul-london-bagel-museum-anguk': 4,
   'seoul-hongdae': 4,
@@ -233,11 +240,11 @@ const INTEGRATED_GALLERY_COUNTS = {
   'seoul-starship-hq': 2,
   'seoul-hyundai-apgujeong-main': 3,
   'seoul-id-hospital': 2,
-  'seoul-sm-hq': 6,
+  'seoul-sm-hq': 7,
   'seoul-cube-hq': 2,
-  'seoul-emart-wangsimni': 3,
+  'seoul-emart-wangsimni': 4,
   'seoul-homeplus-world-cup': 2,
-  'seoul-the-plus-plastic-surgery': 2,
+  'seoul-the-plus-plastic-surgery': 3,
   'seoul-cgv-wangsimni': 3,
   'seoul-jennyhouse-cheongdam-hill': 2,
   'seoul-a-by-bom-cheongdam': 2,
@@ -256,6 +263,8 @@ const INTEGRATED_GALLERY_COUNTS = {
   'seoul-knotted-cheongdam': 4,
   'seoul-kyochon-chicken-yeoksam-1': 2,
   'seoul-eggdrop-gangnam-woosung': 3,
+  'seoul-cu-bgf-hq': 1,
+  'seoul-gs25-gangnam-central': 1,
 }
 
 describe('map place media governance', () => {
@@ -273,7 +282,7 @@ describe('map place media governance', () => {
 
   test('validates the reviewed media registry', () => {
     const seoulPlaceIds = new Set(getMapPackById('real-seoul-v1').places.map((place) => place.id))
-    expect(MAP_PLACE_MEDIA_RECORDS).toHaveLength(254)
+    expect(MAP_PLACE_MEDIA_RECORDS).toHaveLength(260)
     for (const record of MAP_PLACE_MEDIA_RECORDS) {
       expect(validateMapPlaceMediaRecord(record)).toEqual({ valid: true, errors: [] })
     }
@@ -433,6 +442,36 @@ describe('map place media governance', () => {
         kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
         authenticityGrade: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.EXACT_PLACE,
         slot: MAP_PLACE_MEDIA_SLOT.HERO,
+        source: {
+          type: 'source_traced_external_photo',
+          rightsStatus: 'source_traced_personal_project_use',
+          usageScope: 'personal_project',
+        },
+      })
+    }
+
+    for (const placeId of HERO_COMPLETION_EXACT_IDS) {
+      expect(getMapPlaceMediaRecord('real-seoul-v1', placeId)).toMatchObject({
+        placeId,
+        kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+        authenticityGrade: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.EXACT_PLACE,
+        slot: MAP_PLACE_MEDIA_SLOT.HERO,
+        source: {
+          type: 'source_traced_external_photo',
+          rightsStatus: 'source_traced_personal_project_use',
+          usageScope: 'personal_project',
+        },
+      })
+    }
+
+    for (const placeId of HERO_COMPLETION_BRAND_REPRESENTATIVE_IDS) {
+      expect(getMapPlaceMediaRecord('real-seoul-v1', placeId)).toMatchObject({
+        placeId,
+        kind: MAP_PLACE_MEDIA_KIND.CATEGORY_FALLBACK,
+        authenticityGrade: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.GENERIC,
+        slot: MAP_PLACE_MEDIA_SLOT.HERO,
+        labelZh: '品牌代表图',
+        labelEn: 'Brand representative',
         source: {
           type: 'source_traced_external_photo',
           rightsStatus: 'source_traced_personal_project_use',

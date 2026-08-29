@@ -21,7 +21,7 @@ The current implementation is `src/lib/map-place-media.js`. The initial pilot ev
 | `src/lib/seoul-map-food-places.js` | 5 | reviewed Food Delivery-linked restaurant branches |
 | **Total** | **106** | versioned Map-owned catalog |
 
-Every built-in or player place resolves one image-backed `hero` media presentation. A reviewed `exact_photo` or `generated_reconstruction` hero wins; otherwise Map renders an explicit category fallback asset. `area_atmosphere` is detail-only and can never replace the card hero. A reviewed place may additionally expose `detail_gallery` records. Missing exact-place photography therefore never produces an empty card and never promotes a nearby street or district into false place identity.
+Every built-in or player place resolves one image-backed `hero` media presentation. A reviewed `exact_photo` or `generated_reconstruction` hero wins; an everyday facility may instead use a source-traced same-brand representative photo under grade `D / category_fallback`, with explicit representative copy; otherwise Map renders the shared category fallback asset. `area_atmosphere` is detail-only and can never replace the card hero. A reviewed place may additionally expose `detail_gallery` records. Missing exact-place photography therefore never produces an empty card and never promotes a nearby street or district into false place identity.
 
 ## Schema
 
@@ -33,13 +33,13 @@ Each reviewed record contains:
 | `id` | immutable media-record ID |
 | `mapPackId`, `placeId` | canonical Map linkage; no provider place ID |
 | `slot` | `hero` for the single overview image or `detail_gallery` for detail-only slides; `area_atmosphere` requires `detail_gallery` |
-| `kind` | `exact_photo`, `area_atmosphere`, `generated_reconstruction`, or `category_fallback` |
+| `kind` | `exact_photo`, `area_atmosphere`, `generated_reconstruction`, or `category_fallback`; a source-traced same-brand representative remains `category_fallback` rather than claiming exact identity |
 | `authenticityGrade` | `A`, `B`, `C`, or `D`, mapped exactly to `kind` |
 | `asset` | approved public runtime URL, dimensions, MIME, alt text, and SHA-256; category fallback also requires an image asset |
 | `source` | source type, provider, author/generator, source page, access date, source SHA-256, disclosed changes, and either reusable-license metadata or the bounded personal-project usage scope |
 | `review` | status, date, reviewer, and source-archive batch |
 
-The validator fails closed when identity, grade, slot/kind compatibility, runtime location, source page, attribution, hash, alt text, review evidence, and the applicable reusable-license or personal-project usage fields are incomplete. A future `area_atmosphere + hero` record is invalid even when every source field is otherwise complete.
+The validator fails closed when identity, grade, slot/kind compatibility, runtime location, source page, attribution, hash, alt text, review evidence, and the applicable reusable-license or personal-project usage fields are incomplete. A project-rendered category fallback retains `system_fallback` review semantics; a source-traced brand representative instead requires the normal approved-photo evidence and explicit representative presentation copy. A future `area_atmosphere + hero` record is invalid even when every source field is otherwise complete.
 
 ## Detail Slots
 
@@ -50,7 +50,7 @@ has only surrounding-area media, the overview uses the category fallback while P
 Details starts directly with the labeled area slide; the fallback is not repeated as
 photographic evidence.
 
-1. `overview image`: a recognition-oriented image paired with category and a one-sentence introduction. It must identify the specific place (`exact_photo`), present an explicitly generated interpretation (`generated_reconstruction`), or admit missing identity evidence (`category_fallback`). A nearby street, district, interior context, or general atmosphere is never eligible.
+1. `overview image`: a recognition-oriented image paired with category and a one-sentence introduction. It must identify the specific place (`exact_photo`), present an explicitly generated interpretation (`generated_reconstruction`), or admit missing exact identity evidence (`category_fallback`). A grade-D same-brand photograph must say `brand representative` and name that it is not the recorded branch. A nearby street, district, interior context, or general atmosphere is never eligible.
 2. `detail gallery`: a larger place-inspection surface. Buttons, keyboard arrows, and horizontal touch swipes move between slides. Every slide retains its own truth label and attribution; surrounding-area imagery cannot inherit the hero's exact-place label.
 3. `authenticity badge`: always names the representation before the user interprets it.
 4. `truth note` and `image-information disclosure`: distinguish exact place, surrounding area, generated reconstruction, and generic category imagery while keeping author, source page, license link, and disclosed source conversion reachable without competing with place content.
@@ -69,7 +69,7 @@ Image failure returns to the same category fallback without shifting the sheet h
 | `A` | `exact_photo` | the image directly shows this place | location identity is supported by the source page and visual review |
 | `B` | `area_atmosphere` | real nearby district or area, not the exact facade | detail gallery only; the UI must say that it is an area view |
 | `C` | `generated_reconstruction` | synthetic reconstruction | provider/model/prompt evidence is required and the UI must say it is generated |
-| `D` | `category_fallback` | category-only visual | no claim about real appearance; used for missing, fictional, and player places |
+| `D` | `category_fallback` | category-only visual or explicitly labeled same-brand representative | no claim that the image shows the recorded facade; used for missing, fictional, player, and bounded everyday-facility cases |
 
 Grades are evidence labels, not quality scores. A clear `B` is preferable to a falsely precise `A`, but it supplements Place Details and never substitutes for card-level place recognition.
 

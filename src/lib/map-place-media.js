@@ -195,6 +195,7 @@ const sourceTracedPhoto = ({
   sourcePageUrl,
   creator,
   sourceSha256,
+  presentationCopy,
   accessedAt = '2026-08-23',
   reviewedAt = '2026-08-23',
   sourceArchiveBatch = 'map-place-media-heroes-gallery-batch-06-selected-20260823',
@@ -207,6 +208,7 @@ const sourceTracedPhoto = ({
   kind,
   authenticityGrade: MEDIA_KIND_TO_GRADE[kind],
   ...MEDIA_PRESENTATION_COPY[kind],
+  ...(presentationCopy || {}),
   asset: {
     ...runtimeAsset(filename, runtimeSha256),
     altZh,
@@ -3576,6 +3578,104 @@ const MAP_PLACE_MEDIA_BATCH_11_TRACED_20260828 = [
   sourceArchiveBatch: 'map-place-media-batch-11-20260828',
 }))
 
+const MAP_PLACE_MEDIA_HERO_COMPLETION_20260829 = [
+  {
+    id: 'map-media-seoul-sm-hq-hero-v2',
+    placeId: 'seoul-sm-hq',
+    kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+    filename: 'seoul-sm-hq-hero-v2.webp',
+    runtimeSha256: '3876bab63d32caacac5e14d42f5045c0bf383893abbd46985f3c1bfe5bf0ee87',
+    altZh: 'SM 娱乐总部所在 D Tower Seoul Forest 的入口与 SMTOWN 媒体墙',
+    altEn: 'Entrance and SMTOWN media wall at D Tower Seoul Forest, home to SM Entertainment headquarters',
+    provider: 'nol_world',
+    sourcePageUrl: 'https://world.nol.com/en/content/pois/90c098ce-50e7-49ad-9fda-3227176f45bd',
+    creator: 'NOL World / Triple',
+    sourceSha256: 'cb72a3f6112b304080ce4a6e2409fd57780598622934dcdc5af2a0b755e31ebb',
+  },
+  {
+    id: 'map-media-seoul-sillim-one-room-district-hero-v2',
+    placeId: 'seoul-sillim-one-room-district',
+    kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+    filename: 'seoul-sillim-one-room-district-hero-v2.webp',
+    runtimeSha256: '04f25e99ee090ced4e20e4b55aa3687debb565a58d25150db377d12e35966a2b',
+    altZh: '新林洞考试村的街区入口与低层住宅建筑',
+    altEn: 'District entrance and low-rise housing in the Sillim-dong exam-town area',
+    provider: 'naver_blog',
+    sourcePageUrl: 'https://blog.naver.com/together_sh/222073716754',
+    creator: 'Naver Blog / together_sh',
+    sourceSha256: '2ad87af35a4db0896f032404acf4fead42ac3dc62cd97093a199a29f2a49b256',
+  },
+  {
+    id: 'map-media-seoul-emart-wangsimni-hero-v1',
+    placeId: 'seoul-emart-wangsimni',
+    kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+    filename: 'seoul-emart-wangsimni-hero-v1.webp',
+    runtimeSha256: '761027c22adaa2f4367bd20bb90843aca2f4f6c3d5f557f3ed5982dd93360559',
+    altZh: '往十里 Bitplex 与 E-Mart 商场建筑全景',
+    altEn: 'Wide view of the Bitplex complex and E-Mart Wangsimni',
+    provider: 'naver_blog',
+    sourcePageUrl: 'https://blog.naver.com/kdg790301/223667022690',
+    creator: 'Naver Blog / kdg790301',
+    sourceSha256: 'd978b46d81ca0b1efdc7b1d0f217fbd16dc28a62bfe9f1bc5b6091bf5227ae89',
+  },
+  {
+    id: 'map-media-seoul-the-plus-plastic-surgery-hero-v1',
+    placeId: 'seoul-the-plus-plastic-surgery',
+    kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+    filename: 'seoul-the-plus-plastic-surgery-hero-v1.webp',
+    runtimeSha256: '84ceaadb4f87597dfd3b7e61fc11ea750ed04c2dee966771a1812a0a78b8e461',
+    altZh: 'THE PLUS 整形外科的品牌接待墙',
+    altEn: 'Branded reception wall inside THE PLUS Plastic Surgery',
+    provider: 'naver_blog',
+    sourcePageUrl: 'https://blog.naver.com/rhrhsp77/221114248083',
+    creator: 'Naver Blog / rhrhsp77',
+    sourceSha256: 'aa2f2900e9368b7a0f01a968e71c6c1cb2cdbe0eb20a0a68a42993685ec4c1dd',
+  },
+  {
+    id: 'map-media-seoul-cu-bgf-hq-brand-representative-v1',
+    placeId: 'seoul-cu-bgf-hq',
+    kind: MAP_PLACE_MEDIA_KIND.CATEGORY_FALLBACK,
+    filename: 'seoul-cu-bgf-hq-brand-representative-v1.webp',
+    runtimeSha256: '5ca02ffa0010d9e854c5dfe57d57814a2096db721ac1144f6a1e61fec1104fdc',
+    altZh: 'CU 同品牌街角门店代表图，非 BGF 总部店实景',
+    altEn: 'Representative CU corner store, not the BGF Headquarters branch',
+    provider: 'naver_blog',
+    sourcePageUrl: 'https://blog.naver.com/tnwjddja/221658374954',
+    creator: 'Naver Blog / tnwjddja',
+    sourceSha256: '496b9620cb249307d040fa1748b46d7f5542dae6211fbe7a2610de881ef3e913',
+    presentationCopy: {
+      labelZh: '品牌代表图',
+      labelEn: 'Brand representative',
+      noteZh: '照片展示同品牌其他门店，不代表该具体分店。',
+      noteEn: 'Shows another store from the same brand, not this specific branch.',
+    },
+  },
+  {
+    id: 'map-media-seoul-gs25-gangnam-central-brand-representative-v1',
+    placeId: 'seoul-gs25-gangnam-central',
+    kind: MAP_PLACE_MEDIA_KIND.CATEGORY_FALLBACK,
+    filename: 'seoul-gs25-gangnam-central-brand-representative-v1.webp',
+    runtimeSha256: 'a23d6c49d1e6db5ef3323a9cd593893c2c45103c04574fe4cfb49b1baff57b3e',
+    altZh: 'GS25 同品牌夜间门店代表图，非江南地铁店实景',
+    altEn: 'Representative GS25 store at night, not the Gangnam Metro branch',
+    provider: 'naver_blog',
+    sourcePageUrl: 'https://blog.naver.com/npk8149/223626076292',
+    creator: 'Naver Blog / npk8149',
+    sourceSha256: '7f07116f0eb9d3f072dfd661f971159d75adb51572a696b1b021c7dc127f44a9',
+    presentationCopy: {
+      labelZh: '品牌代表图',
+      labelEn: 'Brand representative',
+      noteZh: '照片展示同品牌其他门店，不代表该具体分店。',
+      noteEn: 'Shows another store from the same brand, not this specific branch.',
+    },
+  },
+].map((record) => sourceTracedPhoto({
+  ...record,
+  accessedAt: '2026-08-29',
+  reviewedAt: '2026-08-29',
+  sourceArchiveBatch: 'map-place-media-hero-completion-20260829',
+}))
+
 
 const MAP_PLACE_MEDIA_SOURCE_POLICY_RECOVERY_20260823 = [
   {
@@ -3660,6 +3760,7 @@ const MAP_PLACE_MEDIA_SOURCE_POLICY_RECOVERY_20260823 = [
 }))
 
 export const MAP_PLACE_MEDIA_RECORDS = deepFreeze([
+  ...MAP_PLACE_MEDIA_HERO_COMPLETION_20260829,
   ...MAP_PLACE_MEDIA_BATCH_11_TRACED_20260828,
   ...MAP_PLACE_MEDIA_BATCH_10_TRACED_20260827,
   ...MAP_PLACE_MEDIA_BATCH_09_TRACED_20260827,
@@ -3866,6 +3967,12 @@ export const validateMapPlaceMediaRecord = (record) => {
 
   if (record.kind === MAP_PLACE_MEDIA_KIND.CATEGORY_FALLBACK) {
     if (record.slot !== MAP_PLACE_MEDIA_SLOT.HERO) errors.push('fallback_slot')
+  }
+
+  if (
+    record.kind === MAP_PLACE_MEDIA_KIND.CATEGORY_FALLBACK
+    && record.source?.type === FALLBACK_SOURCE_TYPE
+  ) {
     if (!record.asset || !isHttpsUrl(record.asset.url)) errors.push('fallback_asset_url')
     if (!Number.isFinite(record.asset?.width) || record.asset.width <= 0) errors.push('fallback_width')
     if (!Number.isFinite(record.asset?.height) || record.asset.height <= 0) errors.push('fallback_height')
