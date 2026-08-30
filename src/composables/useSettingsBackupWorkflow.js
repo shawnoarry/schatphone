@@ -2,6 +2,7 @@ import { computed, getCurrentInstance, onBeforeUnmount, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
+import { useChronicleStore } from '../stores/chronicle'
 import { useCalendarStore } from '../stores/calendar'
 import { useAgendaJourneyStore } from '../stores/agendaJourney'
 import { useActivitySessionStore } from '../stores/activitySession'
@@ -21,6 +22,7 @@ import { useWalletStore } from '../stores/wallet'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import { useImageGenerationStore } from '../stores/imageGeneration'
 import { useMiniSceneStore } from '../stores/miniScene'
+import { useWorkHubStore } from '../stores/workHub'
 import { useDialog } from './useDialog'
 import { useI18n } from './useI18n'
 import { useSystemApiReports } from './useSystemApiReports'
@@ -121,6 +123,8 @@ const hasRecognizableBackupSections = (payload) => {
   if (payload.stock && typeof payload.stock === 'object') return true
   if (payload.relationshipRuntime && typeof payload.relationshipRuntime === 'object') return true
   if (payload.imageGeneration && typeof payload.imageGeneration === 'object') return true
+  if (payload.workHub && typeof payload.workHub === 'object') return true
+  if (payload.chronicle && typeof payload.chronicle === 'object') return true
   return false
 }
 
@@ -144,6 +148,7 @@ const saveStores = async (stores = []) => {
 export const useSettingsBackupWorkflow = (options = {}) => {
   const systemStore = options.systemStore || useSystemStore()
   const chatStore = options.chatStore || useChatStore()
+  const chronicleStore = options.chronicleStore || useChronicleStore()
   const calendarStore = options.calendarStore || useCalendarStore()
   const agendaJourneyStore = options.agendaJourneyStore || useAgendaJourneyStore()
   const activitySessionStore = options.activitySessionStore || useActivitySessionStore()
@@ -165,6 +170,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
     options.relationshipRuntimeStore || useRelationshipRuntimeStore()
   const imageGenerationStore = options.imageGenerationStore || useImageGenerationStore()
   const miniSceneStore = options.miniSceneStore || useMiniSceneStore()
+  const workHubStore = options.workHubStore || useWorkHubStore()
   const systemApiReports = options.systemApiReports || useSystemApiReports({ systemStore })
   const { t } = options.t ? { t: options.t } : useI18n()
   const { confirmDialog } = options.confirmDialog
@@ -438,6 +444,8 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       stock: stockStore.createBackupSnapshot(),
       relationshipRuntime: relationshipRuntimeStore.createBackupSnapshot(),
       imageGeneration: imageGenerationStore.exportForBackup(),
+      workHub: workHubStore.createBackupSnapshot(),
+      chronicle: chronicleStore.createBackupSnapshot(),
     }
     const completePackage = await createCompleteBackupPackage(payload)
     return assertCompleteBackupPackage(completePackage)
@@ -466,7 +474,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       }
     }
 
-    if ([3, 4, COMPLETE_BACKUP_SCHEMA_VERSION].includes(schemaVersion)) {
+    if ([3, 4, 5, 6, COMPLETE_BACKUP_SCHEMA_VERSION].includes(schemaVersion)) {
       const inspection = await inspectCompleteBackupPackage(payload)
       if (!inspection.ok) {
         return {
@@ -682,6 +690,8 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       stock: stockStore.createBackupSnapshot(),
       relationshipRuntime: relationshipRuntimeStore.createBackupSnapshot(),
       imageGeneration: imageGenerationStore.exportForBackup(),
+      workHub: workHubStore.createBackupSnapshot(),
+      chronicle: chronicleStore.createBackupSnapshot(),
     }
     return deepClone(snapshot)
   }
@@ -718,6 +728,8 @@ export const useSettingsBackupWorkflow = (options = {}) => {
     stock: stockStore,
     relationshipRuntime: relationshipRuntimeStore,
     imageGeneration: imageGenerationStore,
+    workHub: workHubStore,
+    chronicle: chronicleStore,
   }
 
   const restoreRollbackSnapshot = (rollback) =>
@@ -745,6 +757,8 @@ export const useSettingsBackupWorkflow = (options = {}) => {
     stockStore,
     relationshipRuntimeStore,
     imageGenerationStore,
+    workHubStore,
+    chronicleStore,
   ]
 
   const importData = async (event) => {
@@ -838,6 +852,8 @@ export const useSettingsBackupWorkflow = (options = {}) => {
         imageGenerationStore,
         parsed.imageGeneration,
       )
+      const workHubOk = restoreOptionalBackupSection(workHubStore, parsed.workHub)
+      const chronicleOk = restoreOptionalBackupSection(chronicleStore, parsed.chronicle)
       if (
         !systemOk ||
         !chatOk ||
@@ -859,7 +875,9 @@ export const useSettingsBackupWorkflow = (options = {}) => {
         !phoneOk ||
         !stockOk ||
         !relationshipRuntimeOk ||
-        !imageGenerationOk
+        !imageGenerationOk ||
+        !workHubOk ||
+        !chronicleOk
       ) {
         throw createBackupImportError(
           'BACKUP_IMPORT_STRUCTURE_UNSUPPORTED',

@@ -14,7 +14,12 @@ import {
 } from '../lib/schedule-orchestrator'
 
 const SCHEDULE_ORCHESTRATOR_STORAGE_KEY = 'store:schedule-orchestrator'
-const SCHEDULE_ORCHESTRATOR_STORAGE_VERSION = 1
+const SCHEDULE_ORCHESTRATOR_STORAGE_VERSION = 2
+
+const migrateScheduleOrchestratorStorage = ({ version, data } = {}) =>
+  Number(version) === 1 && data && typeof data === 'object' && !Array.isArray(data)
+    ? data
+    : null
 
 const toTimestamp = (value, fallback = 0) => {
   const numeric = Number(value)
@@ -76,6 +81,7 @@ export const useScheduleOrchestratorStore = defineStore('scheduleOrchestrator', 
   const hydrateFromStorage = () => {
     const persisted = readPersistedState(SCHEDULE_ORCHESTRATOR_STORAGE_KEY, {
       version: SCHEDULE_ORCHESTRATOR_STORAGE_VERSION,
+      migrate: migrateScheduleOrchestratorStorage,
     })
     return applyPersistedSource(persisted)
   }
@@ -83,6 +89,7 @@ export const useScheduleOrchestratorStore = defineStore('scheduleOrchestrator', 
   const hydrateFromStorageAsync = async () => {
     const persisted = await readPersistedStateAsync(SCHEDULE_ORCHESTRATOR_STORAGE_KEY, {
       version: SCHEDULE_ORCHESTRATOR_STORAGE_VERSION,
+      migrate: migrateScheduleOrchestratorStorage,
     })
     return applyPersistedSource(persisted)
   }
@@ -90,6 +97,7 @@ export const useScheduleOrchestratorStore = defineStore('scheduleOrchestrator', 
   const persistToStorage = () =>
     writePersistedState(SCHEDULE_ORCHESTRATOR_STORAGE_KEY, createPersistedSnapshot(), {
       version: SCHEDULE_ORCHESTRATOR_STORAGE_VERSION,
+      migrate: migrateScheduleOrchestratorStorage,
     })
 
   const reconcileCalendarSnapshot = (calendarEvents = [], options = {}) => {
@@ -125,7 +133,32 @@ export const useScheduleOrchestratorStore = defineStore('scheduleOrchestrator', 
             agendaJourneyId: linkedAgendaJourneyId,
             materializationAcknowledgedRevision: item.materializationRevision,
             materializationAcknowledgedAt: toTimestamp(acknowledgedAt, Date.now()),
+            materializationBlockedCode: '',
+            materializationBlockedAt: 0,
             updatedAt: toTimestamp(acknowledgedAt, Date.now()),
+          }
+        : item,
+    )
+    return true
+  }
+
+  const recordMaterializationBlock = ({
+    orchestrationId,
+    calendarFingerprint = '',
+    code = '',
+    blockedAt = Date.now(),
+  } = {}) => {
+    const record = findRecordById(orchestrationId)
+    const normalizedCode = typeof code === 'string' ? code.trim().slice(0, 120) : ''
+    if (!record || record.retiredAt || !normalizedCode) return false
+    if (calendarFingerprint && calendarFingerprint !== record.calendarFingerprint) return false
+    records.value = records.value.map((item) =>
+      item.id === record.id
+        ? {
+            ...item,
+            materializationBlockedCode: normalizedCode,
+            materializationBlockedAt: toTimestamp(blockedAt, Date.now()),
+            updatedAt: toTimestamp(blockedAt, Date.now()),
           }
         : item,
     )
@@ -187,6 +220,7 @@ export const useScheduleOrchestratorStore = defineStore('scheduleOrchestrator', 
     findRecordById,
     reconcileCalendarSnapshot,
     acknowledgeMaterialization,
+    recordMaterializationBlock,
     acknowledgeDeadlineEvaluation,
     createBackupSnapshot,
     createBackupSnapshotAsync,

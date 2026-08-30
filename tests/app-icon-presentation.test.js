@@ -211,7 +211,9 @@ describe('app icon presentation helpers', () => {
 
     Object.entries(expected).forEach(([appId, fileName]) => {
       const meta = resolveAppIconMeta(appId, {}, 'zh-CN')
-      expect(meta.imageUrl).toContain(`/schatphone-assets/images/ui-assets/shared/app-icons/${fileName}`)
+      expect(meta.imageUrl).toContain(
+        `/schatphone-assets/images/ui-assets/shared/app-icons/${fileName}`,
+      )
     })
 
     expect(
@@ -221,6 +223,62 @@ describe('app icon presentation helpers', () => {
         'zh-CN',
       ).imageUrl,
     ).toBe('')
+  })
+
+  test('registers the Workplace shell as an independent customizable App identity', () => {
+    const meta = resolveAppIconMeta('app_workplace', {}, 'zh-CN')
+    expect(meta.label).toBe('工作台')
+    expect(meta.icon).toBe('fas fa-id-badge')
+    expect(meta.accent).toBe('dark')
+    expect(meta.imageUrl).toBe('')
+  })
+
+  test('registers the Tickets shell as an independent customizable App identity', () => {
+    const meta = resolveAppIconMeta('app_tickets', {}, 'zh-CN')
+    expect(meta.label).toBe('入场')
+    expect(meta.icon).toBe('fas fa-ticket')
+    expect(meta.accent).toBe('warm')
+    expect(meta.imageUrl).toBe('')
+  })
+
+  test('registers the Travel shell as an independent customizable App identity', () => {
+    const meta = resolveAppIconMeta('app_travel', {}, 'zh-CN')
+    expect(meta.label).toBe('漫泊')
+    expect(meta.icon).toBe('fas fa-suitcase-rolling')
+    expect(meta.accent).toBe('cool')
+    expect(meta.imageUrl).toBe('')
+  })
+
+  test('registers the remaining shell portfolio as independent customizable App identities', () => {
+    expect(resolveAppIconMeta('app_intercity', {}, 'zh-CN')).toMatchObject({
+      label: '联程',
+      icon: 'fas fa-train',
+      accent: 'cool',
+    })
+    expect(resolveAppIconMeta('app_creator_rights', {}, 'zh-CN')).toMatchObject({
+      label: '谱权',
+      icon: 'fas fa-copyright',
+      accent: 'dark',
+    })
+    expect(resolveAppIconMeta('app_parcel', {}, 'zh-CN')).toMatchObject({
+      label: '递送',
+      icon: 'fas fa-box',
+      accent: 'warm',
+    })
+    expect(resolveAppIconMeta('app_career', {}, 'zh-CN')).toMatchObject({
+      label: '机会',
+      icon: 'fas fa-briefcase',
+      accent: 'default',
+    })
+  })
+
+  test('resolves bundled system-pack images without treating them as gallery overrides', () => {
+    const meta = resolveAppIconMeta('app_map', {}, 'zh-CN', 'cloud-pastel-animals')
+
+    expect(meta.imageUrl).toContain('cloud-pastel-animals-v1/map-turtle.webp')
+    expect(meta.hasImageIcon).toBe(false)
+    expect(meta.sourceType).toBe('preset')
+    expect(meta.galleryAssetId).toBe('')
   })
 
   test('reuses app icon overrides in in-shell notification presentation', () => {

@@ -123,18 +123,20 @@ If an event change needs visual work, first decide visual ownership through `doc
 33. The first product content target is the current modern K-pop realism world, but engine templates, place capabilities, instance lifecycle, choice IDs, and effect requests remain world-neutral. Do not build parallel world packs before the first K-pop vertical slice is accepted.
 34. V1 runtime AI is optional and text-only. It cannot create executable actions, effect identifiers, unbounded numbers, image/audio payloads, external media URLs, or direct domain writes; accepted normalized text is cached per Event Instance and always has a local fallback.
 35. Place/scene imagery primarily follows Map/world asset packs. Event Runtime stores stable references and minimal semantic media intent only. Later CG uses a separately permissioned image-generation/media-resolution Adapter and is not a reason to add V1 provider fields or empty controls.
-36. EVE-3 Event Notebook composition must remain a deterministic read model over existing Event Instances, logs, Chat social proposals, and Map Journey proposals. Do not persist a second event projection or use Notebook selection as authorization.
-37. Event-scoped notes belong to Simulation durability, carry stable source references, survive bounded log rotation and backup/restore, and change only through explicit note create/update/delete actions. They are not Reminders, Calendar plans, source-owner mutations, or Cheats controls.
-38. Every production host must be explicitly registered, and `host_detail.hostKey` must match the consuming host. Register a host only when the approved interaction truly needs an Event Surface; a Module may participate through native records without one. Source owners may persist a runtime-log reference only through an owner-validated one-to-one lineage action; source input, duplicate records, or reused logs cannot manufacture valid lineage.
-39. User-initiated commerce service events begin only from an explicit user interaction in the owner App or a registered Chat service account with valid owner context. Coordinates, saved addresses, purchase history, free-form text, and model classification cannot independently establish human intent or create an order-specific event.
-40. Ordinary commerce messaging, Service Cases, address editing, Map ETA/reroute, Wallet settlement, and Phone sessions remain owner capabilities when optional events are disabled or no recipe matches. Event Runtime orchestrates optional progression; it is not the feature implementation.
-41. Randomness may choose a response disposition or timing only after a valid trigger. Existing pickup/order/journey/call facts come from their owners, and every random decision is persisted once rather than rerolled on refresh or retry.
-42. Phone summaries, Chat service-account replies, and AI classifications are bounded proposals or evidence. A source owner validates exact references/revisions and publishes the confirming owner fact before an Event Instance advances or canonical truth changes.
-43. Identity-conditioned events consume structured, revision-aware Contacts Self Profile projections and named owner facts. Raw biography, coordinates, free text, or model classification cannot independently establish occupation, intent, behavior, guilt, relationship, or world truth.
-44. Dynamic player/world values remain with their natural owners or separately justified minimal owners. WorldBook is static setting context, Event Runtime is orchestration/audit, and neither becomes a universal dynamic-state Store.
-45. Future forum/social/news propagation separates owner-confirmed facts, account/person claims, and committed posts. Community/Media owns publication bodies; Runtime may retain requests, decisions, references, and provenance only.
-46. Mini Scene presentation is separate from event truth. The source owner persists the confirmed event result, and approved Relationship Runtime/diary projections persist independently of whether the user keeps the full presentation. A declined or deleted full scene must not erase those records.
-47. One concrete event occurrence may generate one presentation revision. Reopen/retry reuses a retained artifact before any provider call; a new occurrence or explicit regeneration receives a new request/revision. Presenter format is an adapter choice, not a second event or memory owner.
+36. Ordinary world preparation and one explicit semantic check live in `Settings > World Setup`; opening Settings performs no provider call. World Hub remains hidden by default for advanced usage evidence, lineage review, history, and bounded correction. Do not require ordinary users to enter World Hub to start playing.
+37. Arbitrary-world runtime eligibility may consume only an exact user-confirmed proposal compiled through the versioned generic registry. Model receipts remain separate; invalid IDs, dangling bridges, unsupported meaning, blocking unknowns, unresolved conflicts, and ownerless effects fail closed. Until W2 activation exists, the pure compiler has no production caller.
+38. EVE-3 Event Notebook composition must remain a deterministic read model over existing Event Instances, logs, Chat social proposals, and Map Journey proposals. Do not persist a second event projection or use Notebook selection as authorization.
+39. Event-scoped notes belong to Simulation durability, carry stable source references, survive bounded log rotation and backup/restore, and change only through explicit note create/update/delete actions. They are not Reminders, Calendar plans, source-owner mutations, or Cheats controls.
+40. Every production host must be explicitly registered, and `host_detail.hostKey` must match the consuming host. Register a host only when the approved interaction truly needs an Event Surface; a Module may participate through native records without one. Source owners may persist a runtime-log reference only through an owner-validated one-to-one lineage action; source input, duplicate records, or reused logs cannot manufacture valid lineage.
+41. User-initiated commerce service events begin only from an explicit user interaction in the owner App or a registered Chat service account with valid owner context. Coordinates, saved addresses, purchase history, free-form text, and model classification cannot independently establish human intent or create an order-specific event.
+42. Ordinary commerce messaging, Service Cases, address editing, Map ETA/reroute, Wallet settlement, and Phone sessions remain owner capabilities when optional events are disabled or no recipe matches. Event Runtime orchestrates optional progression; it is not the feature implementation.
+43. Randomness may choose a response disposition or timing only after a valid trigger. Existing pickup/order/journey/call facts come from their owners, and every random decision is persisted once rather than rerolled on refresh or retry.
+44. Phone summaries, Chat service-account replies, and AI classifications are bounded proposals or evidence. A source owner validates exact references/revisions and publishes the confirming owner fact before an Event Instance advances or canonical truth changes.
+45. Identity-conditioned events consume structured, revision-aware Contacts Self Profile projections and named owner facts. Raw biography, coordinates, free text, or model classification cannot independently establish occupation, intent, behavior, guilt, relationship, or world truth.
+46. Dynamic player/world values remain with their natural owners or separately justified minimal owners. WorldBook is static setting context, Event Runtime is orchestration/audit, and neither becomes a universal dynamic-state Store.
+47. Future forum/social/news propagation separates owner-confirmed facts, account/person claims, and committed posts. Community/Media owns publication bodies; Runtime may retain requests, decisions, references, and provenance only.
+48. Mini Scene presentation is separate from event truth. The source owner persists the confirmed event result, and approved Relationship Runtime/diary projections persist independently of whether the user keeps the full presentation. A declined or deleted full scene must not erase those records.
+49. One concrete event occurrence may generate one presentation revision. Reopen/retry reuses a retained artifact before any provider call; a new occurrence or explicit regeneration receives a new request/revision. Presenter format is an adapter choice, not a second event or memory owner.
 
 ## 4. Event Entry Audit
 
@@ -152,6 +154,9 @@ Order/source reference requirement:
 Canonical Service Case / interaction owner:
 Entry surface: owner_app | chat_service_account | other_owner_native | not_applicable
 World context:
+World semantic manifest id/version/compiler receipt, or explicit compatibility-only reason:
+Custom capability bridges used for eligibility:
+Semantic unknown/conflict behavior:
 Player context requirement and exact Self Profile fields/revision:
 Dynamic player/world state inputs and owners:
 World fact / claim / publication references:
@@ -188,13 +193,15 @@ Decision rules:
 1. Module state belongs to the module. The event engine calls an adapter; it does not reach into module internals directly.
 2. The adapter is the seam. If an event can be implemented through one module action, keep the interface small.
 3. The event engine owns eligibility, timing, probability, cooldowns, caps, and event-log records.
-4. The module owner owns real state mutation and data normalization.
-5. Cross-module surfaces should display event context, not duplicate ownership.
-6. A surprising event should still feel fair: the user should understand why it happened and what changed.
-7. A place card exposes an event invitation only when an eligible event or approved locked teaser exists; do not reserve an empty permanent Event button.
-8. A deterministic scheduled activity remains executable when no event template is eligible or when optional event permission is off.
-9. For user-initiated commerce events, the user action opens the owner interaction/Service Case first. Model classification may choose a candidate recipe or follow-up question, but `unknown` remains a valid ordinary-support result and cannot authorize mutation.
-10. An owner request is not proof of completion. Advance only after the correlated owner fact confirms success, rejection, expiration, or another normalized result.
+4. Authored world text and model interpretation are context or proposals, not runtime truth. A reusable arbitrary-world event must consume a reviewed, versioned, code-compiled semantic manifest or document an explicit compatibility-only fixture boundary.
+5. Custom world terms retain their own namespace. A bridge to a generic event capability requires reviewed evidence and cannot be created implicitly from genre similarity or one model's opinion.
+6. The module owner owns real state mutation and data normalization.
+7. Cross-module surfaces should display event context, not duplicate ownership.
+8. A surprising event should still feel fair: the user should understand why it happened and what changed.
+9. A place card exposes an event invitation only when an eligible event or approved locked teaser exists; do not reserve an empty permanent Event button.
+10. A deterministic scheduled activity remains executable when no event template is eligible or when optional event permission is off.
+11. For user-initiated commerce events, the user action opens the owner interaction/Service Case first. Model classification may choose a candidate recipe or follow-up question, but `unknown` remains a valid ordinary-support result and cannot authorize mutation.
+12. An owner request is not proof of completion. Advance only after the correlated owner fact confirms success, rejection, expiration, or another normalized result.
 
 ## 5. Event Template Draft
 

@@ -618,12 +618,24 @@ export const normalizeEventInstanceV1 = (rawInstance) => {
       checkpointAt: normalizeTimestamp(rawInstance.source?.checkpointAt),
     },
     world: {
+      worldId: normalizeEventId(rawInstance.world?.worldId),
       worldContextId: normalizeEventId(rawInstance.world?.worldContextId),
       worldPackId: normalizeEventId(rawInstance.world?.worldPackId),
       variantPackId: normalizeEventId(rawInstance.world?.variantPackId),
       variantPackVersion: normalizeVersion(rawInstance.world?.variantPackVersion),
       mapPackId: normalizeEventId(rawInstance.world?.mapPackId),
       mapPackVersion: normalizeVersion(rawInstance.world?.mapPackVersion),
+      semanticVersionId: normalizeEventId(rawInstance.world?.semanticVersionId),
+      semanticManifestRevision: normalizeVersion(
+        rawInstance.world?.semanticManifestRevision,
+        0,
+      ),
+      semanticManifestHash: normalizeEventText(rawInstance.world?.semanticManifestHash, '', 64),
+      semanticSourceFingerprint: normalizeEventText(
+        rawInstance.world?.semanticSourceFingerprint,
+        '',
+        64,
+      ),
     },
     place: {
       placeId,

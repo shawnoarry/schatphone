@@ -139,9 +139,7 @@ describe('Home folder entries', () => {
     expect(wrapper.find('[data-testid="home-left-shortcut-app-store"]').classes()).toContain(
       'is-fixed',
     )
-    expect(wrapper.find('[data-testid="home-left-shortcut-world-hub"]').classes()).toContain(
-      'is-locked',
-    )
+    expect(wrapper.find('[data-testid="home-left-shortcut-world-hub"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="home-left-shortcut-cheats"]').classes()).toContain(
       'is-locked',
     )
@@ -1182,7 +1180,7 @@ describe('Home folder entries', () => {
     wrapper.unmount()
   })
 
-  test('shows locked feedback for unavailable -1 shortcuts', async () => {
+  test('does not expose the advanced World Hub shortcut before it is enabled', async () => {
     const router = createTestRouter()
     await router.push('/home')
     await router.isReady()
@@ -1197,9 +1195,8 @@ describe('Home folder entries', () => {
       },
     })
 
-    await wrapper.find('[data-testid="home-left-shortcut-world-hub"]').trigger('click')
-
-    expect(wrapper.find('.home-layout-toast').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-left-shortcut-world-hub"]').exists()).toBe(false)
+    expect(wrapper.find('.home-layout-toast').exists()).toBe(false)
     expect(router.currentRoute.value.path).toBe('/home')
     wrapper.unmount()
   })

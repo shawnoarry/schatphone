@@ -114,6 +114,45 @@ describe('Simulation commerce Event Instance V2', () => {
     })
   })
 
+  test('keeps the semantic version captured when an event first starts', () => {
+    const store = useSimulationStore()
+    store.resetForTesting()
+    const input = {
+      id: 'event_world_version_stable',
+      templateId: COMMERCE_EVENT_TEMPLATE_ID.USER_REPORTED_PROBLEM_FIXTURE,
+      contextRefs: { order_id: 'food_order_world', service_case_id: 'case_world' },
+      worldBinding: {
+        worldId: 'world_local_primary',
+        semanticVersionId: 'semantic_1_first',
+        semanticManifestRevision: 1,
+        semanticManifestHash: 'a'.repeat(64),
+        semanticSourceFingerprint: 'b'.repeat(64),
+      },
+      now: Date.now(),
+    }
+    const started = store.startEventInstanceV2(input)
+    const replayed = store.startEventInstanceV2({
+      ...input,
+      worldBinding: {
+        ...input.worldBinding,
+        semanticVersionId: 'semantic_2_later',
+        semanticManifestRevision: 2,
+        semanticManifestHash: 'c'.repeat(64),
+      },
+      now: Date.now() + 1,
+    })
+
+    expect(started.instance.contextRefs).toMatchObject({
+      world_semantic_version_id: 'semantic_1_first',
+      world_semantic_manifest_revision: 1,
+    })
+    expect(replayed).toMatchObject({ ok: true, changed: false, reason: 'instance_already_started' })
+    expect(replayed.instance.contextRefs).toMatchObject({
+      world_semantic_version_id: 'semantic_1_first',
+      world_semantic_manifest_revision: 1,
+    })
+  })
+
   test('migrates V4 pickup-triggered chains to read-only legacy audit without user intent', () => {
     const migrated = migrateSimulationStorage({
       version: 4,

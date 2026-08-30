@@ -41,7 +41,7 @@ const seedSystem = async (page, { language = 'zh-CN', theme = 'default', once = 
 const openWorkplace = async (page, viewport = desktop) => {
   await page.setViewportSize(viewport)
   await unlockToHome(page)
-  await navigateInsideUnlockedApp(page, '/workplace?from=home&homePage=1')
+  await navigateInsideUnlockedApp(page, '/workplace?from=home&homePage=1&preview=1')
   await expect(page.getByTestId('workplace-app')).toBeVisible()
 }
 
@@ -133,7 +133,7 @@ test.describe('Work Hub Organization Workplace S1 shell', () => {
     await unlockToHome(page)
     await navigateInsideUnlockedApp(
       page,
-      '/workplace?section=tasks&sourceRecordId=proposal-radio-20260827',
+      '/workplace?section=tasks&sourceRecordId=proposal-radio-20260827&preview=1',
     )
     await expect(page.getByTestId('workplace-review-calendar-proposal-radio-20260827')).toContainText(
       '在日历中查看',
@@ -210,7 +210,7 @@ test.describe('Work Hub Organization Workplace S1 shell', () => {
 
     await page.reload()
     await unlockToHome(page)
-    await navigateInsideUnlockedApp(page, '/workplace?from=home&homePage=1')
+    await navigateInsideUnlockedApp(page, '/workplace?from=home&homePage=1&preview=1')
     await expect(page.getByTestId('workplace-app')).toBeVisible()
     await expect(page.locator('.workplace-wordmark')).toContainText('星河工作台')
     await expect(page.locator('.workplace-wordmark')).toContainText('星河娱乐')

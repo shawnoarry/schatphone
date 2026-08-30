@@ -4,6 +4,10 @@ import {
   resolveWorldBookSourceText,
 } from './book-text-schema'
 import { DEFAULT_WORLD_PACK_ID } from './world-pack-schema'
+import {
+  PRIMARY_PERSISTED_WORLD_ID,
+  normalizeWorldSettingState,
+} from './world-setting-state'
 
 export const LEGACY_SINGLE_WORLD_ID = 'legacy_single_world'
 
@@ -28,6 +32,11 @@ const createImmutableSnapshot = (value) => {
 export const LEGACY_SINGLE_WORLD_IDENTITY = createImmutableSnapshot({
   worldId: LEGACY_SINGLE_WORLD_ID,
   title: 'Current world',
+})
+
+export const PRIMARY_PERSISTED_WORLD_IDENTITY = createImmutableSnapshot({
+  worldId: PRIMARY_PERSISTED_WORLD_ID,
+  title: 'My world',
 })
 
 export const DEFAULT_WORLD_PACK = Object.freeze({
@@ -116,6 +125,18 @@ const resolveActiveWorldPack = (systemStore) => {
       : DEFAULT_WORLD_PACK_ID
   const packs = Array.isArray(systemStore?.user?.worldPacks) ? systemStore.user.worldPacks : []
   return packs.find((pack) => pack?.id === activePackId) || DEFAULT_WORLD_PACK
+}
+
+const resolveCurrentWorldIdentity = (systemStore) => {
+  const rawState = typeof systemStore?.getWorldSettingState === 'function'
+    ? systemStore.getWorldSettingState()
+    : systemStore?.user?.worldSetting
+  if (!rawState || typeof rawState !== 'object') return LEGACY_SINGLE_WORLD_IDENTITY
+  const state = normalizeWorldSettingState(rawState)
+  return createImmutableSnapshot({
+    worldId: state.identity.worldId,
+    title: state.identity.title,
+  })
 }
 
 const listEnabledWorldPacksFromStore = (systemStore) => {
@@ -244,6 +265,7 @@ export const resolveWorldviewText = (systemStore, options = {}) => {
 }
 
 const buildWorldSettingProjection = ({
+  identity,
   activePack,
   enabledWorldPacks,
   worldview,
@@ -272,7 +294,7 @@ const buildWorldSettingProjection = ({
   )
 
   return {
-    identity: LEGACY_SINGLE_WORLD_IDENTITY,
+    identity: identity || LEGACY_SINGLE_WORLD_IDENTITY,
     narrative: {
       activeSources: bookSources.resolved,
       promptText: worldview,
@@ -425,6 +447,7 @@ export const resolveCurrentWorldContext = ({
   limit,
 } = {}) => {
   const bookSources = resolveActiveBookSources({ systemStore, bookStore })
+  const identity = resolveCurrentWorldIdentity(systemStore)
   const activePack = resolveActiveWorldPack(systemStore)
   const enabledWorldPacks = listEnabledWorldPacksFromStore(systemStore)
   const worldview = resolveWorldviewText(systemStore, { bookStore })
@@ -445,6 +468,7 @@ export const resolveCurrentWorldContext = ({
     WORLD_INTERFACE_CONSUMERS[0]
 
   const projection = buildWorldSettingProjection({
+    identity,
     activePack,
     enabledWorldPacks,
     worldview,
@@ -505,6 +529,7 @@ export const buildWorldPromptBlock = (worldContext = {}) => {
 
 export const resolveActiveWorldOverview = ({ systemStore, bookStore } = {}) => {
   const bookSources = resolveActiveBookSources({ systemStore, bookStore })
+  const identity = resolveCurrentWorldIdentity(systemStore)
   const activePack = resolveActiveWorldPack(systemStore)
   const enabledWorldPacks = listEnabledWorldPacksFromStore(systemStore)
   const worldview = resolveWorldviewText(systemStore, { bookStore })
@@ -515,6 +540,7 @@ export const resolveActiveWorldOverview = ({ systemStore, bookStore } = {}) => {
   const fallbackText = normalizeText(systemStore?.user?.globalWorldview) ||
     normalizeText(systemStore?.user?.worldBook)
   const projection = buildWorldSettingProjection({
+    identity,
     activePack,
     enabledWorldPacks,
     worldview,

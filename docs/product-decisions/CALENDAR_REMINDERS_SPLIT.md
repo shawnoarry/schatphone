@@ -195,7 +195,8 @@ Recommended sequence and current status:
 | 15 | Implement Agenda Journey V1 records, orchestration consumption, Map travel evidence, and visible execution UI | DONE / CJA-3 / 2026-08-16 |
 | 16 | Implement one Activity Session owner and restrained Focus Companion baseline | DONE / CJA-4 / 2026-08-16 |
 | 17 | Implement one midpoint-only low-impact Activity Session Event Runtime collaboration | DONE / CJA-5 / 2026-08-16 |
-| 18 | Implement appointment auto-entry, broader event families, media callers/richer companions, interactive HTML, or Narrative Timeline | TODO / STAGED_IN_LIVE_ROADMAP_ONLY |
+| 18 | Implement the Chronicle Diary Owner and bounded Narrative Timeline projection | DONE / CJA-6B / EVT-CHRONICLE-1 / 2026-08-30 |
+| 19 | Implement appointment auto-entry, broader event families, media callers/richer companions, interactive HTML, AI recall, or CJA-6C | TODO / STAGED_IN_LIVE_ROADMAP_ONLY |
 
 Implementation notes:
 

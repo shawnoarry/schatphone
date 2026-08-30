@@ -94,7 +94,14 @@ describe('SettingsView general section', () => {
 
     const { wrapper: menuWrapper, router: menuRouter } = await mountSettingsView()
 
-    expect(menuWrapper.get('[data-testid="settings-beginner-tip"]').text()).toMatch(/Network|网络/)
+    expect(menuWrapper.get('[data-testid="settings-beginner-tip"]').text()).toMatch(/World Setup|世界准备/)
+
+    await menuWrapper.get('[data-testid="settings-world-setup-entry"]').trigger('click')
+    await flushUi()
+    expect(menuWrapper.find('[data-testid="settings-world-setup"]').exists()).toBe(true)
+
+    await menuWrapper.get('[data-testid="settings-subpage-back"]').trigger('click')
+    await flushUi()
 
     await menuWrapper.get('[data-settings-menu-title="General"]').trigger('click')
     await flushUi()
@@ -116,6 +123,37 @@ describe('SettingsView general section', () => {
     await flushUi()
 
     expect(router.currentRoute.value.path).toBe('/network')
+
+    wrapper.unmount()
+  })
+
+  test('prepares the current world from Settings without exposing advanced runtime controls', async () => {
+    const systemStore = useSystemStore()
+    const simulationStore = useSimulationStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.settings.api.url = ''
+    systemStore.setGlobalWorldview('Tide Contract City uses named covenants for public passage.')
+    simulationStore.resetForTesting()
+    const worldviewBeforeMount = systemStore.user.globalWorldview
+    const eventLogCountBeforeMount = simulationStore.eventLogCount
+
+    const { wrapper, router } = await mountSettingsView('/settings?menu=world-setup')
+    const section = wrapper.get('[data-testid="settings-world-setup"]')
+
+    expect(section.text()).toContain('Prepare the current world')
+    expect(section.text()).toContain('Basic world content is ready')
+    expect(section.text()).toContain('Let the model check once')
+    expect(section.text()).not.toContain('semantic manifest')
+    expect(section.text()).not.toContain('runtime boundary')
+    expect(wrapper.find('[data-testid="settings-world-result"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="settings-world-check"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="settings-world-open-network"]').trigger('click')
+    await flushUi()
+
+    expect(router.currentRoute.value.path).toBe('/network')
+    expect(systemStore.user.globalWorldview).toBe(worldviewBeforeMount)
+    expect(simulationStore.eventLogCount).toBe(eventLogCountBeforeMount)
 
     wrapper.unmount()
   })

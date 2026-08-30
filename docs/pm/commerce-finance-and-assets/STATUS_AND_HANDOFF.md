@@ -1,6 +1,8 @@
 # Commerce Finance And Assets Status And Handoff
 
-Updated: 2026-08-23
+Updated: 2026-08-26
+
+Integrated alignment baseline: `f06a575`. The detailed milestone and validation records below remain package-owned and are not replaced by whole-project rollups.
 
 This file is the handoff page for Shopping, logistics, Food Delivery, Wallet, Assets, and Stock work.
 

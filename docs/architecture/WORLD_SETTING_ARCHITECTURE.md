@@ -1,12 +1,12 @@
 # World Setting Architecture Contract
 
-Updated: 2026-08-18
+Updated: 2026-08-29
 
-Status: `ARCHITECTURE_ACCEPTED / STAGE_W1_DONE`
+Status: `ARCHITECTURE_ACCEPTED / STAGE_W1_DONE / STAGE_W2_DONE_2026-08-29 / STAGE_W3_GATED`
 
-Purpose: define one coherent world-setting architecture across Book, WorldBook, World Pack, structured encyclopedia entries, profile templates, and consuming modules without turning World Pack activation into world identity or creating internal save slots.
+Purpose: define one coherent world-setting architecture across Book, WorldBook, World Pack, structured encyclopedia entries, profile templates, reviewed semantic versions, and consuming modules without turning World Pack activation into world identity or creating internal save slots.
 
-This contract records product and architecture meaning and the completed Stage W1 compatibility resolver. It does not approve a persisted world-definition schema, multi-world switching, another Repository owner migration, or a backup-shape change.
+This contract records product and architecture meaning plus the completed Stage W1 compatibility resolver and Stage W2 single-world identity/version migration. It does not approve multiple world definitions, world switching, another Repository owner migration, or internal save slots.
 
 ## 1. Confirmed Product Meaning
 
@@ -61,22 +61,28 @@ A convenience manifest that coordinates installation of independently installabl
 
 An immutable, consumer-specific projection resolved through one Interface. It separates identity, narrative context, structured context, profile-template context, capabilities, and diagnostics. Consuming modules read this snapshot instead of interpreting mutable `systemStore` fields directly.
 
+### Reviewed Semantic Version
+
+A user-confirmed, provider-neutral interpretation of one exact authored-source fingerprint. Code deterministically validates and compiles it against a versioned runtime registry, persists immutable review/compiler evidence, and exposes only its stable binding to runtime records. It is not model-authored truth, a replacement for WorldBook sources, or permission for an owner Module to mutate its records.
+
 ## 3. Current-Code Audit
 
-The current implementation is a valid single-world Stage W1 compatibility baseline. It exposes a stable resolver identity, but it does not yet persist a canonical WorldBook-owned world definition.
+The current implementation is a single-world Stage W2 baseline. It persists one canonical WorldBook-owned identity and reviewed semantic-version history inside the existing System user carrier while retaining legacy compatibility for old saves and test doubles.
 
 | Current fact | Evidence | Architectural consequence |
 | --- | --- | --- |
 | `user.activeWorldPackId` selects the active capability Pack. | `src/stores/system.js` | This field remains a Pack identifier only. |
-| WorldBook and Contacts read current identity and enabled templates through `world-interface.js`. | `src/views/WorldBookView.vue`, `src/views/ContactsView.vue` | Pack changes no longer change displayed world identity or template selection. |
-| `resolveCurrentWorldContext()` returns `legacy_single_world` plus separate narrative, encyclopedia, profile, capability, and diagnostic projections. | `src/lib/world-interface.js` | Consumers no longer need to interpret Pack state as world identity. |
+| `user.worldSetting` persists the one current identity as `world_local_primary`, exact source snapshots, reviewed/compiled semantic versions, active/previous/candidate pointers, and activation history. | `src/stores/system.js`, `src/lib/world-setting-state.js` | Identity and semantic history survive reload and complete backup without creating a second save or multi-world list. |
+| WorldBook, Contacts, and world-context consumers read current identity through `world-interface.js`. | `src/views/WorldBookView.vue`, `src/views/ContactsView.vue`, `src/lib/world-interface.js` | Pack changes no longer change displayed world identity or template selection; missing legacy/stub state alone falls back to `legacy_single_world`. |
 | Enabled readable Book source links resolve in priority order as the complete active narrative. Base worldview text is used only when no enabled readable Book text resolves. | `src/lib/world-interface.js`, `src/lib/book-text-schema.js` | Active Book text is not mixed with stale fallback text and is not silently truncated by the application; bounded cards and change-review previews are presentation only. |
 | `worldBookSourceLinks` has no `worldId` and is stored as one current-save global list. | `src/lib/book-text-schema.js`, `src/stores/system.js` | It is the source-link set for the one current world, not a multi-world model. |
 | Structured encyclopedia entries are a current-save global list with item-level `enabled`. | `src/stores/system.js` | Their current enabled state is single-world compatibility state. |
-| Historical world profile templates may contain Pack-shaped `worldId` values; new W1 writes use the stable `legacy_single_world` compatibility scope sentinel. | `src/views/WorldBookView.vue`, `src/views/ContactsView.vue` | Existing values remain reviewable and require an explicit W2 migration; no active Pack ID is written by new flows. |
+| Historical world profile templates may contain `default_world`, `legacy_single_world`, or Pack-shaped `worldId` values. | `src/stores/system.js`, `src/views/WorldBookView.vue` | Restore/hydration deterministically migrates known aliases to `world_local_primary`; new WorldBook template writes use the persisted current identity. |
 | World Packs can retain legacy `bookSourceLinkIds`, `encyclopediaEntryIds`, and `profileTemplateIds`. | `src/lib/world-pack-schema.js` | Missing optional references are non-blocking diagnostics, never activation ownership. |
 | Pack activation changes capability state only; it neither toggles content nor blocks on missing optional content references. | `src/stores/system.js`, `src/lib/world-pack-schema.js` | This non-binding behavior must be preserved. |
 | Book assets/categories are stored in the Book section while WorldBook links, Packs, entries, and templates are stored in the System user section. | `src/composables/useSettingsBackupWorkflow.js` | Complete backup/restore must verify both owners and their cross-references as one activation unit. |
+| World identity and reviewed semantic versions remain WorldBook-owned data in the existing required System user backup section. | `src/lib/backup-section-registry.js`, `src/stores/system.js` | Legacy backups normalize to the canonical single-world identity; malformed version records or pointers reject restore before current state mutates. |
+| New Event Instance V1/V2 records retain the active world/semantic binding at first creation. | `src/lib/simulation/event-contracts.js`, `src/lib/simulation/event-instance-v2.js`, `src/stores/simulation.js` | Later activation or rollback affects future records only; an in-progress or settled event is not rebound, rewritten, or rerolled. |
 | World Suite coordination evidence is stored under `user.worldSuiteInventory` in the existing System carrier and current complete-backup `user` section. | `src/stores/system.js`, `src/lib/world-suite-inventory.js` | The inventory is durable and resumable but cannot contain native resource bodies or activation truth; legacy saves normalize to empty. |
 | Book Catalog/Suite installation uses one Book-native Adapter and transactional managed-mutation Interface. | `src/lib/book-world-suite-owner-adapter.js`, `src/stores/book.js` | Catalog text never enters the manifest or inventory; Book persistence, capacity, collision, user-edit, and WorldBook-reference rules remain authoritative for independent and Suite installs alike. |
 | Gallery and Map Catalog/Suite installation have production-backed Owner Adapters over native transactional mutation Interfaces. | `src/lib/gallery-world-suite-owner-adapter.js`, `src/lib/map-world-suite-owner-adapter.js`, `src/stores/gallery.js`, `src/stores/map.js` | Gallery owns stable folders/assets and reference-safe lifecycle; Map owns map metadata/authored places and only consumes a Gallery asset ID. Both share independent/Suite execution, explicit provenance, collision/edit/use checks, and exact native rollback. Map additionally protects topology and Map/Event/Chat current-history references. |
@@ -177,9 +183,9 @@ Book commands edit assets and categories only. Pack commands edit capability def
 
 ### 5.3 Compatibility Identity
 
-Before a WorldBook-owned world definition exists, `legacy_single_world` represents the one current world in the resolver and acts as the stable compatibility scope sentinel in the existing profile-template and contact-template-link fields. It is independent of `activeWorldPackId`, is not an `activeWorldId` or a persisted world record, and must not be presented as a user-created multi-world definition.
+For old saves or incomplete test doubles with no `worldSetting`, `legacy_single_world` remains a private resolver fallback. Normal hydration creates the canonical persisted identity `world_local_primary`; the legacy sentinel is independent of `activeWorldPackId`, is not a selectable world, and must never be presented as a second world definition.
 
-Existing profile-template values that use a Pack ID remain discoverable through private compatibility lookup. Those Pack aliases must not be returned as canonical `worldId` or written by new code; explicit W1 saves replace them with the stable compatibility sentinel.
+Existing profile-template values that use `default_world`, `legacy_single_world`, or a known Pack ID migrate to `world_local_primary`. Those aliases must not be returned as canonical `worldId` or written by new code. Unknown scopes remain untouched rather than being guessed.
 
 ## 6. Zero-Pack And Independent-Selection Rules
 
@@ -266,22 +272,27 @@ Implemented and validated:
 - write no new Pack-shaped template or contact world scope;
 - treat missing legacy Pack content references as non-blocking review diagnostics.
 
-### Stage W2 - Persisted Identity And Reference Migration
+### Stage W2 - Persisted Identity And Semantic Versions (`DONE 2026-08-29`)
 
-Not approved by this contract. It requires:
+Implemented and validated:
 
-- an exact persisted world identity/selection schema;
-- owner inventory and complete-backup manifest updates;
-- deterministic migration of the `legacy_single_world` compatibility sentinel, global source links, encyclopedia enablement, historical profile-template Pack aliases, contact template links, and Pack enablements into one canonical world;
-- preflight, immutable source backup, atomic activation, reopen verification, and rollback;
-- explicit handling of legacy `default_world` and other Pack-shaped template scopes;
-- real-browser persistence and complete restore tests.
+- persist one canonical `world_local_primary` identity inside the existing System user carrier without adding a selector, save slot, or second world record;
+- persist exact authored-source snapshots and SHA-256 fingerprints plus immutable reviewed/compiled semantic version records;
+- keep model output transient until the user explicitly selects `Use this version`;
+- revalidate source/proposal/compiler/runtime-registry evidence before switching active/previous/candidate pointers in one committed state update;
+- keep the previous active version as an explicit rollback target and never delete later reviewed evidence during rollback;
+- classify unchanged, added-content, metadata-only, and meaning-review-required WorldBook changes without automatically calling a model or activating a version;
+- migrate known `default_world`, `legacy_single_world`, and Pack-shaped profile-template aliases to the canonical identity while old saves without `worldSetting` normalize safely;
+- reject malformed persisted semantic records or missing pointers before backup restore mutates the current save;
+- include world identity/version data in the required complete-backup System user section;
+- bind new Event Instance V1/V2 records to the active version at first creation so later activation or rollback changes future runtime only;
+- prove Settings activation/reload on desktop Chromium and simulated Pixel 5, plus focused compiler/state/restore/event tests.
 
 ### Stage W3 - Multiple World Definitions Or Switching
 
 Not approved. It requires a product decision and an ownership audit for every world-sensitive record. It cannot be treated as a storage UI or internal save-slot feature.
 
-## 11. Acceptance Matrix For Stage W1
+## 11. Acceptance Matrix For Stages W1 And W2
 
 | Case | Required result |
 | --- | --- |
@@ -295,6 +306,12 @@ Not approved. It requires a product decision and an ownership audit for every wo
 | Complete backup/restore | Book and WorldBook reference graph verifies together or rolls back together. |
 | Standalone Book import | Asset becomes available but no WorldBook link is created. |
 | Isolated containers | No discovery, merge, or implicit world sharing occurs. |
+| Model check without confirmation | Result remains transient; no semantic version, event, owner record, or save is changed. |
+| Confirmed matching proposal | One new immutable version becomes active only after deterministic validation and durable state commit. |
+| WorldBook edit after activation | The active version remains in use and is shown as needing review; no automatic model call or silent replacement occurs. |
+| New event after activation | It binds the current active version once at first creation. |
+| Existing event after activation or rollback | It retains its original binding and cannot be rewritten or rerolled by the world-version change. |
+| Malformed restored pointer | Restore returns failure before any current System state mutates. |
 
 ## 12. Stop Conditions
 
@@ -303,7 +320,7 @@ Stop the implementation slice if it would:
 1. persist `activeWorldPackId` as canonical `worldId`;
 2. make Pack activation switch the world, select Book text, select an encyclopedia, select a profile template, or enable Mini Scene;
 3. add a world selector, save-slot list, workspace switcher, or cross-container sync/merge;
-4. add `worldId` to only some world-sensitive records without an accepted migration for the rest;
+4. use partial world bindings to authorize W3 switching before every world-sensitive owner has an accepted association and migration rule;
 5. change the System or Book backup shape without manifest, rollback, and compatibility acceptance;
 6. move Book bodies into WorldBook/System or move WorldBook source links into Book ownership;
 7. let Files, Settings, or a source module become a second owner of world-setting truth;
@@ -317,5 +334,6 @@ Stop the implementation slice if it would:
 - One container still owns one current save and one current world context.
 - Book and WorldBook are integrated at the workflow and Interface levels, not merged as data owners.
 - World Pack is optional capability composition and cannot bind content automatically.
-- `legacy_single_world` is the permitted pre-migration resolver identity and existing-field compatibility scope sentinel; it is not a persisted world definition. Active Pack IDs are historical private aliases only.
-- Stage W1 is complete. Persisted world definitions, reference migration, multiple worlds, and switching remain separately gated by W2/W3.
+- `world_local_primary` is the canonical persisted identity for the current single world. `legacy_single_world`, `default_world`, and known Pack IDs are private migration aliases only.
+- A reviewed semantic version is user-confirmed and code-compiled evidence, not model authority or an owner mutation command.
+- Stage W1 and W2 are complete. Multiple world definitions and switching remain separately gated by W3.

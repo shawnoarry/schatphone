@@ -43,6 +43,7 @@ const MapSettingsPlacesView = () => import('../views/MapSettingsPlacesView.vue')
 const CalendarView = () => import('../views/CalendarView.vue')
 const CalendarAppearanceView = () => import('../views/CalendarAppearanceView.vue')
 const AgendaJourneyView = () => import('../views/AgendaJourneyView.vue')
+const ChronicleView = () => import('../views/ChronicleView.vue')
 const RemindersView = () => import('../views/RemindersView.vue')
 const WalletView = () => import('../views/WalletView.vue')
 const WorldBookView = () => import('../views/WorldBookView.vue')
@@ -112,6 +113,7 @@ const router = createRouter({
     { path: '/calendar', component: CalendarView },
     { path: '/calendar/settings/appearance', component: CalendarAppearanceView },
     { path: '/agenda-journey', component: AgendaJourneyView },
+    { path: '/chronicle', component: ChronicleView },
     { path: '/reminders', component: RemindersView },
     { path: '/wallet', component: WalletView },
     { path: '/worldbook', component: WorldBookView },

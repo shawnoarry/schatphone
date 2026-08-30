@@ -7,6 +7,8 @@ import {
   BROWSER_ROUTE,
   CAMERA_HOME_APP_ID,
   CAMERA_ROUTE,
+  CHRONICLE_HOME_APP_ID,
+  CHRONICLE_ROUTE,
   CONTROL_CENTER_HOME_APP_ID,
   CONTROL_CENTER_ROUTE,
   COMMUNITY_HOME_APP_ID,
@@ -69,6 +71,13 @@ export const HOME_APP_REGISTRY_ADDITIONS = Object.freeze({
     label: 'Agenda Journey',
     accent: 'cool',
     route: AGENDA_JOURNEY_ROUTE,
+  }),
+  [CHRONICLE_HOME_APP_ID]: Object.freeze({
+    kind: 'app',
+    icon: 'fas fa-book-open',
+    label: 'Chronicle',
+    accent: 'warm',
+    route: CHRONICLE_ROUTE,
   }),
   [MUSIC_HOME_APP_ID]: Object.freeze({
     kind: 'app',
@@ -144,6 +153,7 @@ export const HOME_APP_REGISTRY_ADDITIONS = Object.freeze({
 
 export const HOME_PLANNED_TILE_IDS = Object.freeze([
   AGENDA_JOURNEY_HOME_APP_ID,
+  CHRONICLE_HOME_APP_ID,
   MUSIC_HOME_APP_ID,
   WEATHER_HOME_APP_ID,
   CAMERA_HOME_APP_ID,

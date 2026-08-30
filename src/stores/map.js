@@ -117,7 +117,7 @@ import { useSystemStore } from './system'
 import { useBookStore } from './book'
 
 const MAP_STORAGE_KEY = 'store:map'
-const MAP_STORAGE_VERSION = 4
+const MAP_STORAGE_VERSION = 5
 const MAP_JOURNEY_POSITION_EVIDENCE_AUTHORIZATION = Symbol('map_journey_position_evidence')
 const MAP_PIN_VISIBILITY_CATEGORY_LIMIT = 80
 const MAP_PIN_VISIBILITY_PLACE_LIMIT = 500
@@ -351,7 +351,9 @@ const createIdleTripState = () => ({
   toLabel: '',
   destinationPlaceId: '',
   sourceCalendarEventId: '',
+  sourceAgendaJourneyId: '',
   sourceAgendaJourneyStepId: '',
+  sourceAgendaExecutionRevision: '',
   transportMode: '',
   estimateVersion: 0,
   distanceKm: 0,
@@ -720,9 +722,17 @@ const normalizeTripState = (raw) => {
       typeof raw.sourceCalendarEventId === 'string'
         ? raw.sourceCalendarEventId.trim().slice(0, 140)
         : '',
+    sourceAgendaJourneyId:
+      typeof raw.sourceAgendaJourneyId === 'string'
+        ? raw.sourceAgendaJourneyId.trim().slice(0, 180)
+        : '',
     sourceAgendaJourneyStepId:
       typeof raw.sourceAgendaJourneyStepId === 'string'
         ? raw.sourceAgendaJourneyStepId.trim().slice(0, 180)
+        : '',
+    sourceAgendaExecutionRevision:
+      typeof raw.sourceAgendaExecutionRevision === 'string'
+        ? raw.sourceAgendaExecutionRevision.trim().slice(0, 80)
         : '',
     transportMode: normalizeMapTransportMode(raw.transportMode, LEGACY_MAP_TRANSPORT_MODE),
     estimateVersion: Math.max(0, toInt(raw.estimateVersion, 0)),
@@ -804,9 +814,17 @@ const normalizeTripHistoryItem = (raw, index = 0) => {
       typeof raw.sourceCalendarEventId === 'string'
         ? raw.sourceCalendarEventId.trim().slice(0, 140)
         : '',
+    sourceAgendaJourneyId:
+      typeof raw.sourceAgendaJourneyId === 'string'
+        ? raw.sourceAgendaJourneyId.trim().slice(0, 180)
+        : '',
     sourceAgendaJourneyStepId:
       typeof raw.sourceAgendaJourneyStepId === 'string'
         ? raw.sourceAgendaJourneyStepId.trim().slice(0, 180)
+        : '',
+    sourceAgendaExecutionRevision:
+      typeof raw.sourceAgendaExecutionRevision === 'string'
+        ? raw.sourceAgendaExecutionRevision.trim().slice(0, 80)
         : '',
     transportMode: normalizeMapTransportMode(raw.transportMode, LEGACY_MAP_TRANSPORT_MODE),
     estimateVersion: Math.max(0, toInt(raw.estimateVersion, 0)),
@@ -943,13 +961,14 @@ const migrateMapCurrentLocationV3 = (data = {}, { migratedAt = Date.now() } = {}
 
 export const migrateMapStorage = ({ version, data, savedAt } = {}) => {
   if (
-    ![2, 3].includes(Number(version)) ||
+    ![2, 3, 4].includes(Number(version)) ||
     !data ||
     typeof data !== 'object' ||
     Array.isArray(data)
   ) {
     return null
   }
+  if (Number(version) === 4) return data
   if (Number(version) === 3) {
     return {
       ...data,
@@ -2560,7 +2579,9 @@ export const useMapStore = defineStore('map', () => {
       toLabel: state.toLabel,
       destinationPlaceId: state.destinationPlaceId,
       sourceCalendarEventId: state.sourceCalendarEventId,
+      sourceAgendaJourneyId: state.sourceAgendaJourneyId,
       sourceAgendaJourneyStepId: state.sourceAgendaJourneyStepId,
+      sourceAgendaExecutionRevision: state.sourceAgendaExecutionRevision,
       transportMode: state.transportMode,
       estimateVersion: state.estimateVersion,
       distanceKm: state.distanceKm,
@@ -3452,6 +3473,7 @@ export const useMapStore = defineStore('map', () => {
       ],
     }
     const contextHash = createEventContextHash(textContext)
+    const worldSemanticBinding = systemStore.getActiveWorldSemanticBinding()
     const materialized = materializeLocalEventInstanceV1({
       templateId: KPOP_REALISM_ARRIVAL_BRIEFING_TEMPLATE_ID,
       variantPackId: KPOP_REALISM_EVENT_PACK_ID,
@@ -3464,10 +3486,15 @@ export const useMapStore = defineStore('map', () => {
         checkpointAt: checkpoint.enteredAt,
       },
       world: {
+        worldId: worldSemanticBinding.worldId,
         worldContextId: worldContext.id,
         worldPackId: checkpoint.worldPackId,
         mapPackId: checkpoint.mapPackId,
         mapPackVersion: checkpoint.mapPackVersion,
+        semanticVersionId: worldSemanticBinding.semanticVersionId,
+        semanticManifestRevision: worldSemanticBinding.semanticManifestRevision,
+        semanticManifestHash: worldSemanticBinding.semanticManifestHash,
+        semanticSourceFingerprint: worldSemanticBinding.semanticSourceFingerprint,
       },
       place: {
         placeId: checkpoint.placeId,
@@ -4171,7 +4198,9 @@ export const useMapStore = defineStore('map', () => {
     estimate,
     destinationPlaceId = '',
     sourceCalendarEventId = '',
+    sourceAgendaJourneyId = '',
     sourceAgendaJourneyStepId = '',
+    sourceAgendaExecutionRevision = '',
     fromLabel = '',
     toLabel = '',
     startedAt = Date.now(),
@@ -4201,7 +4230,9 @@ export const useMapStore = defineStore('map', () => {
       toLabel: toLabel || resolveAddressLabel(to, '目的地'),
       destinationPlaceId,
       sourceCalendarEventId,
+      sourceAgendaJourneyId,
       sourceAgendaJourneyStepId,
+      sourceAgendaExecutionRevision,
       distanceKm: estimate.distanceKm,
       fare: estimate.fare,
       durationSeconds: estimate.durationSeconds,
@@ -4228,7 +4259,9 @@ export const useMapStore = defineStore('map', () => {
       worldPackId,
       mapPackId,
       sourceCalendarEventId,
+      sourceAgendaJourneyId,
       sourceAgendaJourneyStepId,
+      sourceAgendaExecutionRevision,
       remotePushPromise,
     }
   }
@@ -4268,7 +4301,9 @@ export const useMapStore = defineStore('map', () => {
 
   const startScheduledTravel = ({
     calendarEventId = '',
+    agendaJourneyId = '',
     agendaJourneyStepId = '',
+    agendaExecutionRevision = '',
     startsAt = 0,
     locationRef = null,
     transportMode = '',
@@ -4279,6 +4314,12 @@ export const useMapStore = defineStore('map', () => {
     const sourceAgendaJourneyStepId =
       typeof agendaJourneyStepId === 'string'
         ? agendaJourneyStepId.trim().slice(0, 180)
+        : ''
+    const sourceAgendaJourneyId =
+      typeof agendaJourneyId === 'string' ? agendaJourneyId.trim().slice(0, 180) : ''
+    const sourceAgendaExecutionRevision =
+      typeof agendaExecutionRevision === 'string'
+        ? agendaExecutionRevision.trim().slice(0, 80)
         : ''
     if (!sourceCalendarEventId && !sourceAgendaJourneyStepId) {
       return { ok: false, code: 'SCHEDULED_TRAVEL_SOURCE_MISSING' }
@@ -4291,7 +4332,11 @@ export const useMapStore = defineStore('map', () => {
       const sourceMatches = sourceAgendaJourneyStepId
         ? activeState.sourceAgendaJourneyStepId === sourceAgendaJourneyStepId
         : activeState.sourceCalendarEventId === sourceCalendarEventId
-      if (sourceMatches) {
+      const agendaLineageMatches =
+        (!sourceAgendaJourneyId || activeState.sourceAgendaJourneyId === sourceAgendaJourneyId) &&
+        (!sourceAgendaExecutionRevision ||
+          activeState.sourceAgendaExecutionRevision === sourceAgendaExecutionRevision)
+      if (sourceMatches && agendaLineageMatches) {
         return {
           ok: true,
           code: 'SCHEDULED_TRIP_REUSED',
@@ -4303,8 +4348,13 @@ export const useMapStore = defineStore('map', () => {
           worldPackId: activeState.worldPackId,
           mapPackId: activeState.mapPackId,
           sourceCalendarEventId,
+          sourceAgendaJourneyId,
           sourceAgendaJourneyStepId,
+          sourceAgendaExecutionRevision,
         }
+      }
+      if (sourceMatches && !agendaLineageMatches) {
+        return { ok: false, code: 'SCHEDULED_TRIP_SOURCE_REVISION_CONFLICT' }
       }
       return {
         ok: false,
@@ -4336,7 +4386,9 @@ export const useMapStore = defineStore('map', () => {
         estimate: projection.estimate,
         destinationPlaceId: projection.destination.placeId,
         sourceCalendarEventId,
+        sourceAgendaJourneyId,
         sourceAgendaJourneyStepId,
+        sourceAgendaExecutionRevision,
         fromLabel: projection.origin.labelZh || projection.origin.detail,
         toLabel: projection.destination.labelZh || projection.destination.detail,
         startedAt,
@@ -4378,7 +4430,9 @@ export const useMapStore = defineStore('map', () => {
       toLabel: state.toLabel,
       destinationPlaceId: state.destinationPlaceId,
       sourceCalendarEventId: state.sourceCalendarEventId,
+      sourceAgendaJourneyId: state.sourceAgendaJourneyId,
       sourceAgendaJourneyStepId: state.sourceAgendaJourneyStepId,
+      sourceAgendaExecutionRevision: state.sourceAgendaExecutionRevision,
       transportMode: state.transportMode,
       estimateVersion: state.estimateVersion,
       distanceKm: state.distanceKm,

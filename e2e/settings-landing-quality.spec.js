@@ -103,7 +103,7 @@ for (const theme of themes) {
     await expect(profile).toContainText(longUserName)
     await expect(profile).toHaveAttribute('type', 'button')
     await expect(quickAccess).toHaveCount(3)
-    await expect(menuItems).toHaveCount(7)
+    await expect(menuItems).toHaveCount(8)
 
     for (const button of await quickAccess.all()) {
       await expect(button).toHaveAttribute('type', 'button')

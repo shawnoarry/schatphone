@@ -64,6 +64,25 @@ describe('Schedule handoff source resolvers', () => {
       }),
     ).toBeNull()
   })
+
+  test('does not fall back to an accepted preview fixture when production owns the same proposal id', () => {
+    localStorage.setItem(
+      WORKPLACE_SHELL_STORAGE_KEY,
+      JSON.stringify({
+        version: WORKPLACE_SHELL_STORAGE_VERSION,
+        proposalDecisions: { 'proposal-radio-20260827': 'accepted' },
+      }),
+    )
+
+    expect(
+      resolveScheduleHandoffSourceDraftV1({
+        sourceOwner: 'workplace',
+        sourceRecordId: 'proposal-radio-20260827',
+        productionWorkHubResolver: () => null,
+        productionWorkHubOwnsRecord: () => true,
+      }),
+    ).toBeNull()
+  })
 })
 
 const createDraft = (patch = {}) => ({
@@ -270,6 +289,20 @@ describe('ScheduleHandoffDraftV1 conflict resolution', () => {
       incomingSourceRevision: 'revision_3',
     })
     expect(result).not.toHaveProperty('calendarEvent')
+  })
+
+  test('reuses an explicitly saved source-change revision instead of requesting review forever', () => {
+    expect(resolveScheduleHandoffConflictV1({
+      draft: createDraft({ proposalStatus: 'source_changed' }),
+      existingReference,
+    })).toMatchObject({
+      decision: SCHEDULE_HANDOFF_CONFLICT_DECISIONS.REUSE_CONFIRMED,
+      proposalStatus: 'confirmed',
+      requiresReview: false,
+      existingCalendarEventId: 'calendar_event_hair_appointment',
+      previousSourceRevision: 'revision_3',
+      incomingSourceRevision: 'revision_3',
+    })
   })
 
   test('keeps the existing event and requires review when the source revision changes', () => {

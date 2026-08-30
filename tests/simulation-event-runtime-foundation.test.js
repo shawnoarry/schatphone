@@ -50,10 +50,15 @@ const createMaterializationInput = (overrides = {}) => ({
     checkpointAt: 1_786_338_060_000,
   },
   world: {
+    worldId: 'world_local_primary',
     worldContextId: 'world_context_daily',
     worldPackId: 'default_world',
     mapPackId: 'real-seoul-v1',
     mapPackVersion: 1,
+    semanticVersionId: 'semantic_1_abcdef123456',
+    semanticManifestRevision: 1,
+    semanticManifestHash: 'a'.repeat(64),
+    semanticSourceFingerprint: 'b'.repeat(64),
   },
   place: {
     placeId: 'seoul-mbc-hq',

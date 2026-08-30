@@ -21,17 +21,18 @@ import {
 } from '../lib/activity-session'
 
 const ACTIVITY_SESSION_STORAGE_KEY = 'store:activity-session'
-const ACTIVITY_SESSION_STORAGE_VERSION = 2
+const ACTIVITY_SESSION_STORAGE_VERSION = 3
 
 export const migrateActivitySessionStorage = ({ version, data } = {}) => {
   if (
-    Number(version) !== 1 ||
+    ![1, 2].includes(Number(version)) ||
     !data ||
     typeof data !== 'object' ||
     Array.isArray(data)
   ) {
     return null
   }
+  if (Number(version) === 2) return data
   return {
     ...data,
     schemaVersion: ACTIVITY_SESSION_SCHEMA_VERSION,
@@ -161,6 +162,17 @@ export const useActivitySessionStore = defineStore('activitySession', () => {
   const inspectStartRequest = (request = {}) => {
     const existing = findSessionByStepId(request.agendaJourneyStepId)
     if (existing) {
+      const requestedRevision =
+        typeof request.agendaExecutionRevision === 'string'
+          ? request.agendaExecutionRevision.trim().slice(0, 80)
+          : ''
+      if (requestedRevision && existing.agendaExecutionRevision !== requestedRevision) {
+        return {
+          ok: false,
+          code: 'ACTIVITY_SESSION_EXECUTION_REVISION_CONFLICT',
+          session: existing,
+        }
+      }
       return isLiveSession(existing)
         ? { ok: true, code: 'ACTIVITY_SESSION_REUSABLE', session: existing }
         : { ok: false, code: 'ACTIVITY_SESSION_STEP_ALREADY_TERMINAL', session: existing }

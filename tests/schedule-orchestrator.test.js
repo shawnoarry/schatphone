@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
   createCalendarOccurrenceFingerprint,
+  createScheduleLogicalExecutionKey,
   createScheduleOrchestrationId,
   reconcileScheduleOrchestration,
 } from '../src/lib/schedule-orchestrator'
@@ -39,6 +40,9 @@ describe('Schedule Orchestrator pure interface', () => {
 
     expect(id).toBe(`schedule_orchestration::${event.id}::${event.startsAt}`)
     expect(createScheduleOrchestrationId(event.id, event.startsAt)).toBe(id)
+    expect(createScheduleLogicalExecutionKey(event.id, event.startsAt, 'none')).toBe(
+      `calendar_event::${event.id}::one_off`,
+    )
     expect(fingerprint).toMatch(/^[a-f0-9]{16}$/)
     expect(createCalendarOccurrenceFingerprint({ ...event, locationRef: { ...event.locationRef, labelZh: '其他显示名' } })).toBe(
       fingerprint,
@@ -125,10 +129,12 @@ describe('Schedule Orchestrator pure interface', () => {
       now: NOW + 2 * 60_000,
       config: { materializationLeadMs: 2 * DAY_MS },
     })
-    expect(rescheduled.records).toHaveLength(2)
-    expect(rescheduled.records.find((record) => record.occurrenceStartsAt === event.startsAt)).toMatchObject({
-      retiredAt: NOW + 2 * 60_000,
-      retirementReason: 'calendar_occurrence_replaced',
+    expect(rescheduled.records).toHaveLength(1)
+    expect(rescheduled.records[0]).toMatchObject({
+      id: first.records[0].id,
+      logicalExecutionKey: `calendar_event::${event.id}::one_off`,
+      occurrenceStartsAt: rescheduledEvent.startsAt,
+      retiredAt: 0,
     })
 
     const removed = reconcileScheduleOrchestration({
@@ -138,6 +144,29 @@ describe('Schedule Orchestrator pure interface', () => {
     })
     expect(removed.records.filter((record) => !record.retiredAt)).toHaveLength(0)
     expect(removed.records.every((record) => record.retirementReason)).toBe(true)
+  })
+
+  test('changes the fingerprint when Calendar source lineage changes', () => {
+    const event = createEvent({
+      sourceRef: {
+        sourceOwner: 'workplace',
+        sourceRecordId: 'proposal-change',
+        sourceRevision: 'package:r2:proposal-change:r1',
+        sourceReturnContext: { path: '/workplace', query: { section: 'work' } },
+        previousSourceRefs: [{
+          sourceOwner: 'workplace',
+          sourceRecordId: 'proposal-original',
+          sourceRevision: 'package:r1:proposal-original:r1',
+        }],
+      },
+    })
+    expect(createCalendarOccurrenceFingerprint({
+      ...event,
+      sourceRef: {
+        ...event.sourceRef,
+        sourceRevision: 'package:r3:proposal-change:r1',
+      },
+    })).not.toBe(createCalendarOccurrenceFingerprint(event))
   })
 
   test('requests an overdue required deadline once and reopens without duplicating it', () => {

@@ -193,4 +193,39 @@ describe('Agenda Journey view', () => {
     })
     wrapper.unmount()
   })
+
+  test('shows a review-required state and blocks a new activity timer', async () => {
+    const agendaStore = useAgendaJourneyStore()
+    const created = agendaStore.createManualPlan(
+      {
+        title: '修订中的课程',
+        startsAt: NOW + 2 * 60 * 60_000,
+        endsAt: NOW + 3 * 60 * 60_000,
+      },
+      { now: NOW },
+    )
+    agendaStore.restoreFromBackup({
+      journeys: [{
+        ...created.journey,
+        sourceReviewRequired: true,
+        sourceCalendarFingerprint: 'calendar-v2',
+        executionRevision: 'calendar-v1',
+      }],
+    })
+    const router = createTestRouter()
+    await router.push({
+      path: '/agenda-journey',
+      query: { journeyId: created.journey.id },
+    })
+    await router.isReady()
+    const wrapper = mount(AgendaJourneyView, { global: { plugins: [router] } })
+    await flushUi()
+
+    expect(wrapper.get('[data-testid="agenda-source-review"]').text()).toContain('保留原执行版本')
+    await wrapper.get('[data-testid="agenda-activity-start"]').trigger('click')
+    await flushUi()
+    expect(useActivitySessionStore().sessions).toEqual([])
+    expect(wrapper.get('.action-notice[data-tone="warning"]').text()).toContain('不能开始计时')
+    wrapper.unmount()
+  })
 })

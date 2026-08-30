@@ -11,6 +11,7 @@ const request = (stepId, patch = {}) => ({
   sourceStepStatus: 'available',
   agendaJourneyId: `aj::${stepId}`,
   agendaJourneyStepId: stepId,
+  agendaExecutionRevision: 'agenda-revision-1',
   plannedDurationMs: 25 * MINUTE_MS,
   completionPolicy: 'user_confirmation',
   pausePolicy: 'allow_pause',
@@ -68,6 +69,18 @@ describe('Activity Session store', () => {
     expect(store.pendingOwnerCompletions).toHaveLength(1)
   })
 
+  test('rejects a stale request for the same Agenda step revision', async () => {
+    const store = useActivitySessionStore()
+    await vi.waitFor(() => expect(store.hasFinishedStorageHydration).toBe(true))
+    expect(store.startForAgendaRequest(request('agenda-step-revision'), { now: NOW }).ok).toBe(true)
+    expect(store.inspectStartRequest(request('agenda-step-revision', {
+      agendaExecutionRevision: 'agenda-revision-2',
+    }))).toMatchObject({
+      ok: false,
+      code: 'ACTIVITY_SESSION_EXECUTION_REVISION_CONFLICT',
+    })
+  })
+
   test('cancels a live timer when its source activity becomes terminal elsewhere', async () => {
     const store = useActivitySessionStore()
     await vi.waitFor(() => expect(store.hasFinishedStorageHydration).toBe(true))
@@ -84,7 +97,7 @@ describe('Activity Session store', () => {
     })
   })
 
-  test('migrates V1 sessions to V2 with an empty event-resolution ledger', async () => {
+  test('migrates V1 sessions to V3 with an empty event-resolution ledger', async () => {
     const store = useActivitySessionStore()
     await vi.waitFor(() => expect(store.hasFinishedStorageHydration).toBe(true))
     store.startForAgendaRequest(request('agenda-step-v1'), { now: NOW })
@@ -109,9 +122,9 @@ describe('Activity Session store', () => {
     setActivePinia(createPinia())
     const restored = useActivitySessionStore()
     expect(restored.findSessionByStepId('agenda-step-v1')).toMatchObject({
-      schemaVersion: 2,
+      schemaVersion: 3,
       eventResolutions: [],
     })
-    expect(restored.createBackupSnapshot().schemaVersion).toBe(2)
+    expect(restored.createBackupSnapshot().schemaVersion).toBe(3)
   })
 })

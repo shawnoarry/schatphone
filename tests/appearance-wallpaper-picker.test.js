@@ -205,7 +205,7 @@ describe('AppearanceView wallpaper source picker', () => {
     expect(systemStore.settings.appearance.homeWidgetPages.flat()).not.toContain('app_stock')
     expect(systemStore.settings.appearance.homeWidgetPages.flat()).not.toContain('app_assets')
     expect(systemStore.settings.appearance.homeWidgetPages.flat()).not.toContain('app_store')
-    expect(systemStore.settings.appearance.homeDesktopSetupVersion).toBe(14)
+    expect(systemStore.settings.appearance.homeDesktopSetupVersion).toBe(15)
     expect(systemStore.settings.appearance.homeVisiblePageCount).toBe(4)
     expect(wrapper.get('[data-testid="appearance-home-layout-refresh-feedback"]').exists()).toBe(true)
 

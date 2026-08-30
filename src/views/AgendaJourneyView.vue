@@ -399,7 +399,9 @@ const openLinkedMapJourney = () => {
 
   const result = mapStore.startScheduledTravel({
     calendarEventId: journey.sourceCalendarEventId,
+    agendaJourneyId: journey.id,
     agendaJourneyStepId: step.id,
+    agendaExecutionRevision: journey.executionRevision,
     startsAt: step.desiredArrivalAt || journey.scheduledStartsAt,
     locationRef: step.locationRef,
     transportMode: step.transportMode,
@@ -409,7 +411,9 @@ const openLinkedMapJourney = () => {
     actionNotice.value = {
       tone: 'warning',
       text:
-        result.code === 'TRIP_ALREADY_IN_PROGRESS' || result.code === 'TRIP_ARRIVAL_PENDING'
+        result.code === 'SCHEDULED_TRIP_SOURCE_REVISION_CONFLICT'
+          ? t('这段行程属于另一版计划，请先回到行程列表复核。', 'This trip belongs to another plan revision. Review the journey first.')
+          : result.code === 'TRIP_ALREADY_IN_PROGRESS' || result.code === 'TRIP_ARRIVAL_PENDING'
           ? t('地图中已有另一段行程，请先处理那段行程。', 'Another Map Journey is active. Finish or cancel it first.')
           : projectionFailureText(result.code),
     }
@@ -752,6 +756,16 @@ onBeforeUnmount(() => {
           {{ actionNotice.text }}
         </p>
 
+        <p
+          v-if="selectedJourney.sourceReviewRequired"
+          class="action-notice"
+          data-tone="warning"
+          data-testid="agenda-source-review"
+          role="status"
+        >
+          {{ t('日历来源已在执行开始后变化。当前行程保留原执行版本；请先复核，再开始新的步骤。', 'The Calendar source changed after execution began. This journey keeps its original execution revision; review it before starting another step.') }}
+        </p>
+
         <ol class="execution-timeline" :aria-label="t('执行步骤', 'Execution steps')">
           <li v-if="selectedTravelStep" class="execution-step" data-testid="agenda-travel-step">
             <span class="execution-step__rail" aria-hidden="true"><i class="fas fa-route"></i></span>
@@ -800,7 +814,7 @@ onBeforeUnmount(() => {
                   v-if="!['completed', 'cancelled', 'missed', 'skipped'].includes(selectedTravelStep.status)"
                   type="button"
                   class="primary-action"
-                  :disabled="!travelProjection?.ready"
+                  :disabled="!travelProjection?.ready || (selectedJourney.sourceReviewRequired && !selectedTravelStep.mapJourneyId)"
                   data-testid="agenda-open-map"
                   @click="openLinkedMapJourney"
                 >

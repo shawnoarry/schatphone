@@ -1,6 +1,6 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-08-28
+Updated: 2026-08-29
 
 Integrated alignment baseline: `98f1250`.
 
@@ -8,7 +8,7 @@ This is the current handoff for architecture cleanup, state ownership, persisten
 
 ## 1. Current Status
 
-Status: `CMG_SEQUENCE_DONE / CMG-00 THROUGH CMG-10 DONE 2026-08-28`
+Status: `CMG_SEQUENCE_DONE / CMG-00 THROUGH CMG-10 DONE 2026-08-28 / WORLD_SETTING_W2_DONE 2026-08-29`
 
 Roadmap owner: 4.5 Architecture, Security, And Documentation Maintenance.
 
@@ -22,6 +22,7 @@ Current active architecture slice:
 - persistent-storage permission is never requested on first launch; the first qualifying high-volume durable action asks in context, while Settings exposes current status and explicit retry;
 - authoritative Chat/role/relationship/memory/user-document records and still-referenced assets cannot be silently or irreversibly deleted; cold archival must remain reversible. A complete Mini Scene is optional presentation history: explicit user deletion may remove the retained presentation, but never the canonical event result, approved role memory, diary/timeline projection, or owner audit evidence;
 - roadmap 4.5-CMG governs the confirmed shared-experience, role-memory, Event Instance, Mini Scene, and persistence-result defects through fixed IDs. `CMG-00` through `CMG-10` and `DCF-01` through `DCF-06` are complete at current acceptance;
+- `WORLD_SETTING_W2 DONE 2026-08-29` persists one canonical current-world identity and immutable user-confirmed semantic-version history in the existing System user carrier. Known single-world/Pack-shaped profile-template aliases migrate to `world_local_primary`; malformed version records or pointers reject restore before mutation; complete backup inventories the WorldBook-owned data class; and new Event Instance V1/V2 records retain their first-start semantic binding. This adds no second world, selector, save slot, automatic model call, or owner mutation authority;
 - `CMG-09 DONE 2026-08-28` at `3126c1c` preserves storage shapes and every owner record while indexing Relationship Runtime memories by person and Mini Scene retained history by state. Contacts/World Hub clone only the requested page. Chat consumes one current relationship, at most 3 relevant role memories / 720 characters, and at most 2 non-archived shared-experience summaries / 480 characters, deduplicated by stable experience ID; raw source modules/IDs, supporting-record counts, and recent relationship-event rows do not enter the prompt;
 - `CMG-10 DONE 2026-08-28` at `98f1250` upgrades Relationship Runtime to V3 with a rebuildable restore report for rejected and ungrouped legacy rows. Missing memory or experience links are never inferred. One verified complete backup jointly restores 501 relationship events, 241 Event Instances, and 125 retained Mini Scenes, persists them, and reopens them; the gift journey also survives owner-snapshot recovery as one shared experience. Earlier rows already discarded by old capped writers remain unrecoverable;
 - any canonical content formally published, confirmed, applied, or admitted into an owning module's history is durable when it can be revisited, referenced, or affect continuity, regardless of user/AI/system origin. A generated presentation remains temporary until the user explicitly chooses to retain the complete Mini Scene;
@@ -106,7 +107,7 @@ Current active architecture slice:
 | Backup/recovery engineering contract | `ARCHITECTURE_ACCEPTED` | Complete package, integrity, capacity, staged restore, migration, failure, crash recovery, rollback, and acceptance-test boundaries are frozen in `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`. |
 | Persistence inventory and Repository contract | `BOOK_ACTIVE` | Canonical inventory includes the active Book Repository database/six stores and direct legacy fallback; exact schema, staging, policy, coordination, activation, reopen, and rollback gates pass. |
 | Storage runtime implementation | `BOOK_ONLY_DONE` | Book is the sole active Repository owner. Cloudflare connector, media offload, Gallery schema, legacy deletion, garbage collection, and every other owner migration remain unapproved. |
-| Unified world-setting architecture | `STAGE_W1_DONE` | `worldId` is distinct from `packId` and save identity. Book owns text, WorldBook owns activation/current-world context, Packs own optional capabilities, and consumers read an immutable shared projection. Persisted world definitions, W2 migration, and switching remain unapproved. |
+| Unified world-setting architecture | `STAGE_W1_AND_W2_DONE / W3_GATED` | `worldId` is distinct from `packId` and save identity. Book owns text, WorldBook owns activation/current-world context plus reviewed semantic versions, Packs own optional capabilities, and consumers read immutable projections. One canonical current-world identity, legacy alias migration, complete-backup coverage, explicit activation/rollback, and stable Event Instance bindings are implemented; multiple worlds and switching remain unapproved. |
 | Cross-module Mini Scene | `AI_RUNTIME_AND_TEXT_SHELL_DONE_2026-08-19` | Pure contracts plus durable AI artifacts/policies, provider-neutral required-AI generation, Event Runtime registration, and the root Text Presenter are landed and tested. |
 | Mini Scene remaining depth | `PARTIAL / SEPARATELY_GATED` | Production event triggering, profile binding, safe Book transforms, HTML sandbox, and source-owner Adapters remain staged outside persistence Batch 2B. |
 
@@ -147,8 +148,8 @@ Current inventory and validation posture:
 - `src/lib/map-world-suite-inspection.js` is the Map read-only inspection Module, and `src/lib/production-map-world-suite-inspection-adapter.js` composes Map, Gallery, Event Runtime, and Chat owner evidence behind it. It distinguishes built-in, user custom, correctly Catalog-managed, other-resource, ambiguous, and absent identities; fingerprints managed metadata/topology; and inventories Gallery availability, player places, active/world binding, visibility, Footprints knowledge, current position/place session, active/history Map Journeys, current/history Event references, persisted Chat location cards, and capacity without copying owner bodies. `src/lib/map-world-suite-owner-adapter.js` adds a separately constructed resolver-backed Adapter for shared independent/Suite install/update/remove. It requires existing Gallery-owned material, strictly validates authored canvas places and Catalog identity/version, blocks user edits/current-history references/topology replacement, and never activates or binds. Native readiness is approved, but the default production inspection exposes no mutation methods and the product runtime registers no mutation Adapter;
 - `src/lib/music-contract.js`, `src/lib/chksz-music-adapter.js`, `src/lib/music-module-interface.js`, `src/lib/music-playback-runtime.js`, and `src/stores/music.js` own Music normalization, generic JSON, the Radio Browser preset, dedicated ChKSz provider behavior, browser playback, persistence facade, and bounded Chat/Map seams;
 - `src/lib/tts-contract.js`, `src/lib/tts-api.js`, and `src/stores/tts.js` own runtime speech normalization, Cloudflare/MiniMax Adapters, device-local configuration/credentials, temporary preview lifecycle, and the future caller boundary defined by `docs/architecture/TTS_MODULE_CONTRACT.md`;
-- `src/lib/world-interface.js` now exposes stable compatibility identity separately from narrative, encyclopedia, profile-template, Pack-capability, and diagnostic projections;
-- `docs/architecture/WORLD_SETTING_ARCHITECTURE.md` defines the accepted Interface and the separately gated W2 migration from compatibility scope to persisted WorldBook-owned identity;
+- `src/lib/world-interface.js` now exposes the persisted current-world identity separately from narrative, encyclopedia, profile-template, Pack-capability, and diagnostic projections, with legacy fallback only for missing old/stub state;
+- `src/lib/world-setting-state.js` owns the W2 identity/source/version/activation/rollback state contract, while `docs/architecture/WORLD_SETTING_ARCHITECTURE.md` records completed W1/W2 and the separately gated W3 switching boundary;
 - relationship facts, role bindings, source cleanup, app bindings, service templates, shareable objects, image sources, and persistence use named helper contracts;
 - notification and API report access has focused `systemStore` facades;
 - Settings backup, storage diagnostics, and push orchestration has focused workflow composables.
@@ -246,7 +247,7 @@ Stage W1 is complete, while the single-world baseline still has no WorldBook-own
 - historical profile templates can retain Pack-shaped aliases, while new explicit saves use the stable compatibility scope sentinel;
 - Pack schemas retain legacy Book/encyclopedia/template reference fields only as non-blocking diagnostics.
 
-Preferred response: preserve Stage W1 and do not start W2 until the persisted world-definition schema, complete-backup manifest, deterministic legacy-scope migration, atomic activation, and rollback are separately approved. A world selector or partial per-record migration remains prohibited.
+Preferred response: preserve completed W1/W2, route ordinary preparation through Settings, and do not start W3 until every world-sensitive owner has an accepted association, suspension, history, and migration rule. A world selector, internal save-slot model, or genre-specific semantic engine remains prohibited.
 
 ### Type Coverage
 
@@ -436,7 +437,7 @@ The 2026-07-22 product-release audit changes that order through roadmap 4.9:
 2. structured write results, newest-valid local/mirror reconciliation, product-level save-failed/read-only recovery, and the product-wide same-container writer boundary are integrated foundations;
 3. `DONE 2026-08-09`: the release-local v3 backup/restore/reopen boundary covers required Chat identity/avatar state, default-on retained Gallery material, integrity verification, durable rollback checkpoints, startup crash recovery, and legacy compatibility;
 4. first Chat activation and the explicit custom-role-to-Chat journey are already product-side complete; remote CI/Pages, the deployed `/schatphone/` smoke, and the Git-connected Vercel plus Cloudflare Worker/static-assets `a1418ed` restricted relays are complete with real-provider model/Chat smoke. Deployed PWA/install/offline and named true-device backup evidence still close the public-release gate;
-5. Gallery schema, non-Book Repository cutovers, production push, hotspot decomposition, incremental typing, Mini Scene, and World Setting W2 remain post-preview unless a current product blocker requires a separately approved slice.
+5. Gallery schema, non-Book Repository cutovers, production push, hotspot decomposition, incremental typing, Mini Scene production triggering, and World Setting W3 switching remain post-preview unless a current product blocker requires a separately approved slice. The user-promoted W2 single-world identity/version slice is complete.
 6. roadmap 4.10's Camera/shared-image-generation first slice is complete; the new Chat/Network compatibility relay does not automatically become Camera image-generation transport. Gallery People truth, source-module callers, true-device checks, and hosted image-provider smoke require separate promotion.
 7. `DONE 2026-08-12`: Book, Gallery, and Map now have production-backed World Suite Owner Adapters. Book retains real Store/Repository persistence, Catalog provenance, collision/capacity/read-only protection, WorldBook reference review, and exact rollback. Gallery adds stable folder/URL-asset packs, pack/asset provenance, duplicate ID/URL protection, other-folder/native-use review, and transactional create/update/delete. Map retains production-composed body-free Map/Gallery/Event/Chat inspection, stable Catalog-authored places, topology/reference protection, and transactional mutation. One typed/versioned Book/Gallery/Map Catalog plus `map-gallery-world-suite-runtime.js` and `production-world-suite-runtime.js` now compose real Store preview/install/uninstall, dependency order, independent/Suite reuse, receipt-gated System checkpoints, serialized operations, reopen proof, and retry without duplicate Owner mutation. The default standalone Map inspection remains read-only, and there is still no built-in K-pop Catalog/manifest, startup caller, UI, activation, world binding, relocation, or Journey mutation. Do not start WorldBook/System or Event Runtime mutation work, whose current write paths still combine activation/current-world or runtime-registration meaning.
 8. Contacts remains the concrete role-profile Owner and Relationship Runtime remains the relationship-memory Owner. The next relationship-network work should add read projections over existing role IDs and confirmed facts rather than create another role Store. Reuse deterministic recall and pressure Modules separately for relationship memory, future world chronology, and future role-to-role knowledge; do not enable automatic replacement summaries, a mixed global memory Store, or separate role/world provider settings before a real background-world runtime is approved.
@@ -511,14 +512,15 @@ Status: `STAGE_1_DONE / AI_RUNTIME_AND_TEXT_SHELL_DONE_2026-08-19 / PRODUCTION_T
 
 ### P1: Unified World Setting Identity
 
-Status: `STAGE_W1_DONE / STAGE_W2_NOT_APPROVED`.
+Status: `STAGE_W1_DONE / STAGE_W2_DONE 2026-08-29 / STAGE_W3_NOT_APPROVED`.
 
 1. `DONE 2026-07-22`: accept `docs/architecture/WORLD_SETTING_ARCHITECTURE.md` without widening it into persisted world definitions or multi-world switching;
 2. `DONE 2026-07-22`: deepen the current world Interface so `legacy_single_world` identity is stable and Pack capability state is a separate projection;
 3. `DONE 2026-07-22`: route WorldBook and Contacts reads through the Interface; new template/contact writes use the stable compatibility sentinel instead of Pack IDs;
 4. `DONE 2026-07-22`: prove Pack changes cannot change identity, Book links, encyclopedia selection, or profile-template selection, and make missing legacy content references non-blocking;
-5. preserve unchanged System/Book schema and complete-backup bytes from Stage W1;
-6. require a separate Stage W2 schema/migration/rollback review before persisting WorldBook-owned world definitions.
+5. `DONE 2026-08-29`: persist `world_local_primary`, exact source snapshots, reviewed/compiled versions, activation history, rollback, and complete-backup coverage inside the existing System user carrier;
+6. `DONE 2026-08-29`: migrate known legacy/Pack-shaped profile-template scopes, reject malformed restore pointers before mutation, and bind new Event Instance V1/V2 records once at first creation;
+7. keep W3 multiple-world definitions/switching, automatic recompilation/background calls, and production semantic-capability consumption separately gated.
 
 ### P1: One Architecture Seam
 

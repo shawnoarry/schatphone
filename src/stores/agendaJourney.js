@@ -24,9 +24,14 @@ import {
 import { startOfCalendarDay } from '../lib/calendar-schedule'
 
 const AGENDA_JOURNEY_STORAGE_KEY = 'store:agenda-journey'
-const AGENDA_JOURNEY_STORAGE_VERSION = 1
+const AGENDA_JOURNEY_STORAGE_VERSION = 2
 const DAY_MS = 24 * 60 * 60 * 1000
 const MANUAL_PLAN_HORIZON_MS = 14 * DAY_MS
+
+const migrateAgendaJourneyStorage = ({ version, data } = {}) =>
+  Number(version) === 1 && data && typeof data === 'object' && !Array.isArray(data)
+    ? data
+    : null
 
 const toTimestamp = (value, fallback = 0) => {
   const numeric = Number(value)
@@ -86,7 +91,12 @@ export const useAgendaJourneyStore = defineStore('agendaJourney', () => {
   const createPersistedSnapshot = () => ({
     schemaVersion: AGENDA_JOURNEY_SCHEMA_VERSION,
     journeys: journeys.value.map((journey) => ({
-      ...journey,
+        ...journey,
+      executionProof: journey.executionProof ? { ...journey.executionProof } : null,
+      pendingExecutionProof: journey.pendingExecutionProof
+        ? { ...journey.pendingExecutionProof }
+        : null,
+      priorExecutionProofs: journey.priorExecutionProofs.map((proof) => ({ ...proof })),
       locationRef: journey.locationRef ? { ...journey.locationRef } : null,
       steps: journey.steps.map((step) => ({
         ...step,
@@ -104,6 +114,7 @@ export const useAgendaJourneyStore = defineStore('agendaJourney', () => {
   const hydrateFromStorage = () => {
     const persisted = readPersistedState(AGENDA_JOURNEY_STORAGE_KEY, {
       version: AGENDA_JOURNEY_STORAGE_VERSION,
+      migrate: migrateAgendaJourneyStorage,
     })
     return applyPersistedSource(persisted)
   }
@@ -111,6 +122,7 @@ export const useAgendaJourneyStore = defineStore('agendaJourney', () => {
   const hydrateFromStorageAsync = async () => {
     const persisted = await readPersistedStateAsync(AGENDA_JOURNEY_STORAGE_KEY, {
       version: AGENDA_JOURNEY_STORAGE_VERSION,
+      migrate: migrateAgendaJourneyStorage,
     })
     return applyPersistedSource(persisted)
   }
@@ -118,6 +130,7 @@ export const useAgendaJourneyStore = defineStore('agendaJourney', () => {
   const persistToStorage = () =>
     writePersistedState(AGENDA_JOURNEY_STORAGE_KEY, createPersistedSnapshot(), {
       version: AGENDA_JOURNEY_STORAGE_VERSION,
+      migrate: migrateAgendaJourneyStorage,
     })
 
   const createManualPlan = (input = {}, { now = Date.now() } = {}) => {
@@ -187,6 +200,37 @@ export const useAgendaJourneyStore = defineStore('agendaJourney', () => {
     if (!result.ok || !replaceJourney(result.journey)) return result
     lastReconciledAt.value = toTimestamp(now, Date.now())
     return { ...result, journey: findJourneyById(result.journey.id) }
+  }
+
+  const recordExecutionNotification = (
+    journeyId,
+    { revision = '', notificationId = '', notifiedAt = Date.now() } = {},
+  ) => {
+    const journey = findJourneyById(journeyId)
+    const normalizedRevision = typeof revision === 'string' ? revision.trim().slice(0, 80) : ''
+    const normalizedNotificationId =
+      typeof notificationId === 'string' ? notificationId.trim().slice(0, 180) : ''
+    if (!journey || !normalizedRevision || !normalizedNotificationId) return false
+    return replaceJourney({
+      ...journey,
+      executionNotificationRevision: normalizedRevision,
+      executionNotificationId: normalizedNotificationId,
+      executionNotifiedAt: toTimestamp(notifiedAt, Date.now()),
+      updatedAt: Math.max(journey.updatedAt, toTimestamp(notifiedAt, Date.now())),
+    })
+  }
+
+  const clearExecutionNotification = (journeyId, notificationId = '') => {
+    const journey = findJourneyById(journeyId)
+    if (!journey) return false
+    const expectedId = typeof notificationId === 'string' ? notificationId.trim() : ''
+    if (expectedId && journey.executionNotificationId !== expectedId) return false
+    return replaceJourney({
+      ...journey,
+      executionNotificationRevision: '',
+      executionNotificationId: '',
+      executionNotifiedAt: 0,
+    })
   }
 
   const setStepTransportMode = (journeyId, stepId, transportMode, { now = Date.now() } = {}) => {
@@ -311,6 +355,8 @@ export const useAgendaJourneyStore = defineStore('agendaJourney', () => {
     materializeCalendarOccurrence,
     retireOrchestrationRecords,
     evaluateDeadlineRequest,
+    recordExecutionNotification,
+    clearExecutionNotification,
     setStepTransportMode,
     linkMapJourney,
     reconcileMapEvidence,

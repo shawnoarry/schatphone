@@ -17,6 +17,14 @@ const TERMINAL_LIFECYCLES = new Set([
   EVENT_INSTANCE_V2_LIFECYCLE.CANCELLED,
 ])
 
+export const EVENT_WORLD_BINDING_CONTEXT_KEYS = Object.freeze({
+  WORLD_ID: 'world_id',
+  SEMANTIC_VERSION_ID: 'world_semantic_version_id',
+  SEMANTIC_MANIFEST_REVISION: 'world_semantic_manifest_revision',
+  SEMANTIC_MANIFEST_HASH: 'world_semantic_manifest_hash',
+  SEMANTIC_SOURCE_FINGERPRINT: 'world_semantic_source_fingerprint',
+})
+
 const normalizeTimestamp = (value, fallback = 0) => {
   const number = Number(value)
   return Number.isFinite(number) && number >= 0 ? Math.floor(number) : Math.max(0, fallback)
@@ -78,11 +86,25 @@ const normalizeNode = (rawNode) => {
       : {}
     const defaultNodeId = normalizeNodeId(rawNode.defaultNodeId)
     const deadlineId = normalizeEventId(rawNode.deadlineId, 160)
+    const deadlineContextKey = normalizeEventId(rawNode.deadlineContextKey, 120)
     const durationMs = Math.max(0, Math.floor(Number(rawNode.durationMs) || 0))
     const onTimeout = normalizeNodeId(rawNode.onTimeout)
     if (factTypes.length === 0 || (!defaultNodeId && Object.keys(resultCodeToNode).length === 0)) return null
-    if ((deadlineId || durationMs || onTimeout) && (!deadlineId || !durationMs || !onTimeout)) return null
-    return { id, kind, factTypes, resultCodeToNode, defaultNodeId, deadlineId, durationMs, onTimeout }
+    if (
+      (deadlineId || deadlineContextKey || durationMs || onTimeout) &&
+      (!deadlineId || (!deadlineContextKey && !durationMs) || !onTimeout)
+    ) return null
+    return {
+      id,
+      kind,
+      factTypes,
+      resultCodeToNode,
+      defaultNodeId,
+      deadlineId,
+      deadlineContextKey,
+      durationMs,
+      onTimeout,
+    }
   }
   if (kind === EVENT_NODE_KIND.TIMEOUT) {
     const deadlineId = normalizeEventId(rawNode.deadlineId, 160)
@@ -140,7 +162,71 @@ export const normalizeEventTemplateV2 = (rawTemplate) => {
   return { schemaVersion: 2, id, startNodeId, nodes }
 }
 
-export const createEventInstanceV2 = ({ id = '', template = null, contextRefs = {}, now = Date.now() } = {}) => {
+export const normalizeEventWorldBinding = (rawBinding = {}) => {
+  const source = isEventPlainObject(rawBinding) ? rawBinding : {}
+  const worldId = normalizeEventId(source.worldId, 180)
+  const semanticVersionId = normalizeEventId(source.semanticVersionId, 180)
+  const semanticManifestRevision = Math.max(0, Math.floor(Number(source.semanticManifestRevision) || 0))
+  const semanticManifestHash = normalizeEventText(source.semanticManifestHash, '', 64).toLowerCase()
+  const semanticSourceFingerprint = normalizeEventText(
+    source.semanticSourceFingerprint,
+    '',
+    64,
+  ).toLowerCase()
+  return {
+    worldId,
+    semanticVersionId,
+    semanticManifestRevision,
+    semanticManifestHash,
+    semanticSourceFingerprint,
+  }
+}
+
+export const extractEventWorldBinding = (contextRefs = {}) => normalizeEventWorldBinding({
+  worldId: contextRefs?.[EVENT_WORLD_BINDING_CONTEXT_KEYS.WORLD_ID],
+  semanticVersionId: contextRefs?.[EVENT_WORLD_BINDING_CONTEXT_KEYS.SEMANTIC_VERSION_ID],
+  semanticManifestRevision:
+    contextRefs?.[EVENT_WORLD_BINDING_CONTEXT_KEYS.SEMANTIC_MANIFEST_REVISION],
+  semanticManifestHash: contextRefs?.[EVENT_WORLD_BINDING_CONTEXT_KEYS.SEMANTIC_MANIFEST_HASH],
+  semanticSourceFingerprint:
+    contextRefs?.[EVENT_WORLD_BINDING_CONTEXT_KEYS.SEMANTIC_SOURCE_FINGERPRINT],
+})
+
+const mergeEventWorldBindingIntoContext = (contextRefs = {}, worldBinding = {}) => {
+  const binding = normalizeEventWorldBinding(worldBinding)
+  return {
+    ...(isEventPlainObject(contextRefs) ? contextRefs : {}),
+    ...(binding.worldId
+      ? { [EVENT_WORLD_BINDING_CONTEXT_KEYS.WORLD_ID]: binding.worldId }
+      : {}),
+    ...(binding.semanticVersionId
+      ? { [EVENT_WORLD_BINDING_CONTEXT_KEYS.SEMANTIC_VERSION_ID]: binding.semanticVersionId }
+      : {}),
+    ...(binding.semanticManifestRevision
+      ? {
+          [EVENT_WORLD_BINDING_CONTEXT_KEYS.SEMANTIC_MANIFEST_REVISION]:
+            binding.semanticManifestRevision,
+        }
+      : {}),
+    ...(binding.semanticManifestHash
+      ? { [EVENT_WORLD_BINDING_CONTEXT_KEYS.SEMANTIC_MANIFEST_HASH]: binding.semanticManifestHash }
+      : {}),
+    ...(binding.semanticSourceFingerprint
+      ? {
+          [EVENT_WORLD_BINDING_CONTEXT_KEYS.SEMANTIC_SOURCE_FINGERPRINT]:
+            binding.semanticSourceFingerprint,
+        }
+      : {}),
+  }
+}
+
+export const createEventInstanceV2 = ({
+  id = '',
+  template = null,
+  contextRefs = {},
+  worldBinding = {},
+  now = Date.now(),
+} = {}) => {
   const normalizedTemplate = normalizeEventTemplateV2(template)
   const createdAt = normalizeTimestamp(now)
   if (!normalizedTemplate || !createdAt) return null
@@ -150,7 +236,7 @@ export const createEventInstanceV2 = ({ id = '', template = null, contextRefs = 
     templateId: normalizedTemplate.id,
     lifecycle: EVENT_INSTANCE_V2_LIFECYCLE.ACTIVE,
     currentNodeId: normalizedTemplate.startNodeId,
-    contextRefs,
+    contextRefs: mergeEventWorldBindingIntoContext(contextRefs, worldBinding),
     decisionLedger: [],
     deadlines: [],
     pendingOwnerRequests: [],
@@ -262,11 +348,16 @@ export const advanceEventInstanceV2 = ({
       if (!fact && node.deadlineId) {
         const deadline = instance.deadlines.find((item) => item.id === node.deadlineId)
         if (!deadline) {
+          const contextDeadline = node.deadlineContextKey
+            ? normalizeTimestamp(instance.contextRefs[node.deadlineContextKey])
+            : 0
+          const dueAt = contextDeadline || normalizedNow + node.durationMs
+          if (!dueAt) return { ok: false, changed, reason: 'deadline_invalid', instance: null }
           instance = {
             ...instance,
             deadlines: [
               ...instance.deadlines,
-              { id: node.deadlineId, dueAt: normalizedNow + node.durationMs, reconciledAt: 0 },
+              { id: node.deadlineId, dueAt, reconciledAt: 0 },
             ],
             updatedAt: normalizedNow,
           }

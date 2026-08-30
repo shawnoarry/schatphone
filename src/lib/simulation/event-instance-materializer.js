@@ -223,12 +223,17 @@ export const materializeLocalEventInstanceV1 = ({
       checkpointAt: source.checkpointAt || timestamp,
     },
     world: {
+      worldId: world.worldId || '',
       worldContextId: world.worldContextId || 'world_context_daily',
       worldPackId: world.worldPackId || 'default_world',
       variantPackId: pack.id,
       variantPackVersion: pack.version,
       mapPackId: world.mapPackId,
       mapPackVersion: world.mapPackVersion || 1,
+      semanticVersionId: world.semanticVersionId || '',
+      semanticManifestRevision: world.semanticManifestRevision || 0,
+      semanticManifestHash: world.semanticManifestHash || '',
+      semanticSourceFingerprint: world.semanticSourceFingerprint || '',
     },
     place: {
       placeId: place.placeId,

@@ -134,6 +134,21 @@ const normalizeReturnContext = (raw, sourceOwner) => {
   return query ? { path, query } : null
 }
 
+const normalizeReplacementSourceRef = (raw, sourceOwner) => {
+  if (raw === undefined || raw === null) return null
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false
+  const owner = trimLine(raw.sourceOwner, sourceOwner, 40).toLowerCase()
+  const sourceRecordId = trimLine(raw.sourceRecordId, '', 180)
+  const sourceRevision = trimLine(raw.sourceRevision, '', 120)
+  if (owner !== sourceOwner || !sourceRecordId || !sourceRevision) return false
+  return {
+    sourceOwner: owner,
+    sourceRecordId,
+    sourceRevision,
+    idempotencyKey: createScheduleHandoffIdempotencyKey(owner, sourceRecordId),
+  }
+}
+
 export const normalizeScheduleHandoffDraftV1 = (raw) => {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
 
@@ -153,6 +168,7 @@ export const normalizeScheduleHandoffDraftV1 = (raw) => {
   const idempotencyKey = createScheduleHandoffIdempotencyKey(sourceOwner, sourceRecordId)
   const participantRefs = normalizeParticipantRefs(raw.participantRefs)
   const sourceReturnContext = normalizeReturnContext(raw.sourceReturnContext, sourceOwner)
+  const replacesSourceRef = normalizeReplacementSourceRef(raw.replacesSourceRef, sourceOwner)
   const hasLocationRef = raw.proposedLocationRef !== undefined && raw.proposedLocationRef !== null
   const proposedLocationRef = hasLocationRef
     ? normalizeLocationRef(raw.proposedLocationRef)
@@ -167,6 +183,7 @@ export const normalizeScheduleHandoffDraftV1 = (raw) => {
     !PROPOSAL_STATUS_IDS.has(proposalStatus) ||
     participantRefs === null ||
     !sourceReturnContext ||
+    replacesSourceRef === false ||
     (hasLocationRef && !proposedLocationRef)
   ) {
     return null
@@ -188,6 +205,7 @@ export const normalizeScheduleHandoffDraftV1 = (raw) => {
     participantRefs,
     sourceReturnContext,
     proposalStatus,
+    ...(replacesSourceRef ? { replacesSourceRef } : {}),
   }
 }
 
@@ -199,6 +217,15 @@ export const normalizeScheduleHandoffEventSourceRefV1 = (raw) => {
   const idempotencyKey = createScheduleHandoffIdempotencyKey(sourceOwner, sourceRecordId)
   const suppliedKey = trimLine(raw.idempotencyKey, idempotencyKey, 420)
   const sourceReturnContext = normalizeReturnContext(raw.sourceReturnContext, sourceOwner)
+  const previousSourceRefs = Array.isArray(raw.previousSourceRefs)
+    ? raw.previousSourceRefs
+        .map((item) => normalizeReplacementSourceRef(item, sourceOwner))
+        .filter((item) => item && item !== false)
+        .filter((item, index, list) =>
+          list.findIndex((candidate) => candidate.idempotencyKey === item.idempotencyKey) === index,
+        )
+        .slice(0, 20)
+    : []
   if (!idempotencyKey || suppliedKey !== idempotencyKey || !sourceRevision || !sourceReturnContext) {
     return null
   }
@@ -209,6 +236,7 @@ export const normalizeScheduleHandoffEventSourceRefV1 = (raw) => {
     sourceRecordId,
     sourceRevision,
     sourceReturnContext,
+    ...(previousSourceRefs.length > 0 ? { previousSourceRefs } : {}),
   }
 }
 
@@ -221,6 +249,7 @@ export const createScheduleHandoffEventSourceRefV1 = (rawDraft) => {
     sourceRecordId: draft.sourceRecordId,
     sourceRevision: draft.sourceRevision,
     sourceReturnContext: draft.sourceReturnContext,
+    ...(draft.replacesSourceRef ? { previousSourceRefs: [draft.replacesSourceRef] } : {}),
   })
 }
 
@@ -275,6 +304,20 @@ export const resolveScheduleHandoffConflictV1 = ({ draft: rawDraft, existingRefe
   const existing = normalizeConfirmedHandoffReference(existingReference)
   if (!existing) return null
   if (existing.idempotencyKey !== draft.idempotencyKey) {
+    const replacesExisting = draft.replacesSourceRef?.idempotencyKey === existing.idempotencyKey
+    if (replacesExisting) {
+      return {
+        idempotencyKey: draft.idempotencyKey,
+        decision: SCHEDULE_HANDOFF_CONFLICT_DECISIONS.REVIEW_SOURCE_CHANGE,
+        proposalStatus: SCHEDULE_HANDOFF_PROPOSAL_STATUSES.SOURCE_CHANGED,
+        requiresReview: true,
+        mayCreateAfterReview: false,
+        mayUpdateAfterReview: true,
+        existingCalendarEventId: existing.calendarEventId,
+        previousSourceRevision: existing.sourceRevision,
+        incomingSourceRevision: draft.sourceRevision,
+      }
+    }
     return {
       idempotencyKey: draft.idempotencyKey,
       decision: SCHEDULE_HANDOFF_CONFLICT_DECISIONS.BLOCKED_IDENTITY_CONFLICT,
@@ -300,9 +343,7 @@ export const resolveScheduleHandoffConflictV1 = ({ draft: rawDraft, existingRefe
     }
   }
 
-  const sourceChanged =
-    existing.sourceRevision !== draft.sourceRevision ||
-    draft.proposalStatus === SCHEDULE_HANDOFF_PROPOSAL_STATUSES.SOURCE_CHANGED
+  const sourceChanged = existing.sourceRevision !== draft.sourceRevision
   return {
     idempotencyKey: draft.idempotencyKey,
     decision: sourceChanged

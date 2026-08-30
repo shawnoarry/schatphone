@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
+import { useBookStore } from '../stores/book'
 import { useChatStore } from '../stores/chat'
 import { useFoodDeliveryStore } from '../stores/foodDelivery'
 import { SIMULATION_SURPRISE_MODE, useSimulationStore } from '../stores/simulation'
@@ -17,6 +18,22 @@ import { useSettingsBackupWorkflow } from '../composables/useSettingsBackupWorkf
 import { useSettingsPushWorkflow } from '../composables/useSettingsPushWorkflow'
 import { useSettingsStorageDiagnosticsWorkflow } from '../composables/useSettingsStorageDiagnosticsWorkflow'
 import { useSystemApiReports } from '../composables/useSystemApiReports'
+import { formatApiErrorForUi } from '../lib/ai'
+import { resolveActiveWorldOverview } from '../lib/world-interface'
+import { resolveWorldContextFromSystemStore } from '../lib/simulation/world-context'
+import {
+  buildLocalWorldUnderstanding,
+  buildWorldSemanticVersionInput,
+  requestWorldSemanticVersionReview,
+} from '../lib/simulation/world-semantic-preview'
+import {
+  WORLD_SEMANTIC_REVIEW_SCHEMA_VERSION,
+  createWorldSemanticProposalHash,
+} from '../lib/simulation/world-semantic-contract'
+import {
+  classifyWorldSettingSourceChange,
+  createWorldSettingSourceSnapshot,
+} from '../lib/world-setting-state'
 import {
   BACKUP_REMINDER_INTERVAL_OPTIONS,
   createBackupReminderIntervalLabel,
@@ -36,6 +53,7 @@ import SettingsRingtoneSection from '../components/settings/SettingsRingtoneSect
 import SettingsSoftwareUpdateSection from '../components/settings/SettingsSoftwareUpdateSection.vue'
 import SettingsStorageDiagnosticsSection from '../components/settings/SettingsStorageDiagnosticsSection.vue'
 import SettingsSubPageHeader from '../components/settings/SettingsSubPageHeader.vue'
+import SettingsWorldSetupSection from '../components/settings/SettingsWorldSetupSection.vue'
 import { SCHATPHONE_BUILD_CHANNEL, SOFTWARE_UPDATE_RELEASE_NOTES } from '../lib/app-update'
 import { runSimulationEventTick } from '../lib/simulation/event-tick-runner'
 import { getSimulationEventReasonCopy } from '../lib/simulation/event-reason-labels'
@@ -70,6 +88,7 @@ import {
 const router = useRouter()
 const route = useRoute()
 const systemStore = useSystemStore()
+const bookStore = useBookStore()
 const chatStore = useChatStore()
 const foodDeliveryStore = useFoodDeliveryStore()
 const simulationStore = useSimulationStore()
@@ -123,6 +142,196 @@ const backupReminderIntervalLabel = createBackupReminderIntervalLabel(t)
 const softwareUpdateState = computed(() => settings.value.system?.softwareUpdate || {})
 const softwareUpdateReleaseNotes = SOFTWARE_UPDATE_RELEASE_NOTES
 const softwareUpdateBuildChannel = SCHATPHONE_BUILD_CHANNEL
+const worldSetupLoading = ref(false)
+const worldSetupApplying = ref(false)
+const worldSetupResult = ref(null)
+const worldSetupNotice = ref('')
+const worldSetupSourceSnapshot = ref(null)
+let worldSetupController = null
+
+const activeWorldOverview = computed(() =>
+  resolveActiveWorldOverview({
+    systemStore,
+    bookStore,
+  }),
+)
+
+const activeWorldContext = computed(() =>
+  resolveWorldContextFromSystemStore(systemStore, {
+    bookStore,
+    locale: settings.value.system?.language || 'zh-CN',
+  }),
+)
+
+const localWorldUnderstanding = computed(() =>
+  buildLocalWorldUnderstanding({
+    worldOverview: activeWorldOverview.value,
+    worldContext: activeWorldContext.value,
+  }),
+)
+
+const worldSettingState = computed(() => systemStore.getWorldSettingState())
+const worldSetupSourceChange = computed(() =>
+  worldSetupSourceSnapshot.value
+    ? classifyWorldSettingSourceChange(
+        worldSettingState.value.source.current,
+        worldSetupSourceSnapshot.value,
+      )
+    : null,
+)
+const worldSetupVersionStatus = computed(() => {
+  const status = systemStore.getWorldSettingVersionStatus()
+  return {
+    ...status,
+    sourceChanged: Boolean(
+      status.sourceChanged ||
+      (status.hasActiveVersion && worldSetupSourceChange.value?.changed),
+    ),
+    changeStatus: worldSetupSourceChange.value?.status || '',
+  }
+})
+
+const worldSetupModelConfigured = computed(() => Boolean(String(settings.value.api?.url || '').trim()))
+const worldSetupModelLabel = computed(() =>
+  String(settings.value.api?.model || '').trim() || t('已配置模型', 'Configured model'),
+)
+
+const refreshWorldSetupSourceSnapshot = async () => {
+  const snapshot = await createWorldSettingSourceSnapshot({
+    worldOverview: activeWorldOverview.value,
+  })
+  worldSetupSourceSnapshot.value = snapshot
+  return snapshot
+}
+
+const checkCurrentWorld = async () => {
+  if (worldSetupLoading.value || !worldSetupModelConfigured.value) return
+  worldSetupController?.abort()
+  worldSetupController = new AbortController()
+  worldSetupLoading.value = true
+  worldSetupNotice.value = ''
+  try {
+    const sourceSnapshot = await refreshWorldSetupSourceSnapshot()
+    const input = buildWorldSemanticVersionInput({
+      worldOverview: activeWorldOverview.value,
+      worldContext: activeWorldContext.value,
+      sourceSnapshot,
+      locale: settings.value.system?.language || 'zh-CN',
+    })
+    worldSetupResult.value = await requestWorldSemanticVersionReview({
+      input,
+      settings: settings.value,
+      signal: worldSetupController.signal,
+    })
+  } catch (error) {
+    worldSetupNotice.value = formatApiErrorForUi(
+      error,
+      t(
+        '这次检查没有完成，也没有改动任何设定。请检查模型配置后重试。',
+        'The check did not finish, and no setting was changed. Review the model setup and try again.',
+      ),
+    )
+  } finally {
+    worldSetupLoading.value = false
+    worldSetupController = null
+  }
+}
+
+const useCheckedWorldVersion = async () => {
+  if (worldSetupApplying.value || !worldSetupResult.value?.proposal) return
+  worldSetupApplying.value = true
+  worldSetupNotice.value = ''
+  try {
+    const sourceSnapshot = await createWorldSettingSourceSnapshot({
+      worldOverview: activeWorldOverview.value,
+    })
+    if (sourceSnapshot.sourceFingerprint !== worldSetupResult.value.proposal.sourceFingerprint) {
+      worldSetupSourceSnapshot.value = sourceSnapshot
+      worldSetupNotice.value = t(
+        '世界内容在检查后又发生了变化。当前版本没有改变，请重新检查一次。',
+        'The world changed after the check. The current version was kept; check it again before using the update.',
+      )
+      return
+    }
+    const state = systemStore.getWorldSettingState()
+    const manifestRevision = state.semantic.versions.reduce(
+      (maximum, version) => Math.max(maximum, Number(version.revision) || 0),
+      0,
+    ) + 1
+    const proposalHash = await createWorldSemanticProposalHash(worldSetupResult.value.proposal)
+    const result = await systemStore.confirmAndActivateWorldSemanticProposal({
+      snapshot: sourceSnapshot,
+      proposal: worldSetupResult.value.proposal,
+      confirmation: {
+        schemaVersion: WORLD_SEMANTIC_REVIEW_SCHEMA_VERSION,
+        status: 'confirmed',
+        confirmedBy: 'user',
+        sourceFingerprint: sourceSnapshot.sourceFingerprint,
+        proposalHash,
+        manifestRevision,
+      },
+      modelReceipt: worldSetupResult.value.modelReceipt,
+    })
+    if (!result.ok) {
+      const retryableReasons = new Set([
+        'source_fingerprint_mismatch',
+        'candidate_stale',
+        'manifest_revision_mismatch',
+      ])
+      worldSetupNotice.value = retryableReasons.has(result.reason)
+        ? t(
+            '世界内容已经变化，当前版本没有改变。请重新检查后再使用。',
+            'The world content changed, so the current version was kept. Check again before using it.',
+          )
+        : t(
+            '这份理解还有未解决的内容，当前版本没有改变。请先补充世界书，再重新检查。',
+            'This interpretation still has unresolved details. The current version was kept; update World Book and check again.',
+          )
+      return
+    }
+    worldSetupSourceSnapshot.value = sourceSnapshot
+    worldSetupResult.value = null
+    worldSetupNotice.value = t(
+      '新的世界规则已经开始用于之后的内容；已经开始的事件仍保留原来的规则。',
+      'The updated world rules now apply to future content. Events already in progress keep their original rules.',
+    )
+  } catch (error) {
+    worldSetupNotice.value = formatApiErrorForUi(
+      error,
+      t(
+        '新版本没有启用，当前世界仍保持原样。',
+        'The new version was not enabled, and the current world remains unchanged.',
+      ),
+    )
+  } finally {
+    worldSetupApplying.value = false
+  }
+}
+
+const rollbackWorldVersion = async () => {
+  if (worldSetupApplying.value) return
+  worldSetupApplying.value = true
+  worldSetupNotice.value = ''
+  try {
+    const result = await systemStore.rollbackWorldSemanticVersion()
+    worldSetupNotice.value = result.ok
+      ? t(
+          '已经恢复上一套世界规则；正在进行的事件不会被重写。',
+          'The previous world rules are active again. Events already in progress were not rewritten.',
+        )
+      : t(
+          '暂时没有可以恢复的上一版本。',
+          'There is no previous version available to restore.',
+        )
+  } finally {
+    worldSetupApplying.value = false
+  }
+}
+
+const clearWorldSetupResult = () => {
+  worldSetupResult.value = null
+  worldSetupNotice.value = ''
+}
 
 const soundEffectsProfileOptions = computed(() =>
   UI_SFX_PROFILE_OPTIONS.filter((profile) => profile.visible !== false).map((profile) => ({
@@ -425,6 +634,7 @@ const normalizeSettingsMenuFromQuery = (value) => {
   const raw = typeof value === 'string' ? value.trim() : ''
   const allowed = new Set([
     'general',
+    'world-setup',
     'notification',
     'events',
     'automation',
@@ -437,6 +647,9 @@ const normalizeSettingsMenuFromQuery = (value) => {
 
 const openSubPage = (menu) => {
   activeMenu.value = menu
+  if (menu === 'world-setup') {
+    void refreshWorldSetupSourceSnapshot()
+  }
   if (menu === 'automation') {
     automationInitialMaster.value = Boolean(settings.value.aiAutomation?.masterEnabled)
   }
@@ -992,6 +1205,7 @@ const openAppearanceStudio = () => {
 }
 
 onBeforeUnmount(() => {
+  worldSetupController?.abort()
   if (generalSavedTimerId) clearTimeout(generalSavedTimerId)
   if (automationSavedTimerId) clearTimeout(automationSavedTimerId)
   if (softwareUpdateFeedbackTimerId) clearTimeout(softwareUpdateFeedbackTimerId)
@@ -1009,6 +1223,9 @@ const initialMenu = normalizeSettingsMenuFromQuery(
 )
 if (initialMenu) {
   activeMenu.value = initialMenu
+  if (initialMenu === 'world-setup') {
+    void refreshWorldSetupSourceSnapshot()
+  }
   if (initialMenu === 'automation') {
     automationInitialMaster.value = Boolean(settings.value.aiAutomation?.masterEnabled)
   }
@@ -1039,6 +1256,7 @@ if (initialMenu) {
       <SettingsLandingSection
         :user="user"
         @open-profile="openProfile"
+        @open-world-setup="openSubPage('world-setup')"
         @open-worldbook="openWorldBook"
         @open-general="openSubPage('general')"
         @open-software-update="openSubPage('software-update')"
@@ -1140,6 +1358,31 @@ if (initialMenu) {
             :enabled="settings.appearance.hapticFeedbackEnabled !== false"
             test-id-prefix="settings"
             @toggle="toggleHaptics"
+          />
+        </div>
+      </div>
+
+      <div
+        v-if="activeMenu === 'world-setup'"
+        class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in"
+      >
+        <SettingsSubPageHeader title-zh="世界准备" title-en="World Setup" @close="closeSubPage" />
+        <div class="settings-subpage-scroll p-4 space-y-4 overflow-y-auto no-scrollbar">
+          <SettingsWorldSetupSection
+            :local-understanding="localWorldUnderstanding"
+            :model-configured="worldSetupModelConfigured"
+            :model-label="worldSetupModelLabel"
+            :loading="worldSetupLoading"
+            :applying="worldSetupApplying"
+            :notice="worldSetupNotice"
+            :result="worldSetupResult"
+            :version-status="worldSetupVersionStatus"
+            @check-world="checkCurrentWorld"
+            @use-version="useCheckedWorldVersion"
+            @rollback-version="rollbackWorldVersion"
+            @open-worldbook="openWorldBook"
+            @open-network="openNetworkReports"
+            @clear-result="clearWorldSetupResult"
           />
         </div>
       </div>

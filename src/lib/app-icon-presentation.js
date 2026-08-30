@@ -69,6 +69,8 @@ BUILT_IN_APP_ICON_META.app_control_center = {
 }
 APP_ICON_LABELS.app_agenda_journey = { zh: '行程', en: 'Agenda Journey', ko: '일정 여정' }
 BUILT_IN_APP_ICON_META.app_agenda_journey = { icon: 'fas fa-route', accent: 'cool' }
+APP_ICON_LABELS.app_chronicle = { zh: '生活志', en: 'Chronicle', ko: '생활 기록' }
+BUILT_IN_APP_ICON_META.app_chronicle = { icon: 'fas fa-book-open', accent: 'warm' }
 APP_ICON_LABELS.app_book = { zh: '文本库', en: 'Book', ko: 'Book' }
 BUILT_IN_APP_ICON_META.app_book = { icon: 'fas fa-book-open', accent: 'cool' }
 APP_ICON_LABELS.app_daon_mail = { zh: '邮件', en: 'Mail', ko: '메일' }
@@ -128,6 +130,7 @@ export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
   'app_weather',
   'app_calendar',
   'app_agenda_journey',
+  'app_chronicle',
   'app_reminders',
   'app_stock',
   'app_shopping',

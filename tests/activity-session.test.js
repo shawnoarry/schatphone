@@ -27,6 +27,7 @@ const request = (patch = {}) => ({
   sourceStepStatus: 'available',
   agendaJourneyId: 'aj::manual::activity-session',
   agendaJourneyStepId: 'aj::manual::activity-session::activity',
+  agendaExecutionRevision: 'agenda-revision-v1',
   plannedDurationMs: 25 * MINUTE_MS,
   completionPolicy: 'user_confirmation',
   pausePolicy: 'allow_pause',
@@ -113,6 +114,7 @@ describe('Activity Session contract', () => {
       owner: 'activity-session',
       agendaJourneyId: request().agendaJourneyId,
       agendaJourneyStepId: request().agendaJourneyStepId,
+      agendaExecutionRevision: 'agenda-revision-v1',
       completionPolicy: 'user_confirmation',
       status: 'completed',
     })

@@ -48,7 +48,9 @@ describe('WorldBookView profile templates', () => {
     await nextTick()
 
     expect(store.listWorldProfileTemplates('legacy_single_world')).toHaveLength(1)
-    expect(store.listWorldProfileTemplates('survival_city')).toHaveLength(0)
+    expect(store.listWorldProfileTemplates('survival_city')).toHaveLength(1)
+    expect(store.listWorldProfileTemplates('unknown_external_world')).toHaveLength(0)
+    expect(store.listWorldProfileTemplates()[0]?.worldId).toBe('world_local_primary')
     expect(wrapper.text()).toContain('Current-world enabled templates')
 
     wrapper.unmount()

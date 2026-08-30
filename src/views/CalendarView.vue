@@ -9,6 +9,7 @@ import { useChatStore } from '../stores/chat'
 import { useMapStore } from '../stores/map'
 import { useRemindersStore } from '../stores/reminders'
 import { useSystemStore } from '../stores/system'
+import { useWorkHubStore } from '../stores/workHub'
 import { buildWorldBookRouteQuery } from '../lib/worldbook-navigation'
 import { pushReturnTarget } from '../lib/navigation-return'
 import { RELATIONSHIP_FACT_SOURCE_KEYS } from '../lib/relationship-fact-adapters'
@@ -44,6 +45,7 @@ const chatStore = useChatStore()
 const mapStore = useMapStore()
 const remindersStore = useRemindersStore()
 const systemStore = useSystemStore()
+const workHubStore = useWorkHubStore()
 const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const systemNotifications = useSystemNotifications({ systemStore })
 const { confirmedEvents } = storeToRefs(calendarStore)
@@ -165,12 +167,22 @@ const calendarScheduleHandoffDraft = computed(() =>
   resolveScheduleHandoffSourceDraftV1({
     sourceOwner: singleRouteQueryValue(route.query.source),
     sourceRecordId: singleRouteQueryValue(route.query.sourceRecordId),
+    productionWorkHubResolver: workHubStore.resolveScheduleHandoffDraft,
+    productionWorkHubOwnsRecord: workHubStore.ownsScheduleProposal,
   }),
 )
 const calendarScheduleHandoffExistingEvent = computed(() => {
   const draft = calendarScheduleHandoffDraft.value
   if (!draft) return null
-  return calendarStore.findEventByScheduleHandoffSource(draft.sourceOwner, draft.sourceRecordId)
+  return (
+    calendarStore.findEventByScheduleHandoffSource(draft.sourceOwner, draft.sourceRecordId) ||
+    (draft.replacesSourceRef
+      ? calendarStore.findEventByScheduleHandoffSource(
+          draft.replacesSourceRef.sourceOwner,
+          draft.replacesSourceRef.sourceRecordId,
+        )
+      : null)
+  )
 })
 const calendarScheduleHandoffResolution = computed(() => {
   const draft = calendarScheduleHandoffDraft.value
@@ -227,12 +239,14 @@ const calendarSourceHandoff = computed(() => {
             : 'This message is currently only a source reference; Calendar has no matching event yet.',
       returnZh: '返回邮件',
       returnEn: 'Return to Mail',
-      reviewZh: '审阅并添加',
-      reviewEn: 'Review and add',
+      reviewZh: sourceChanged ? '审阅并更新' : '审阅并添加',
+      reviewEn: sourceChanged ? 'Review and update' : 'Review and add',
       canReview: Boolean(
         draft &&
-          resolution?.decision === SCHEDULE_HANDOFF_CONFLICT_DECISIONS.REVIEW_NEW &&
-          resolution.mayCreateAfterReview,
+          ((resolution?.decision === SCHEDULE_HANDOFF_CONFLICT_DECISIONS.REVIEW_NEW &&
+            resolution.mayCreateAfterReview) ||
+            (resolution?.decision === SCHEDULE_HANDOFF_CONFLICT_DECISIONS.REVIEW_SOURCE_CHANGE &&
+              resolution.mayUpdateAfterReview)),
       ),
     }
   }
@@ -268,12 +282,14 @@ const calendarSourceHandoff = computed(() => {
             : 'This proposal is currently only a Work Hub reference; Calendar has no matching event yet.',
       returnZh: '返回工作台',
       returnEn: 'Return to Work Hub',
-      reviewZh: '审阅并添加',
-      reviewEn: 'Review and add',
+      reviewZh: sourceChanged ? '审阅并更新' : '审阅并添加',
+      reviewEn: sourceChanged ? 'Review and update' : 'Review and add',
       canReview: Boolean(
         draft &&
-          resolution?.decision === SCHEDULE_HANDOFF_CONFLICT_DECISIONS.REVIEW_NEW &&
-          resolution.mayCreateAfterReview,
+          ((resolution?.decision === SCHEDULE_HANDOFF_CONFLICT_DECISIONS.REVIEW_NEW &&
+            resolution.mayCreateAfterReview) ||
+            (resolution?.decision === SCHEDULE_HANDOFF_CONFLICT_DECISIONS.REVIEW_SOURCE_CHANGE &&
+              resolution.mayUpdateAfterReview)),
       ),
     }
   }
@@ -907,16 +923,21 @@ const openScheduleHandoffEditor = () => {
   const resolution = calendarScheduleHandoffResolution.value
   if (
     !handoff ||
-    resolution?.decision !== SCHEDULE_HANDOFF_CONFLICT_DECISIONS.REVIEW_NEW ||
-    !resolution.mayCreateAfterReview
+    ![
+      SCHEDULE_HANDOFF_CONFLICT_DECISIONS.REVIEW_NEW,
+      SCHEDULE_HANDOFF_CONFLICT_DECISIONS.REVIEW_SOURCE_CHANGE,
+    ].includes(resolution?.decision) ||
+    (!resolution.mayCreateAfterReview && !resolution.mayUpdateAfterReview)
   ) {
     return
   }
-  editorMode.value = 'create'
+  const existing = calendarScheduleHandoffExistingEvent.value
+  editorMode.value = existing ? 'handoff_update' : 'create'
   editorValidationMessage.value = ''
   editorDraft.value = {
     ...buildCalendarEditorDraft({
       event: {
+        ...(existing || {}),
         titleZh: handoff.proposedTitleZh,
         titleEn: handoff.proposedTitleEn,
         startsAt: handoff.proposedStartsAt,
@@ -925,6 +946,7 @@ const openScheduleHandoffEditor = () => {
       },
     }),
     scheduleHandoffId: handoff.id,
+    eventId: existing?.id || '',
   }
   editorOpen.value = true
 }
@@ -949,7 +971,10 @@ watch(
     }
     const reviewId = `${handoff.id}::${handoff.sourceRevision}`
     if (
-      resolution.decision !== SCHEDULE_HANDOFF_CONFLICT_DECISIONS.REVIEW_NEW ||
+      ![
+        SCHEDULE_HANDOFF_CONFLICT_DECISIONS.REVIEW_NEW,
+        SCHEDULE_HANDOFF_CONFLICT_DECISIONS.REVIEW_SOURCE_CHANGE,
+      ].includes(resolution.decision) ||
       openedScheduleHandoffId.value === reviewId
     ) {
       return
@@ -1045,7 +1070,7 @@ const saveCalendarEventEditor = () => {
     return
   }
 
-  if (editorMode.value === 'edit') {
+  if (editorMode.value === 'edit' || editorMode.value === 'handoff_update') {
     void calendarStore.rescheduleEventPush(savedEvent.id, {
       source: 'calendar_event_editor_update',
     })

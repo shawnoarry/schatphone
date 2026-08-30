@@ -20,6 +20,7 @@ const SOURCE_RETURN_TARGETS = Object.freeze({
   'creator-rights': '/creator-rights',
   parcel: '/parcel',
   career: '/career',
+  chronicle: '/chronicle',
 })
 const SOURCE_RETURN_LABELS = Object.freeze({
   chat: 'Chat',
@@ -41,6 +42,7 @@ const SOURCE_RETURN_LABELS = Object.freeze({
   'creator-rights': 'CREDO',
   parcel: 'POSTA',
   career: 'NEXT',
+  chronicle: 'Chronicle',
 })
 
 const normalizeReturnSource = (source) => {
@@ -135,6 +137,21 @@ const buildAgendaJourneyReturnTarget = (route) => {
   }
   return {
     path: SOURCE_RETURN_TARGETS['agenda-journey'],
+    ...(Object.keys(query).length ? { query } : {}),
+  }
+}
+
+const buildChronicleReturnTarget = (route) => {
+  const homePage = normalizeHomePageQuery(route?.query?.homePage)
+  const date = normalizeBrowserContextQuery(route?.query?.chronicleDate, 10)
+  const entryId = normalizeBrowserContextQuery(route?.query?.chronicleEntryId, 220)
+  const query = {
+    ...(date ? { date } : {}),
+    ...(entryId ? { entryId } : {}),
+    ...(homePage ? { from: 'home', homePage } : {}),
+  }
+  return {
+    path: SOURCE_RETURN_TARGETS.chronicle,
     ...(Object.keys(query).length ? { query } : {}),
   }
 }
@@ -290,6 +307,7 @@ export const resolveReturnTarget = (route, fallback = HOME_RETURN_ROUTE) => {
   const routeSource = normalizeCrossModuleSource(route?.query?.source)
   if (routeSource === 'chat') return resolveChatReturnTarget(route) || SOURCE_RETURN_TARGETS.chat
   if (routeSource === 'agenda-journey') return buildAgendaJourneyReturnTarget(route)
+  if (routeSource === 'chronicle') return buildChronicleReturnTarget(route)
   if (routeSource === 'map') return buildMapReturnTarget(route)
   if (routeSource === 'browser') return buildBrowserReturnTarget(route)
   if (routeSource === 'healthcare' || routeSource === 'housing' || routeSource === 'workplace' || routeSource === 'fandom' || routeSource === 'tickets' || routeSource === 'travel' || routeSource === 'intercity' || routeSource === 'creator-rights' || routeSource === 'parcel' || routeSource === 'career') {

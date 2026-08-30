@@ -1,7 +1,7 @@
 import { canonicalStringify, sha256Canonical, sha256Text } from './persistence-repository-schema'
 
 export const COMPLETE_BACKUP_MAGIC = 'schatphone-complete-backup'
-export const COMPLETE_BACKUP_SCHEMA_VERSION = 5
+export const COMPLETE_BACKUP_SCHEMA_VERSION = 7
 
 export const COMPLETE_BACKUP_V3_SECTION_PATHS = Object.freeze([
   'settings',
@@ -64,9 +64,19 @@ export const COMPLETE_BACKUP_V4_SECTION_PATHS = Object.freeze([
   'imageGeneration',
 ])
 
-export const COMPLETE_BACKUP_SECTION_PATHS = Object.freeze([
+export const COMPLETE_BACKUP_V5_SECTION_PATHS = Object.freeze([
   ...COMPLETE_BACKUP_V4_SECTION_PATHS,
   'contactsLifecycle',
+])
+
+export const COMPLETE_BACKUP_V6_SECTION_PATHS = Object.freeze([
+  ...COMPLETE_BACKUP_V5_SECTION_PATHS,
+  'workHub',
+])
+
+export const COMPLETE_BACKUP_SECTION_PATHS = Object.freeze([
+  ...COMPLETE_BACKUP_V6_SECTION_PATHS,
+  'chronicle',
 ])
 
 const textByteSize = (value) => new TextEncoder().encode(value).byteLength
@@ -267,7 +277,11 @@ export const inspectCompleteBackupPackage = async (payload) => {
   const sectionPaths =
     schemaVersion === COMPLETE_BACKUP_SCHEMA_VERSION
       ? COMPLETE_BACKUP_SECTION_PATHS
-      : schemaVersion === 4
+      : schemaVersion === 6
+        ? COMPLETE_BACKUP_V6_SECTION_PATHS
+      : schemaVersion === 5
+        ? COMPLETE_BACKUP_V5_SECTION_PATHS
+        : schemaVersion === 4
         ? COMPLETE_BACKUP_V4_SECTION_PATHS
       : schemaVersion === 3
         ? COMPLETE_BACKUP_V3_SECTION_PATHS

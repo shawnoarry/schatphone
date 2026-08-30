@@ -346,8 +346,12 @@ export const useCalendarStore = defineStore('calendar', () => {
     return (
       events.value.find(
         (event) =>
-          event.sourceRef?.sourceOwner === owner &&
-          event.sourceRef?.sourceRecordId === recordId,
+          (event.sourceRef?.sourceOwner === owner &&
+            event.sourceRef?.sourceRecordId === recordId) ||
+          event.sourceRef?.previousSourceRefs?.some(
+            (sourceRef) =>
+              sourceRef.sourceOwner === owner && sourceRef.sourceRecordId === recordId,
+          ),
       ) || null
     )
   }
@@ -437,12 +441,39 @@ export const useCalendarStore = defineStore('calendar', () => {
   const createEventFromScheduleHandoff = ({ event: input = {}, handoffDraft } = {}) => {
     const sourceRef = createScheduleHandoffEventSourceRefV1(handoffDraft)
     if (!sourceRef) return null
-    const existing = findEventByScheduleHandoffSource(
+    const existingForCurrentSource = findEventByScheduleHandoffSource(
       sourceRef.sourceOwner,
       sourceRef.sourceRecordId,
     )
-    if (existing) {
-      return existing.sourceRef?.sourceRevision === sourceRef.sourceRevision ? existing : null
+    if (existingForCurrentSource) {
+      return existingForCurrentSource.sourceRef?.sourceRevision === sourceRef.sourceRevision
+        ? existingForCurrentSource
+        : null
+    }
+    const replacementSource = handoffDraft?.replacesSourceRef
+    const existingReplacement = replacementSource
+      ? findEventByScheduleHandoffSource(
+          replacementSource.sourceOwner,
+          replacementSource.sourceRecordId,
+        )
+      : null
+    if (existingReplacement) {
+      const previousSourceRefs = [
+        ...(existingReplacement.sourceRef?.previousSourceRefs || []),
+        existingReplacement.sourceRef,
+        ...(sourceRef.previousSourceRefs || []),
+      ].filter(Boolean)
+      return upsertEvent({
+        ...existingReplacement,
+        ...input,
+        id: existingReplacement.id,
+        source: 'schedule_handoff',
+        sourceRef: { ...sourceRef, previousSourceRefs },
+        status: CALENDAR_EVENT_STATUS_CONFIRMED,
+        originalStartsAt: existingReplacement.originalStartsAt || existingReplacement.startsAt,
+        originalEndsAt: existingReplacement.originalEndsAt || existingReplacement.endsAt,
+        timeEditedAt: Date.now(),
+      })
     }
     const now = Date.now()
     return upsertEvent({

@@ -4,6 +4,7 @@ import { useActivitySessionStore } from '../stores/activitySession'
 import { useBookStore } from '../stores/book'
 import { useCalendarStore } from '../stores/calendar'
 import { useChatStore } from '../stores/chat'
+import { useChronicleStore } from '../stores/chronicle'
 import { useFilesStore } from '../stores/files'
 import { useFoodDeliveryStore } from '../stores/foodDelivery'
 import { useGalleryStore } from '../stores/gallery'
@@ -19,6 +20,7 @@ import { useSimulationStore } from '../stores/simulation'
 import { useStockStore } from '../stores/stock'
 import { useSystemStore } from '../stores/system'
 import { useWalletStore } from '../stores/wallet'
+import { useWorkHubStore } from '../stores/workHub'
 import {
   completeBackupRestoreCheckpoint,
   listPendingBackupRestoreCheckpoints,
@@ -30,6 +32,7 @@ import { reportPersistenceWriteResult } from './persistence-runtime-status'
 export const createBackupRestoreStoreSet = (pinia) => ({
   system: useSystemStore(pinia),
   chat: useChatStore(pinia),
+  chronicle: useChronicleStore(pinia),
   map: useMapStore(pinia),
   calendar: useCalendarStore(pinia),
   miniScene: useMiniSceneStore(pinia),
@@ -49,6 +52,7 @@ export const createBackupRestoreStoreSet = (pinia) => ({
   stock: useStockStore(pinia),
   relationshipRuntime: useRelationshipRuntimeStore(pinia),
   imageGeneration: useImageGenerationStore(pinia),
+  workHub: useWorkHubStore(pinia),
 })
 
 export const saveBackupRestoreStores = async (stores) => {
@@ -72,6 +76,7 @@ export const restoreBackupRollbackSnapshot = async (stores, snapshot) => {
   const operations = [
     ['system', snapshot.system],
     ['chat', snapshot.chat],
+    ['chronicle', snapshot.chronicle || {}],
     ['map', snapshot.map],
     ['calendar', snapshot.calendar],
     ['miniScene', snapshot.miniScene || {}],
@@ -91,6 +96,7 @@ export const restoreBackupRollbackSnapshot = async (stores, snapshot) => {
     ['stock', snapshot.stock],
     ['relationshipRuntime', snapshot.relationshipRuntime],
     ['imageGeneration', snapshot.imageGeneration],
+    ['workHub', snapshot.workHub || {}],
   ]
   const results = []
 

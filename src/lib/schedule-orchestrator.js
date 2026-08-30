@@ -2,13 +2,14 @@ import {
   expandCalendarEventOccurrences,
   normalizeCalendarRequirement,
 } from './calendar-schedule'
+import { normalizeScheduleHandoffEventSourceRefV1 } from './schedule-handoff'
 
 const HOUR_MS = 60 * 60 * 1000
 const DAY_MS = 24 * HOUR_MS
 const MAX_TIMESTAMP = 8_640_000_000_000_000
 const RECORD_LIMIT = 500
 
-export const SCHEDULE_ORCHESTRATOR_SCHEMA_VERSION = 1
+export const SCHEDULE_ORCHESTRATOR_SCHEMA_VERSION = 2
 
 export const DEFAULT_SCHEDULE_ORCHESTRATOR_CONFIG = Object.freeze({
   materializationLeadMs: DAY_MS,
@@ -68,6 +69,21 @@ const normalizeLocationRefForFingerprint = (raw) => {
   return { owner: 'map', mapPackId, placeId }
 }
 
+const normalizeSourceRefForFingerprint = (raw) => {
+  const sourceRef = normalizeScheduleHandoffEventSourceRefV1(raw)
+  if (!sourceRef) return null
+  return {
+    sourceOwner: sourceRef.sourceOwner,
+    sourceRecordId: sourceRef.sourceRecordId,
+    sourceRevision: sourceRef.sourceRevision,
+    previousSourceRefs: (sourceRef.previousSourceRefs || []).map((candidate) => ({
+      sourceOwner: candidate.sourceOwner,
+      sourceRecordId: candidate.sourceRecordId,
+      sourceRevision: candidate.sourceRevision,
+    })),
+  }
+}
+
 export const normalizeScheduleOrchestratorConfig = (raw = {}) => ({
   materializationLeadMs: toBoundedDuration(
     raw.materializationLeadMs,
@@ -114,6 +130,18 @@ export const createScheduleOrchestrationId = (sourceCalendarEventId, occurrenceS
   return eventId && startsAt ? `schedule_orchestration::${eventId}::${startsAt}` : ''
 }
 
+export const createScheduleLogicalExecutionKey = (
+  sourceCalendarEventId,
+  occurrenceStartsAt,
+  recurrence = 'none',
+) => {
+  const eventId = trimLine(sourceCalendarEventId, '', 140)
+  if (!eventId) return ''
+  return trimLine(recurrence, 'none', 20) === 'none'
+    ? `calendar_event::${eventId}::one_off`
+    : createScheduleOrchestrationId(eventId, occurrenceStartsAt)
+}
+
 export const createCalendarOccurrenceFingerprint = (occurrence = {}) => {
   const sourceCalendarEventId = trimLine(
     occurrence.sourceCalendarEventId || occurrence.sourceEventId || occurrence.id,
@@ -135,6 +163,7 @@ export const createCalendarOccurrenceFingerprint = (occurrence = {}) => {
     requirement: normalizeCalendarRequirement(occurrence.requirement),
     reminderLeadMinutes: Math.max(0, Math.floor(Number(occurrence.reminderLeadMinutes) || 0)),
     locationRef: normalizeLocationRefForFingerprint(occurrence.locationRef),
+    sourceRef: normalizeSourceRefForFingerprint(occurrence.sourceRef),
     titleZh: trimLine(occurrence.titleZh, '', 100),
     titleEn: trimLine(occurrence.titleEn, '', 100),
     summaryZh: trimLine(occurrence.summaryZh, '', 240),
@@ -159,10 +188,20 @@ export const normalizeScheduleOrchestrationRecord = (raw) => {
     360,
   )
   const calendarFingerprint = trimLine(raw.calendarFingerprint, '', 80)
+  const logicalExecutionKey = trimLine(
+    raw.logicalExecutionKey,
+    createScheduleLogicalExecutionKey(
+      sourceCalendarEventId,
+      occurrenceStartsAt,
+      raw.recurrence,
+    ),
+    360,
+  )
   if (
     !id ||
     !sourceCalendarEventId ||
     !sourceOccurrenceId ||
+    !logicalExecutionKey ||
     !occurrenceStartsAt ||
     occurrenceEndsAt <= occurrenceStartsAt ||
     !calendarFingerprint
@@ -173,6 +212,7 @@ export const normalizeScheduleOrchestrationRecord = (raw) => {
     id,
     sourceCalendarEventId,
     sourceOccurrenceId,
+    logicalExecutionKey,
     occurrenceStartsAt,
     occurrenceEndsAt,
     calendarFingerprint,
@@ -188,6 +228,8 @@ export const normalizeScheduleOrchestrationRecord = (raw) => {
       80,
     ),
     materializationAcknowledgedAt: toTimestamp(raw.materializationAcknowledgedAt, 0),
+    materializationBlockedCode: trimLine(raw.materializationBlockedCode, '', 120),
+    materializationBlockedAt: toTimestamp(raw.materializationBlockedAt, 0),
     deadlineEvaluationRevision: trimLine(raw.deadlineEvaluationRevision, '', 80),
     deadlineEvaluationRequestedAt: toTimestamp(raw.deadlineEvaluationRequestedAt, 0),
     deadlineEvaluationAcknowledgedRevision: trimLine(
@@ -251,9 +293,15 @@ const createOrRefreshRecord = ({ occurrence, existing, now, config }) => {
   )
   const occurrenceStartsAt = toTimestamp(occurrence.startsAt, 0)
   const occurrenceEndsAt = toTimestamp(occurrence.endsAt, 0)
-  const id = createScheduleOrchestrationId(sourceCalendarEventId, occurrenceStartsAt)
+  const generatedId = createScheduleOrchestrationId(sourceCalendarEventId, occurrenceStartsAt)
+  const logicalExecutionKey = createScheduleLogicalExecutionKey(
+    sourceCalendarEventId,
+    occurrenceStartsAt,
+    occurrence.recurrence,
+  )
+  const id = existing?.id || generatedId
   const calendarFingerprint = createCalendarOccurrenceFingerprint(occurrence)
-  if (!id || !calendarFingerprint || occurrenceEndsAt <= occurrenceStartsAt) return null
+  if (!id || !logicalExecutionKey || !calendarFingerprint || occurrenceEndsAt <= occurrenceStartsAt) return null
 
   const materializationWindowStartsAt = Math.max(
     0,
@@ -268,6 +316,7 @@ const createOrRefreshRecord = ({ occurrence, existing, now, config }) => {
     id,
     sourceCalendarEventId,
     sourceOccurrenceId: occurrence.occurrenceId || `${sourceCalendarEventId}::${occurrenceStartsAt}`,
+    logicalExecutionKey,
     agendaJourneyId: '',
     materializationAcknowledgedRevision: '',
     materializationAcknowledgedAt: 0,
@@ -282,6 +331,7 @@ const createOrRefreshRecord = ({ occurrence, existing, now, config }) => {
     id,
     sourceCalendarEventId,
     sourceOccurrenceId: occurrence.occurrenceId || `${sourceCalendarEventId}::${occurrenceStartsAt}`,
+    logicalExecutionKey,
     occurrenceStartsAt,
     occurrenceEndsAt,
     calendarFingerprint,
@@ -296,6 +346,8 @@ const createOrRefreshRecord = ({ occurrence, existing, now, config }) => {
   if (!existing || fingerprintChanged) {
     next.materializationRevision = calendarFingerprint
     next.materializationRequestedAt = now
+    next.materializationBlockedCode = ''
+    next.materializationBlockedAt = 0
   }
   if (!next.materializationRevision) {
     next.materializationRevision = calendarFingerprint
@@ -335,6 +387,9 @@ export const reconcileScheduleOrchestration = ({
   )
   const normalizedExisting = normalizeScheduleOrchestrationRecords(existingRecords)
   const recordsById = new Map(normalizedExisting.map((record) => [record.id, record]))
+  const recordsByLogicalKey = new Map(
+    normalizedExisting.map((record) => [record.logicalExecutionKey, record]),
+  )
 
   for (const record of normalizedExisting) {
     if (record.retiredAt) continue
@@ -374,13 +429,22 @@ export const reconcileScheduleOrchestration = ({
       continue
     }
     const id = createScheduleOrchestrationId(occurrence.sourceEventId || occurrence.id, occurrence.startsAt)
+    const logicalExecutionKey = createScheduleLogicalExecutionKey(
+      occurrence.sourceEventId || occurrence.id,
+      occurrence.startsAt,
+      occurrence.recurrence,
+    )
+    const existing = recordsById.get(id) || recordsByLogicalKey.get(logicalExecutionKey)
     const refreshed = createOrRefreshRecord({
       occurrence,
-      existing: recordsById.get(id),
+      existing,
       now: reconciledAt,
       config,
     })
-    if (refreshed) recordsById.set(refreshed.id, refreshed)
+    if (refreshed) {
+      recordsById.set(refreshed.id, refreshed)
+      recordsByLogicalKey.set(refreshed.logicalExecutionKey, refreshed)
+    }
     if (deadlineAt > reconciledAt) {
       nextBoundaryAt = nextBoundaryAt ? Math.min(nextBoundaryAt, deadlineAt) : deadlineAt
     }
@@ -430,6 +494,7 @@ export const projectScheduleMaterializationRequest = (record = {}) => {
     occurrenceStartsAt: normalized.occurrenceStartsAt,
     occurrenceEndsAt: normalized.occurrenceEndsAt,
     calendarFingerprint: normalized.calendarFingerprint,
+    logicalExecutionKey: normalized.logicalExecutionKey,
     agendaJourneyId: normalized.agendaJourneyId,
     requestedAt: normalized.materializationRequestedAt,
   }

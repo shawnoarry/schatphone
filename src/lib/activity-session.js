@@ -13,7 +13,7 @@ const MAX_DURATION_MS = 12 * 60 * 60 * 1000
 const SESSION_LIMIT = 300
 const EVENT_RESOLUTION_LIMIT = 8
 
-export const ACTIVITY_SESSION_SCHEMA_VERSION = 2
+export const ACTIVITY_SESSION_SCHEMA_VERSION = 3
 
 export const ACTIVITY_SESSION_STATUS = Object.freeze({
   PLANNED: 'planned',
@@ -210,6 +210,7 @@ export const normalizeActivitySession = (raw) => {
     schemaVersion: ACTIVITY_SESSION_SCHEMA_VERSION,
     agendaJourneyId,
     agendaJourneyStepId,
+    agendaExecutionRevision: trimLine(raw.agendaExecutionRevision, '', 80),
     sourceCalendarEventId: trimLine(raw.sourceCalendarEventId, '', 140),
     sourceMapJourneyId: trimLine(raw.sourceMapJourneyId, '', 180),
     plannedDurationMs,
@@ -275,6 +276,7 @@ export const createActivitySession = (request = {}, { now = Date.now() } = {}) =
     id,
     agendaJourneyId,
     agendaJourneyStepId,
+    agendaExecutionRevision: request.agendaExecutionRevision,
     sourceCalendarEventId: request.sourceCalendarEventId,
     sourceMapJourneyId: request.sourceMapJourneyId,
     plannedDurationMs: request.plannedDurationMs,
@@ -590,6 +592,7 @@ export const createActivitySessionCompletionEvidence = (rawSession) => {
     recordId: session.id,
     agendaJourneyId: session.agendaJourneyId,
     agendaJourneyStepId: session.agendaJourneyStepId,
+    agendaExecutionRevision: session.agendaExecutionRevision,
     status: 'completed',
     completionPolicy: session.completionPolicy,
     completionReason: session.completionReason,

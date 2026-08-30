@@ -3,7 +3,7 @@ import { readPersistedState, readPersistedStateAsync } from './persistence'
 import { subscribeScheduleOrchestratorCalendarChanges } from './schedule-orchestrator-calendar-signal'
 
 const CALENDAR_STORAGE_KEY = 'store:calendar'
-const CALENDAR_STORAGE_VERSION = 3
+const CALENDAR_STORAGE_VERSION = 4
 
 export const startScheduleOrchestratorRuntime = ({
   pinia,

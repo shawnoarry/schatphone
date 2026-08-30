@@ -1,6 +1,6 @@
 # SchatPhone Task Package Index
 
-Updated: 2026-08-28
+Updated: 2026-08-30
 
 This file is the PM-facing and handoff-facing index for all current task packages.
 
@@ -30,12 +30,13 @@ Current routing note:
 - the landed Player Context V1 eligibility seam and the still-documentation-only world-evolution/information-propagation direction route first to `event-runtime-and-world-hub`; engage `contacts-relationship-system-v2` for the Contacts-owned Self Profile revision and stable identity meaning. A future Community/Media or Investigation owner must receive its own accepted product package before routes, Stores, posts, feeds, or clues are implemented.
 - roadmap 4.15 shared runtime TTS belongs primarily to `module-architecture-governance` for provider Adapters, Cloudflare Worker behavior, persistence, credentials, preview-media lifecycle, and future caller contracts. Engage `chat-and-chat-directory` for the current Settings entry and any later read-aloud/voice-message behavior; development-time ElevenLabs Skills remain tooling rather than runtime ownership.
 - roadmap 4.16 app shell previews belong to `visual-and-ia-governance` for S1 fixture shells, entry/IA, and visual identity acceptance. Engage `module-architecture-governance` only when a shell is promoted from S1 fixture preview to S2 owner implementation, and `event-runtime-and-world-hub` only when a shell is promoted to an S3 event chain; a future shell's canonical owner must receive its own accepted product package before production routes, Stores, or schemas are implemented.
+- production Work Hub organization authority, ordinary work, and owner-native decisions belong to `work-hub-organization`. The completed `EVT-WORK-3` schedule-change family additionally engages `event-runtime-and-world-hub` for eligibility/lifecycle/audit and `map-calendar-reminders` for explicit replacement review and Save. `EVT-WORK-4` execution proof remains separately gated.
 
 ## Current Alignment Check
 
 Checked against integrated baseline `98f1250` on 2026-08-28:
 
-- all seven package quartets remain present and retain their own detailed milestones, validation, exclusions, and next-safe-slice records;
+- all eight package quartets remain present and retain their own detailed milestones, validation, exclusions, and next-safe-slice records;
 - the Module Architecture handoff records `CMG-08` through `CMG-10` complete without creating another execution board;
 - the Commerce handoff header now covers its integrated 2026-08-24 checkout/support work;
 - Chat records the CMG-09 bounded prompt-consumer contract; Contacts retains its separate lifecycle and relationship-owner detail;
@@ -201,6 +202,24 @@ Use for:
 Current handoff page:
 
 - `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md`
+
+### 8. Work Hub Organization Owner
+
+Path:
+
+- `docs/pm/work-hub-organization/README.md`
+
+Use for:
+
+- organization, membership, and role authority;
+- teams, channels, work notices, tasks, status reports, schedule proposals, and approvals;
+- durable Work Hub decision receipts;
+- S1 preview separation;
+- Work Hub-to-Calendar explicit review and Save handoff.
+
+Current handoff page:
+
+- `docs/pm/work-hub-organization/STATUS_AND_HANDOFF.md`
 
 ## 3. Default Reading Shortcut
 

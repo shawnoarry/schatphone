@@ -253,7 +253,7 @@ describe('canonical persistence-owner inventory', () => {
     const inventoriedStoreKeys = PERSISTED_STORE_CARRIERS.map((entry) => entry.storageKey).sort()
 
     expect(sourceStoreKeys).toEqual(inventoriedStoreKeys)
-    expect(PERSISTED_STATE_AUDIT_TARGETS).toHaveLength(21)
+    expect(PERSISTED_STATE_AUDIT_TARGETS).toHaveLength(23)
     expect(PERSISTED_STATE_AUDIT_TARGETS.map((entry) => entry.key)).toEqual(
       PERSISTED_STORE_CARRIERS.map((entry) => entry.storageKey),
     )
@@ -280,6 +280,20 @@ describe('canonical persistence-owner inventory', () => {
     expect(simulationTarget.migrate({ version: 2, data: { marker: 'instance-events' } })).toEqual({
       marker: 'instance-events',
     })
+
+    const workHubTarget = PERSISTED_STATE_AUDIT_TARGETS.find(
+      (entry) => entry.key === 'store:work-hub',
+    )
+    expect(workHubTarget.version).toBe(2)
+    expect(workHubTarget.migrate({ version: 1, data: { marker: 'legacy-work-hub' } })).toEqual({
+      marker: 'legacy-work-hub',
+    })
+    expect(workHubTarget.migrate({ version: 0, data: { marker: 'unsupported-work-hub' } })).toBeNull()
+
+    const chronicleTarget = PERSISTED_STATE_AUDIT_TARGETS.find(
+      (entry) => entry.key === 'store:chronicle',
+    )
+    expect(chronicleTarget.version).toBe(1)
 
     for (const carrier of PERSISTED_STORE_CARRIERS) {
       const source = readSource(carrier.sourceFile)
@@ -501,6 +515,9 @@ describe('canonical persistence-owner inventory', () => {
     const activitySession = PERSISTENCE_OWNER_DATA_CLASSES.find(
       (entry) => entry.id === 'activity-session.timing-records',
     )
+    const chronicle = PERSISTENCE_OWNER_DATA_CLASSES.find(
+      (entry) => entry.id === 'chronicle.user-authored-diary-entries',
+    )
     const music = PERSISTENCE_OWNER_DATA_CLASSES.find(
       (entry) => entry.id === 'music.library-and-provider-settings',
     )
@@ -546,6 +563,12 @@ describe('canonical persistence-owner inventory', () => {
       backupSectionId: 'calendar',
     })
     expect(activitySession.referenceRule).toContain('owns time only')
+    expect(chronicle).toMatchObject({
+      logicalOwner: 'Chronicle',
+      storageKeys: ['store:chronicle'],
+      backupSectionId: 'chronicle',
+    })
+    expect(chronicle.referenceRule).toContain('Chronicle owns diary prose only')
     expect(music).toMatchObject({ logicalOwner: 'Music', storageKeys: ['store:system'] })
     expect(musicCredentials).toMatchObject({
       logicalOwner: 'Music',
@@ -601,6 +624,8 @@ describe('canonical persistence-owner inventory', () => {
       'chat.module-identity-settings',
       'world-suite.installation-inventory',
       'mini-scene.artifacts-and-policies',
+      'work-hub.organization-authority-and-work-records',
+      'chronicle.user-authored-diary-entries',
     ])
     expect(coveredRequiredClassIds.has('chat.module-identity-settings')).toBe(false)
     expect(coveredRequiredClassIds.has('world-suite.installation-inventory')).toBe(false)
@@ -651,6 +676,14 @@ describe('canonical persistence-owner inventory', () => {
         {
           sectionId: 'mini-scene-known-gap',
           dataClassIds: ['mini-scene.artifacts-and-policies'],
+        },
+        {
+          sectionId: 'work-hub',
+          dataClassIds: ['work-hub.organization-authority-and-work-records'],
+        },
+        {
+          sectionId: 'chronicle',
+          dataClassIds: ['chronicle.user-authored-diary-entries'],
         },
       ],
     })

@@ -1,6 +1,6 @@
 # SchatPhone Product Manager Brief
 
-Updated: 2026-08-28
+Updated: 2026-08-29
 
 Integrated baseline: `98f1250`
 
@@ -16,6 +16,7 @@ The project is an integrated V1 in product-preview and release-hardening work. T
 
 - Contacts, Chat Directory, Chat, and Relationship Runtime have explicit ownership boundaries.
 - Book, WorldBook, World Pack, source Apps, Wallet, Calendar, Reminders, and Map retain separate canonical truth.
+- World Setting W2 persists one canonical current-world identity and user-confirmed semantic-version history; Settings is the ordinary setup/check/confirm/rollback surface, while World Hub remains advanced and W3 switching remains gated.
 - release-local backup/recovery, same-container writer protection, and a Book Repository reference cutover are integrated;
 - Chat, commerce, schedule, Map, Music, Camera/image generation, TTS preview, Event Runtime, World Hub, and the S1 App Shell portfolio have named integrated slices;
 - CI and Pages workflows run lint, unit, build, both audit scopes, and full Playwright.
@@ -30,7 +31,7 @@ Follow the roadmap exactly:
 
 ## 5. Important Holds
 
-Do not infer authorization for production push, personal R2 implementation, broad non-Book migration, World Setting W2, hotspot rewrites, full TypeScript migration, broad secondary-module expansion, closed-page autonomy, Cheats, or EVE-5.
+Do not infer authorization for production push, personal R2 implementation, broad non-Book migration, World Setting W3 switching, hotspot rewrites, full TypeScript migration, broad secondary-module expansion, closed-page autonomy, Cheats, or EVE-5.
 
 ## 6. How To Read Progress
 

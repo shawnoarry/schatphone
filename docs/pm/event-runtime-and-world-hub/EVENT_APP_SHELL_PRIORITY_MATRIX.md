@@ -100,7 +100,7 @@ S0 不创建跨模块写入、不注册 Event Surface、不调用 provider、不
 | 产品面 | 形态 | 当前成熟度 | 已确认方向 | 下一可见切片 | 详细规划 |
 | --- | --- | --- | --- | --- | --- |
 | Work Hub owner promotion | 已有独立 S1 App | `NEXT PLANNED / S2 GATED` | 内部组织工作是默认已签约艺人、学生与职员的主要工作入口 | 先建立组织 authority/owner 与普通无事件工作闭环，再接首条 Work Hub 原生事件 | 下一事件计划 + roadmap 4.14/4.16 |
-| 生活志 / Chronicle | 独立个人连续性产品 | `PLANNED / SHELL NOT BUILT` | 只读聚合已确认的个人生活事实，并由 Diary Owner 拥有用户日记 | 在首条 Work Hub 事件链产生可信事实后建设；不复制 Calendar、Work Hub、Journey、Wallet 或关系记录 | 生活志专项计划 + roadmap 4.12/4.16 |
+| 生活志 / Chronicle | 独立个人连续性产品 | `EVT-CHRONICLE-1 DONE 2026-08-30` | Diary Owner 拥有用户日记；有限只读投影聚合已验证的个人生活事实 | 普通 Home/App Store 产品；不复制或编辑 Calendar、Work Hub、Journey、Wallet、Assets 或关系记录；AI recall/自动日记仍 gated | 生活志专项计划 + roadmap 4.12/4.16 |
 | Owner promotion for CREDO / POSTA / NEXT | 已有独立 S1 App | `S2 GATED` | 三个壳已完成普通本机预览，不再属于“壳待做”；NEXT 仅承担外部机会 | 按独立领域需求分别建立 institution/rights、logistics、external-opportunity canonical owner | 总规划 + roadmap 4.16 |
 
 #### Conditional, extension-first, or dependency-gated / 条件型、优先扩展或受依赖限制
@@ -112,7 +112,7 @@ S0 不创建跨模块写入、不注册 Event Surface、不调用 provider、不
 | Home Services / 物业与家庭服务 | Housing 子模块 | `B2 / TODO` | Housing owner 建立后补维修、保洁、费用请求 | 总规划 |
 | Pharmacy / 药房 | Healthcare 子模块 | `B2 / TODO` | Healthcare owner 建立后补处方、取药与配送 | 总规划 |
 | Production activities / 演出、录制、练习 | Workplace + Calendar + Agenda/Activity 模板 | `B2 / TEMPLATE TODO` | 完成活动模板和执行链，不新建“事件 App” | 总规划第 16 节 |
-| Narrative Timeline / 故事时间线 | 未来只读产品面 | `C / CJA-6B GATED` | 先确定 owner、留存、编辑与来源策略 | 总规划 + CJA-6A 合同 |
+| Narrative Timeline / 故事时间线 | Chronicle 内的派生只读视图 | `CJA-6B DONE 2026-08-30` | 从已验证 Owner 摘要确定性重建，不持久化第二份时间线 | 总规划 + CJA-6A/CJA-6B 合同 |
 | Investigation / Knowledge / 线索案件 | 独立玩法壳候选 | `C / TODO` | 先有可玩的案件、Community owner 与稳定 Fact/Claim 引用 | 总规划 |
 | Messages / SMS / 短信 | 暂不独立 | `C / TODO` | 出现不可由 Chat、Phone、服务号和通知承担的号码/短码场景 | 总规划 |
 | Insurance / 保险 | Healthcare/Housing 附属设计 | `C / TODO` | 相关 owner 与制度模型成熟后再决定入口 | 总规划 |
@@ -214,7 +214,7 @@ S0 不创建跨模块写入、不注册 Event Surface、不调用 provider、不
 | Home Services / 物业与家庭服务 | `B2-3` | Housing 子模块 | Housing、Wallet、Calendar、Phone、通知 | 没有 Housing owner 前独立入口价值不足 | `P1` after Housing，维修/费用问题 |
 | Pharmacy / 药房 | `B2-4` | Healthcare 子模块 | Healthcare、Map pharmacy、Wallet、通知 | 应先属于医疗闭环，后续频率高再独立 | `P1` after Healthcare，缺货/取药/配送 |
 | Production activities / 演出录制工作过程 | `B2-5` | Agenda/Activity templates | Calendar、Agenda Journey、Map、Activity Session、Mini Scene | 本身是计划活动，不应先建“事件 App” | `P0` 功能优先，但不是新壳优先 |
-| Narrative Timeline / 故事时间线 | `C-1` | 暂不做生产壳 | CJA-6A、多个 owner summary | 需要 CJA-6B 决定名称、owner、留存和编辑策略 | `P2`，owner summaries 成熟后 |
+| Narrative Timeline / 故事时间线 | `C-1` | 已作为 Chronicle 派生视图实现 | CJA-6A、多个 owner summary、Diary Owner | AI recall、自动日记、领域后果与 CJA-6C 仍需另行批准 | `DONE 2026-08-30` |
 | Investigation/Knowledge / 线索案件 | `C-2` | 设计稿/fixture contract | Community、Map、Phone、Chat、Files | 没有首个案件和 Community owner 时容易成为空看板 | `P2`，先有可玩案件 |
 | Messages/SMS / 短信 | `C-3` | 暂不独立 | Chat、Phone、服务号、通知 | 与现有消息能力重叠，需先证明手机号/短码独立价值 | `P2`，从明确短信场景开始 |
 | Insurance / 保险 | `C-4` | Healthcare/Housing 附属设计 | Wallet、Healthcare、Housing、Mail | 依赖医疗/住房 owner 和制度模型 | `P2` after owners |
@@ -323,7 +323,7 @@ Browser/Search/Help 作为 `A1-4` 横向工具候选排在这三个生活锚点�
 
 这组应复用第一批已经稳定的列表、详情、表单、通知、文件和交易视觉模式，不宜与第一批并行发明新的通用 UI 规则。
 
-Wave 2 的六个壳均已完成 S1（2026-08-24）：`GATE / 入场`、`ROAM / 漫泊`、`VIA / 联程`、`CREDO / 谱权`、`POSTA / 递送` 与 `NEXT / 机会`。它们只保存本机、非权威的普通使用状态；售罄、无权限、不可用与过期来源 fail-closed；不写 Wallet、Mail、Calendar、Map Journey、Agenda Journey、通知或 Event Runtime。桌面/模拟 Pixel 5、日夜、中英文、可访问性和零横向溢出证据已覆盖，不声称真机证据。下一步不再横向扩壳，也不默认提升 NEXT；先修正并提升 Work Hub owner，完成普通组织工作闭环与首条 Work Hub 原生事件，再建设生活志。
+Wave 2 的六个壳均已完成 S1（2026-08-24）：`GATE / 入场`、`ROAM / 漫泊`、`VIA / 联程`、`CREDO / 谱权`、`POSTA / 递送` 与 `NEXT / 机会`。它们只保存本机、非权威的普通使用状态。此后的 production Work Hub owner、普通组织工作闭环、首条 Work Hub 原生事件、revision-safe 执行证据与 Chronicle 已分别完成；这些完成不把任何 S1 壳自动提升为生产 Owner，也不授权下一条事件线。
 
 ## 8. Shell Teams And Non-Overlap / 建议小组边界
 
@@ -411,7 +411,7 @@ Future S3 event entry candidate:
 
 如果选择三个并行壳，优先 `Mail + Healthcare + Housing`：分别覆盖信息、服务预约和地点生活，最能检验 SchatPhone 是否已经从聊天模拟器变成可生活的手机世界。
 
-默认 K-pop 世界观的公共声音、粉丝关系、票务、住宿、城际交通、创作者权益、包裹与外部职业机会基座现已形成 S1 壳组合。当前下一步按 `NEXT_EVENT_PRODUCTION_PLAN_AFTER_SHELL_PORTFOLIO.md` 修正并提升 `Work Hub / 工作台`：先建立可信组织所属与普通无事件工作闭环，再接“机构工作改期 -> 用户在 Work Hub 处理 -> Calendar/Agenda/Map/Activity”的首条职业事件链。`生活志 / Chronicle` 是该链之后的下一个重要可见壳；Messages/SMS 仍等待明确号码或短码场景。
+默认 K-pop 世界观的公共声音、粉丝关系、票务、住宿、城际交通、创作者权益、包裹与外部职业机会基座保留为 S1 夹具组合。`NEXT_EVENT_PRODUCTION_PLAN_AFTER_SHELL_PORTFOLIO.md` 中的 Work Hub owner、普通工作闭环、首条世界观中立事件链、revision-safe 执行证据与 `生活志 / Chronicle` 已完成。现代 K-pop 不构成生产权限或“完整版”定义；Messages/SMS 仍等待明确号码或短码场景，后续事件线未被授权。
 
 如果选择一个最能减少用户迷路、同时为未来世界知识和真实互联网留接口的工具壳，选择 `Browser/Search/Help`。先做本地 Help + World 搜索即可成立，外部 Web Search 不是首版阻塞条件。
 

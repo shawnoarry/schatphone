@@ -1789,18 +1789,28 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
         class="rounded-2xl border border-white/10 bg-slate-900/80 p-4"
         data-testid="control-center-world-panel"
       >
-        <p class="text-xs font-semibold text-slate-200">{{ t('World Variant Runtime', 'World Variant Runtime') }}</p>
-        <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
-          <span class="rounded-xl bg-white/8 px-3 py-2">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-sm font-semibold text-slate-100">{{ t('世界使用记录', 'World usage evidence') }}</p>
+            <p class="mt-1 text-[11px] leading-5 text-slate-500">
+              {{ t('用于深度检查最近事件采用了哪套世界内容。世界的首次准备请在“设置 > 世界准备”完成。', 'For advanced review of which world content recent events used. Prepare a world from Settings > World Setup.') }}
+            </p>
+          </div>
+          <span class="shrink-0 rounded-full bg-cyan-200/10 px-2 py-1 text-[10px] font-semibold text-cyan-100">
+            {{ t('高级审查', 'Advanced review') }}
+          </span>
+        </div>
+        <div class="mt-3 grid grid-cols-2 gap-2 text-xs" data-testid="world-understanding-runtime-evidence">
+          <span class="rounded-lg bg-white/8 px-3 py-2">
             {{ t('Variant logs', 'Variant logs') }}: {{ worldRuntimeSummary.count }}
           </span>
-          <span class="rounded-xl bg-white/8 px-3 py-2">
+          <span class="rounded-lg bg-white/8 px-3 py-2">
             {{ t('World context', 'World context') }}: {{ worldRuntimeSummary.worldContextId }}
           </span>
-          <span class="col-span-2 rounded-xl bg-white/8 px-3 py-2">
+          <span class="col-span-2 rounded-lg bg-white/8 px-3 py-2">
             {{ t('Latest variant', 'Latest variant') }}: {{ worldRuntimeSummary.variantId }}
           </span>
-          <span class="col-span-2 rounded-xl bg-white/8 px-3 py-2">
+          <span class="col-span-2 rounded-lg bg-white/8 px-3 py-2">
             {{ t('Active WorldBook entries', 'Active WorldBook entries') }}:
             {{ worldRuntimeSummary.activeWorldBookCount }}
           </span>

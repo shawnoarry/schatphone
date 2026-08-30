@@ -1,12 +1,12 @@
 # Visual Polish TODO (视觉专项切片计划)
 
-Updated: 2026-08-19
+Updated: 2026-08-27
 
 Owner package: `docs/pm/visual-and-ia-governance/`.
 
 This file is the visual-lane working plan for the ongoing UI beautification effort. It is NOT a roadmap, task board, or second authority: live priority and product status remain owned by `docs/roadmap/TODO_ROADMAP.md`, and product meaning remains owned by the task packages. When this file conflicts with those, those win.
 
-Cross-PC resume rule: read this file, then `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md` (the authoritative record of landed slices), then `docs/process/VISUAL_WORKFLOW.md`. Screenshot evidence lives in machine-local `tmp/*-visual/` folders and is NOT cross-machine evidence; validation results are re-runnable on any PC.
+Cross-PC resume rule: read `docs/roadmap/TODO_ROADMAP.md`, then `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md`, and use this file only for the current bounded visual slice plus historical candidate detail. Load `docs/process/VISUAL_WORKFLOW.md` only when a visual implementation slice is promoted. Screenshot evidence lives in machine-local `tmp/*-visual/` folders and is NOT cross-machine evidence; validation results are re-runnable on any PC.
 
 Working rhythm (user-set 2026-08-17): one small slice at a time; document first, then implement; each slice must independently pass the validation contract.
 
@@ -14,19 +14,24 @@ Validation contract per slice (visual-only code change): `npm.cmd run lint`, `np
 
 ## 0. Integration State (read first when resuming)
 
-2026-08-17 integration: local visual work was rebased onto `origin/main` (4 remote commits: EVE-4B food-delivery event chain, commerce event foundation, CJA-1..CJA-5 calendar/agenda/weather, widget e2e stabilization). Two conflicts resolved: package handoff (kept newer date line) and `GalleryView.vue` (adopted the remote redesigned IA wholesale — tabbed Library/Albums, People/Places, album detail — then re-applied tokenization as the follow-up slice below). `npm ci` was required for new remote dependencies (`uisfx`, `opencc-js`). Merged-baseline validation at that point: lint, **290 files / 2047 tests**, build, visual gate 16/16 — all green.
+Integrated baseline: `823d108` on 2026-08-27. The live roadmap remains the execution authority; this working plan does not promote any item by itself.
 
-Latest slice (same day): tokenized the redesigned Gallery (`--gallery-*` bridged to `--system-*`; surfaces/text/semantic colors on system tokens; `#0a84ff` kept as app-owned accent). Validation now includes lint, the full **290 files / 2047 tests**, build, the default/zen visual gate **16/16**, targeted Gallery tests 30/30, and screenshots.
+Current integrated meaning:
 
-Local git state after cross-PC sync: `main` matches `origin/main` at `7767ad4` (2026-08-19: plus Chat accent parity, neutral/blue mapping extension, Chat Appearance CSS file import, and the thread-menu card slices). No tracked local changes remain; only unrelated untracked temporary directories are present.
+1. the Calendar/Reminders lane in section 2 is complete historical evidence, not the active visual lane: Month/Week/Agenda, Calendar appearance markers, Calendar-to-Agenda date links, Agenda Journey, Activity Session, and Reminders presentation are already integrated;
+2. Appearance now has five stylized system themes, independent system icon packs, one-click style kits, and optional companion-widget collections at their recorded scoped baselines; another theme or icon family is not the current task;
+3. the accepted S1 App-shell portfolio and Notification Center are complete at simulated desktop/mobile acceptance, while installed-PWA/relaunch and named physical-device proof remain release gates;
+4. Contacts V3 is the roadmap P0 lane. `PERSONA-1` is next, followed by `PERSONA-2` and purpose-specific projections before Work Hub promotion.
 
-Known flake: one intermittent single-test failure observed twice across many full runs (unidentified, always green on rerun).
+Current bounded working slice, explicitly accepted by the user on 2026-08-27:
 
-NOT done / open for the next session:
+1. close visual integration bookkeeping without adding a new theme, page redesign, or product capability;
+2. keep registry-backed project-image-bed runtime assets out of Git when their local bytes are only untracked caches; verify registry coverage and byte identity instead;
+3. retain focused regression coverage for independent App identities and system-pack preset images;
+4. preserve unrelated Map screenshot evidence, Commerce documentation, generated review folders, and local audit scripts without staging, deleting, or reclassifying them;
+5. after this closure, return to the roadmap queue with `PERSONA-1`, then `PERSONA-2`; treat review, conflict, confirmation, and mobile form presentation as the next UI-quality surface.
 
-1. Re-evaluate the Calendar lane (section 2) against the now-integrated CJA implementation: remote already ships Month/Week/Agenda (`CalendarWorkspace.vue`, `CalendarEventEditor.vue`), the Agenda Journey app, Activity Session, and Weather. The drafted month-grid Slice A is likely obsolete — review `output/e2e/calendar-cja1/` screenshots and the new components first, then decide what (if anything) remains for the visual lane. The two `PENDING RE-CONFIRMATION` items (month-grid direction, cross-app date links) must be re-discussed with the user in this new context.
-2. The 12-marker system stays a user-approved idea, but its mapping target changed: it should attach to the remote `CalendarEventEditor`/workspace, not the old list cards. Do not start before the re-discussion in item 1.
-3. `npm run test:e2e` full run has not been executed on the merged baseline (only the 16-case visual gate and the focused event E2E set have passed).
+The historical completed slices and unscheduled candidate backlog remain below for context. They do not override the current roadmap or package handoff.
 
 ## 1. Completed Slices
 
@@ -72,7 +77,7 @@ NOT done / open for the next session:
 - The page shell was already tokenized; the actual residual lived in the two child panels' uncovered utility colors. Extended the existing `:deep()` override map in `NetworkView.vue` to cover `emerald` -> `--system-success*`, `amber` -> `--system-warning*`, and `indigo` -> `--system-info`/control tokens. Zero template/logic change, child components untouched.
 - Validation: lint, focused tests 29/29, full suite 258 files / 1913 tests, build, default/zen screenshots (status boxes now read as proper semantic tones in both themes).
 
-## 2. Current Lane: Calendar / Reminders Schedule Identity (RE-EVALUATED 2026-08-19 post-integration)
+## 2. Completed Historical Lane: Calendar / Reminders Schedule Identity
 
 Audit basis (visual package 2026-07-16 matrix): schedule surfaces read as generic status cards; Calendar/Reminders are targeted rebuild candidates. Hard constraints: Reminders stays the unconfirmed-cue inbox, Calendar stays the confirmed-schedule owner.
 
@@ -98,7 +103,7 @@ Audit basis (visual package 2026-07-16 matrix): schedule surfaces read as generi
 
 The original Slice A/B/C draft below was written before the CJA integration landed locally. It is kept as decision evidence; section 2.2 supersedes it for execution.
 
-Reserved design language (for the future Agenda Journey app, or Calendar's later Agenda view): today anchor block, day-grouped quiet timeline, time-column event rows. Do not build it into Calendar now.
+Reserved design language for a future Agenda Journey depth slice, or a later Calendar Agenda-view refinement: today anchor block, day-grouped quiet timeline, time-column event rows. The current Agenda Journey app is already integrated; do not infer this visual candidate as unfinished route or owner work.
 
 ### Slice A (drafted 2026-08-17 as Calendar month-grid home + selected-day detail — starts only after the user re-confirms the month-grid direction above)
 
@@ -168,4 +173,4 @@ Fix slices (sized):
 - No event authoring model changes (CJA-1 authoring scope is a separate roadmap stage).
 - No Gallery Photos-first entry or People views (deferred by package handoff).
 - No Wallet / Food Delivery / Map / Music / Home / Appearance rework (accepted directions to preserve).
-- No Calendar execution-model UI (checkboxes, step ordering) — that language belongs to the future Agenda Journey app.
+- No Calendar execution-model UI (checkboxes, step ordering) — that language belongs to the existing Agenda Journey owner and may deepen only through its own promoted slice.

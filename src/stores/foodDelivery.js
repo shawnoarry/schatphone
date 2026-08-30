@@ -5232,6 +5232,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       const started = simulationStore.startEventInstanceV2({
         id: instanceId,
         templateId: COMMERCE_EVENT_TEMPLATE_ID.DESTINATION_CHANGE_AFTER_FULFILLMENT,
+        worldBinding: getSystemStore().getActiveWorldSemanticBinding(),
         contextRefs: {
           order_id: order.id,
           order_revision: order.ownerRevision,

@@ -15,7 +15,7 @@ const freezeRegistry = (entries) =>
 
 export const LEGACY_V2_BACKUP_SECTION_REGISTRY = freezeRegistry([
   { id: 'system-settings', owner: 'Settings / Music', coverage: 'required', dataClassIds: ['settings.application-settings', 'music.library-and-provider-settings'], payloadFields: [{ path: 'settings', shape: 'object' }] },
-  { id: 'system-user', owner: 'Settings / WorldBook', coverage: 'required', dataClassIds: ['settings.current-user-profile', 'worldbook.world-context'], payloadFields: [{ path: 'user', shape: 'object' }] },
+  { id: 'system-user', owner: 'Settings / WorldBook', coverage: 'required', dataClassIds: ['settings.current-user-profile', 'worldbook.world-context', 'worldbook.world-identity-and-semantic-versions'], payloadFields: [{ path: 'user', shape: 'object' }] },
   { id: 'system-notifications', owner: 'System', coverage: 'required', dataClassIds: ['system.notifications'], payloadFields: [{ path: 'notifications', shape: 'array' }] },
   { id: 'system-api-reports', owner: 'Module Architecture / Technical Governance', coverage: 'required', dataClassIds: ['technical-governance.api-reports'], payloadFields: [{ path: 'apiReports', shape: 'array' }] },
   { id: 'system-truth-state', owner: 'System', coverage: 'required_legacy_compatibility', dataClassIds: ['system.truth-state-legacy'], payloadFields: [{ path: 'truthState', shape: 'object' }] },
@@ -67,6 +67,8 @@ export const LEGACY_V2_BACKUP_SECTION_REGISTRY = freezeRegistry([
   { id: 'shopping', owner: 'Shopping', coverage: 'required', dataClassIds: ['shopping.orders-and-logistics'], payloadFields: [{ path: 'shopping', shape: 'object' }] },
   { id: 'food-delivery', owner: 'Food Delivery', coverage: 'required', dataClassIds: ['food-delivery.orders'], payloadFields: [{ path: 'foodDelivery', shape: 'object' }] },
   { id: 'simulation', owner: 'Event Runtime / World Hub', coverage: 'required', dataClassIds: ['event-runtime.simulation-state'], payloadFields: [{ path: 'simulation', shape: 'object' }] },
+  { id: 'work-hub', owner: 'Work Hub', coverage: 'known_gap', dataClassIds: ['work-hub.organization-authority-and-work-records'], payloadFields: [], reason: 'Legacy v2 exports predate the production Work Hub organization owner.' },
+  { id: 'chronicle', owner: 'Chronicle', coverage: 'known_gap', dataClassIds: ['chronicle.user-authored-diary-entries'], payloadFields: [], reason: 'Legacy v2 exports predate the independent Chronicle diary owner.' },
   { id: 'assets', owner: 'Assets', coverage: 'required', dataClassIds: ['assets.owned-assets'], payloadFields: [{ path: 'assets', shape: 'object' }] },
   { id: 'wallet', owner: 'Wallet', coverage: 'required', dataClassIds: ['wallet.ledger'], payloadFields: [{ path: 'wallet', shape: 'object' }] },
   { id: 'phone', owner: 'Phone', coverage: 'required', dataClassIds: ['phone.call-records'], payloadFields: [{ path: 'phone', shape: 'object' }] },

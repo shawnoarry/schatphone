@@ -141,10 +141,12 @@ describe('Settings backup workflow interface', () => {
       'stock',
       'relationshipRuntime',
       'imageGeneration',
+      'workHub',
+      'chronicle',
     ])
     expect(exported.backupMeta).toMatchObject({
       magic: 'schatphone-complete-backup',
-      schemaVersion: 5,
+      schemaVersion: 7,
       exportMode: 'metadata_only',
     })
     expect(exported.backupMeta.manifest.sectionCount).toBeGreaterThan(20)
@@ -163,16 +165,20 @@ describe('Settings backup workflow interface', () => {
     )
     expect(exported.imageGeneration.defaults.aspectRatio).toBe('4:5')
     expect(exported.calendar.scheduleOrchestrator).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: 2,
       records: [],
     })
     expect(exported.calendar.agendaJourney).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: 2,
       journeys: [],
     })
     expect(exported.calendar.activitySession).toMatchObject({
-      schemaVersion: 2,
+      schemaVersion: 3,
       sessions: [],
+    })
+    expect(exported.chronicle).toMatchObject({
+      schemaVersion: 1,
+      entries: [],
     })
     expect(exported.miniScene).toMatchObject({
       schemaVersion: 2,
@@ -330,7 +336,7 @@ describe('Settings backup workflow interface', () => {
     const exportedBlob = createObjectURL.mock.calls[0][0]
     const exported = JSON.parse(exportedBlob.parts.join(''))
     expect(exported.backupMeta).toMatchObject({
-      schemaVersion: 5,
+      schemaVersion: 7,
       exportMode: 'metadata_with_asset_package',
     })
     expect(exported.backupMeta.galleryAssetPackage).toMatchObject({

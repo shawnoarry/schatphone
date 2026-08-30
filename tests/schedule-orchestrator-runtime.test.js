@@ -21,7 +21,7 @@ const writeCalendarSnapshot = (patch = {}) => {
   }
   localStorage.setItem(
     'schatphone:store:calendar',
-    JSON.stringify({ version: 3, savedAt: NOW, data: { events: [event] } }),
+    JSON.stringify({ version: 4, savedAt: NOW, data: { events: [event] } }),
   )
   return event
 }

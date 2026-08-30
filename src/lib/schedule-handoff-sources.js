@@ -6,8 +6,20 @@ const SOURCE_RESOLVERS = Object.freeze({
   workplace: resolveWorkplaceScheduleHandoffDraftV1,
 })
 
-export const resolveScheduleHandoffSourceDraftV1 = ({ sourceOwner, sourceRecordId } = {}) => {
+export const resolveScheduleHandoffSourceDraftV1 = ({
+  sourceOwner,
+  sourceRecordId,
+  productionWorkHubResolver,
+  productionWorkHubOwnsRecord,
+} = {}) => {
   const owner = typeof sourceOwner === 'string' ? sourceOwner.trim().toLowerCase() : ''
+  if (owner === 'workplace' && typeof productionWorkHubResolver === 'function') {
+    const productionDraft = productionWorkHubResolver(sourceRecordId)
+    if (productionDraft) return productionDraft
+    if (typeof productionWorkHubOwnsRecord === 'function' && productionWorkHubOwnsRecord(sourceRecordId)) {
+      return null
+    }
+  }
   const resolver = SOURCE_RESOLVERS[owner]
   return resolver ? resolver(sourceRecordId) : null
 }

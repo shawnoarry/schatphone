@@ -83,7 +83,8 @@ Updated: 2026-08-28
 - the restrained Focus Companion follows the Agenda-step duration and uses one built-in quiet scene; later Pomodoro/custom modes, Gallery background, Music/ambient, and decorative companion references remain cross-owner extensions, not Activity Session assets
 - when the same presentation is used during a flight or other long Map Journey, consume the Map-owned clock instead of creating a duplicate Activity Session
 - `CJA-6A DONE 2026-08-17`: document the bounded read-only Narrative Timeline contract, typed `sourceRefs`, owner-confirmed summary inputs, stale/deleted/unauthorized-source fail-closed behavior, and explicit recency/scope/permission/character-token limits for future AI context
-- keep `CJA-6B` as a separate implementation gate until Story/Diary/Journal naming, route, persistence owner, retention, backup, review, migration, and visible-product policy are approved; do not add a store, route, or backup child in this workstream
+- `CJA-6B / EVT-CHRONICLE-1 DONE 2026-08-30`: `生活志 / Chronicle` is the ordinary visible product, schema-V1 Diary Owner persists only user-authored entries, and a pure finite projection reads verified Work Hub, Calendar, Agenda Journey, Map, and Activity Session summaries through typed source references
+- keep Timeline persistence, automatic diary generation, AI recall/context, free-text fact extraction, domain consequences, public projection, and CJA-6C behind separate approval; Chronicle never becomes a second schedule, journey, event, relationship, finance, asset, or world owner
 
 ## 6. Workstream F: Reminders As Cue Layer
 

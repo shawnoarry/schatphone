@@ -1,4 +1,4 @@
-export const PERSISTENCE_OWNER_INVENTORY_VERSION = 15
+export const PERSISTENCE_OWNER_INVENTORY_VERSION = 17
 
 const freezeEntries = (entries) =>
   Object.freeze(
@@ -316,8 +316,8 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   },
   {
     storageKey: 'store:map',
-    schemaVersion: 4,
-    legacySchemaVersions: [2, 3],
+    schemaVersion: 5,
+    legacySchemaVersions: [2, 3, 4],
     labelZh: '地图存档',
     labelEn: 'Map state',
     sourceFile: 'src/stores/map.js',
@@ -343,7 +343,8 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   },
   {
     storageKey: 'store:schedule-orchestrator',
-    schemaVersion: 1,
+    schemaVersion: 2,
+    legacySchemaVersions: [1],
     labelZh: '时间编排记录',
     labelEn: 'Schedule orchestration state',
     sourceFile: 'src/stores/scheduleOrchestrator.js',
@@ -351,7 +352,8 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   },
   {
     storageKey: 'store:agenda-journey',
-    schemaVersion: 1,
+    schemaVersion: 2,
+    legacySchemaVersions: [1],
     labelZh: '行程执行记录',
     labelEn: 'Agenda Journey state',
     sourceFile: 'src/stores/agendaJourney.js',
@@ -359,12 +361,29 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   },
   {
     storageKey: 'store:activity-session',
-    schemaVersion: 2,
-    legacySchemaVersions: [1],
+    schemaVersion: 3,
+    legacySchemaVersions: [1, 2],
     labelZh: '活动计时记录',
     labelEn: 'Activity Session state',
     sourceFile: 'src/stores/activitySession.js',
     logicalOwners: ['Activity Session'],
+  },
+  {
+    storageKey: 'store:work-hub',
+    schemaVersion: 2,
+    legacySchemaVersions: [1],
+    labelZh: '工作台组织与工作记录',
+    labelEn: 'Work Hub organization and work records',
+    sourceFile: 'src/stores/workHub.js',
+    logicalOwners: ['Work Hub'],
+  },
+  {
+    storageKey: 'store:chronicle',
+    schemaVersion: 1,
+    labelZh: '生活志日记',
+    labelEn: 'Chronicle diary entries',
+    sourceFile: 'src/stores/chronicle.js',
+    logicalOwners: ['Chronicle'],
   },
   {
     storageKey: 'store:reminders',
@@ -597,6 +616,22 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
       'Consumers store stable IDs and projections; WorldBook remains the logical owner.',
   },
   {
+    id: 'worldbook.world-identity-and-semantic-versions',
+    logicalOwner: 'WorldBook',
+    dataClass:
+      'Canonical current-world identity, source snapshots, reviewed semantic versions, activation pointers, and rollback history',
+    physicalCarrierIds: layeredStoreCarriers,
+    storageKeys: ['store:system'],
+    durability: 'durable-authoritative',
+    growthClass: 'bounded-version-history',
+    backupRequirement: 'required',
+    backupSectionId: 'system-user',
+    stableIdRule:
+      'The current single world keeps one stable world ID; each confirmed semantic version keeps an immutable version ID.',
+    referenceRule:
+      'Event records retain the world and semantic-version binding captured at first creation; later activation or rollback does not rewrite them.',
+  },
+  {
     id: 'world-suite.installation-inventory',
     logicalOwner: 'World Suite',
     dataClass: 'Installed resource origins, expected versions, and resumable Suite operation checkpoints',
@@ -810,6 +845,36 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     stableIdRule: 'One deterministic Activity Session ID per stable Agenda Journey activity-step ID.',
     referenceRule:
       'Activity Session owns time only and validates Event Runtime requests only when they adjust its bounded timer; Agenda Journey validates completion evidence, while Map retains any linked travel clock and media owners retain their assets and playback truth.',
+  },
+  {
+    id: 'work-hub.organization-authority-and-work-records',
+    logicalOwner: 'Work Hub',
+    dataClass:
+      'World-bound organization, membership, role authority, teams, channels, work notices, tasks, status reports, schedule proposals, approval requests, and durable user-decision receipts',
+    physicalCarrierIds: layeredStoreCarriers,
+    storageKeys: ['store:work-hub'],
+    durability: 'durable-authoritative',
+    growthClass: 'bounded-event-growth',
+    backupRequirement: 'required',
+    backupSectionId: 'work-hub',
+    stableIdRule:
+      'Issuer-assigned organization records retain stable IDs and positive revisions; user receipts derive a deterministic ID from source type, source ID, source revision, decision, and actor membership.',
+    referenceRule:
+      'Work Hub retains world/profile revision bindings and stable Contacts/Calendar references. Contacts owns identity, Calendar owns confirmed time, and preview-shell fixtures remain excluded.',
+  },
+  {
+    id: 'chronicle.user-authored-diary-entries',
+    logicalOwner: 'Chronicle',
+    dataClass: 'User-authored diary entries with optional typed references to owner records',
+    physicalCarrierIds: layeredStoreCarriers,
+    storageKeys: ['store:chronicle'],
+    durability: 'durable-authoritative',
+    growthClass: 'bounded-event-growth',
+    backupRequirement: 'required',
+    backupSectionId: 'chronicle',
+    stableIdRule: 'Each diary entry receives one stable owner ID at creation and retains it through edits.',
+    referenceRule:
+      'Chronicle owns diary prose only. Typed source references never transfer source truth or deletion authority, and Narrative Timeline projections are rebuilt rather than persisted here.',
   },
   {
     id: 'reminders.reminder-records',

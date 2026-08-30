@@ -1,0 +1,298 @@
+{
+  "runtimeRegistry": {
+    "schemaVersion": 1,
+    "registryVersion": "world-semantic-conformance-v1",
+    "capabilityIds": [
+      "runtime:access:restricted_place"
+    ],
+    "ownerModules": [
+      {
+        "id": "map",
+        "actionIds": [
+          "map:access:validate"
+        ]
+      }
+    ]
+  },
+  "worlds": [
+    {
+      "fixtureId": "modern_kpop_realism",
+      "proposal": {
+        "schemaVersion": 1,
+        "worldId": "world:modern_kpop_realism",
+        "namespace": "kpop_realism",
+        "sourceFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "concepts": [
+          {
+            "id": "kpop_realism:credentialed_artist",
+            "label": "Credentialed artist",
+            "kind": "actor",
+            "aliases": ["signed artist"],
+            "meaning": "An artist whose agency credential can be checked for restricted production areas.",
+            "confidence": "high",
+            "evidence": [
+              {
+                "sourceId": "worldbook:kpop:access",
+                "excerpt": "Backstage access requires an active agency credential."
+              }
+            ]
+          },
+          {
+            "id": "kpop_realism:backstage_area",
+            "label": "Backstage area",
+            "kind": "place",
+            "aliases": [],
+            "meaning": "A production area whose entry is restricted by credential.",
+            "confidence": "high",
+            "evidence": [
+              {
+                "sourceId": "worldbook:kpop:access",
+                "excerpt": "Backstage access requires an active agency credential."
+              }
+            ]
+          }
+        ],
+        "capabilities": [
+          {
+            "id": "kpop_realism:backstage_access",
+            "label": "Backstage access",
+            "description": "Validate whether an artist may enter a restricted production area.",
+            "actorConceptIds": ["kpop_realism:credentialed_artist"],
+            "objectConceptIds": ["kpop_realism:backstage_area"],
+            "effects": [
+              {
+                "id": "kpop_realism:backstage_access_check",
+                "ownerModule": "map",
+                "actionId": "map:access:validate",
+                "description": "Map confirms the current place-access result."
+              }
+            ],
+            "confidence": "high",
+            "evidence": [
+              {
+                "sourceId": "worldbook:kpop:access",
+                "excerpt": "Backstage access requires an active agency credential."
+              }
+            ]
+          }
+        ],
+        "boundaries": [
+          {
+            "id": "kpop_realism:no_inferred_credential",
+            "kind": "prohibition",
+            "statement": "Public fame alone cannot create an agency credential.",
+            "capabilityIds": ["kpop_realism:backstage_access"],
+            "evidence": [
+              {
+                "sourceId": "worldbook:kpop:access",
+                "excerpt": "Only an active agency credential grants backstage access."
+              }
+            ]
+          }
+        ],
+        "bridges": [
+          {
+            "id": "kpop_realism:bridge_backstage_access",
+            "sourceType": "capability",
+            "sourceId": "kpop_realism:backstage_access",
+            "targetCapabilityId": "runtime:access:restricted_place",
+            "evidence": [
+              {
+                "sourceId": "worldbook:kpop:access",
+                "excerpt": "Backstage access is a restricted-place entry rule."
+              }
+            ]
+          }
+        ],
+        "unknowns": [],
+        "conflicts": []
+      }
+    },
+    {
+      "fixtureId": "magic_academy",
+      "proposal": {
+        "schemaVersion": 1,
+        "worldId": "world:magic_academy",
+        "namespace": "magic_academy",
+        "sourceFingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "concepts": [
+          {
+            "id": "magic_academy:oathbound_student",
+            "label": "Oathbound student",
+            "kind": "actor",
+            "aliases": ["vow bearer"],
+            "meaning": "A student whose archive oath can be checked by the warded threshold.",
+            "confidence": "high",
+            "evidence": [
+              {
+                "sourceId": "worldbook:academy:archive",
+                "excerpt": "Only students bearing the archive oath may cross the silver ward."
+              }
+            ]
+          },
+          {
+            "id": "magic_academy:silver_ward_archive",
+            "label": "Silver Ward Archive",
+            "kind": "place",
+            "aliases": [],
+            "meaning": "A restricted archive protected by an oath-sensitive ward.",
+            "confidence": "high",
+            "evidence": [
+              {
+                "sourceId": "worldbook:academy:archive",
+                "excerpt": "Only students bearing the archive oath may cross the silver ward."
+              }
+            ]
+          }
+        ],
+        "capabilities": [
+          {
+            "id": "magic_academy:warded_archive_access",
+            "label": "Warded archive access",
+            "description": "Validate whether an oathbound student may cross the archive ward.",
+            "actorConceptIds": ["magic_academy:oathbound_student"],
+            "objectConceptIds": ["magic_academy:silver_ward_archive"],
+            "effects": [
+              {
+                "id": "magic_academy:archive_access_check",
+                "ownerModule": "map",
+                "actionId": "map:access:validate",
+                "description": "Map confirms the current threshold-access result."
+              }
+            ],
+            "confidence": "high",
+            "evidence": [
+              {
+                "sourceId": "worldbook:academy:archive",
+                "excerpt": "Only students bearing the archive oath may cross the silver ward."
+              }
+            ]
+          }
+        ],
+        "boundaries": [
+          {
+            "id": "magic_academy:no_job_title_substitution",
+            "kind": "invariant",
+            "statement": "The archive oath is not a modern employment credential.",
+            "capabilityIds": ["magic_academy:warded_archive_access"],
+            "evidence": [
+              {
+                "sourceId": "worldbook:academy:archive",
+                "excerpt": "The ward recognizes the archive oath itself."
+              }
+            ]
+          }
+        ],
+        "bridges": [
+          {
+            "id": "magic_academy:bridge_warded_archive_access",
+            "sourceType": "capability",
+            "sourceId": "magic_academy:warded_archive_access",
+            "targetCapabilityId": "runtime:access:restricted_place",
+            "evidence": [
+              {
+                "sourceId": "worldbook:academy:archive",
+                "excerpt": "The silver ward is a restricted-place entry rule."
+              }
+            ]
+          }
+        ],
+        "unknowns": [],
+        "conflicts": []
+      }
+    },
+    {
+      "fixtureId": "tide_contract_city",
+      "proposal": {
+        "schemaVersion": 1,
+        "worldId": "world:tide_contract_city",
+        "namespace": "tide_contract",
+        "sourceFingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "concepts": [
+          {
+            "id": "tide_contract:chant_namer",
+            "label": "Chant Namer",
+            "kind": "actor",
+            "aliases": ["public name confirmer"],
+            "meaning": "A civic role that confirms public street names without rewriting settled history.",
+            "confidence": "high",
+            "evidence": [
+              {
+                "sourceId": "worldbook:tide:contracts",
+                "excerpt": "Chant Namers confirm public street names but cannot rewrite settled history."
+              }
+            ]
+          },
+          {
+            "id": "tide_contract:named_covenant_route",
+            "label": "Named covenant route",
+            "kind": "place",
+            "aliases": [],
+            "meaning": "A route whose passage depends on a currently recognized named covenant.",
+            "confidence": "high",
+            "evidence": [
+              {
+                "sourceId": "worldbook:tide:contracts",
+                "excerpt": "Tide Contract City permits passage through named covenants."
+              }
+            ]
+          }
+        ],
+        "capabilities": [
+          {
+            "id": "tide_contract:covenant_passage",
+            "label": "Covenant passage",
+            "description": "Validate whether a named covenant permits passage through a route.",
+            "actorConceptIds": ["tide_contract:chant_namer"],
+            "objectConceptIds": ["tide_contract:named_covenant_route"],
+            "effects": [
+              {
+                "id": "tide_contract:covenant_passage_check",
+                "ownerModule": "map",
+                "actionId": "map:access:validate",
+                "description": "Map confirms the current route-access result."
+              }
+            ],
+            "confidence": "high",
+            "evidence": [
+              {
+                "sourceId": "worldbook:tide:contracts",
+                "excerpt": "Tide Contract City permits passage through named covenants."
+              }
+            ]
+          }
+        ],
+        "boundaries": [
+          {
+            "id": "tide_contract:settled_history_invariant",
+            "kind": "prohibition",
+            "statement": "A Chant Namer cannot rewrite settled history.",
+            "capabilityIds": ["tide_contract:covenant_passage"],
+            "evidence": [
+              {
+                "sourceId": "worldbook:tide:contracts",
+                "excerpt": "Chant Namers cannot rewrite settled history."
+              }
+            ]
+          }
+        ],
+        "bridges": [
+          {
+            "id": "tide_contract:bridge_covenant_passage",
+            "sourceType": "capability",
+            "sourceId": "tide_contract:covenant_passage",
+            "targetCapabilityId": "runtime:access:restricted_place",
+            "evidence": [
+              {
+                "sourceId": "worldbook:tide:contracts",
+                "excerpt": "Named covenants govern passage through restricted routes."
+              }
+            ]
+          }
+        ],
+        "unknowns": [],
+        "conflicts": []
+      }
+    }
+  ]
+}

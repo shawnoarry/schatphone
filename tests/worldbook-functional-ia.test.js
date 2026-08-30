@@ -73,7 +73,7 @@ describe('WorldBook functional IA', () => {
     const worldKernel = wrapper.get('[data-testid="worldbook-world-kernel"]')
 
     expect(overview.text()).toContain('World setting')
-    expect(overview.get('[data-testid="worldbook-overview-world"]').text()).toContain('Current world setting')
+    expect(overview.get('[data-testid="worldbook-overview-world"]').text()).toContain('My world')
     expect(overview.get('[data-testid="worldbook-overview-context-total"]').text()).toContain(
       String(worldview.length),
     )
@@ -165,7 +165,7 @@ describe('WorldBook functional IA', () => {
     const wrapper = await mountWorldBook()
     const overview = wrapper.get('[data-testid="worldbook-overview"]')
 
-    expect(overview.get('[data-testid="worldbook-overview-world"]').text()).toContain('Current world setting')
+    expect(overview.get('[data-testid="worldbook-overview-world"]').text()).toContain('My world')
     expect(overview.get('[data-testid="worldbook-overview-consumer-chat"]').text()).toContain('Chat')
     expect(wrapper.get('[data-testid="worldbook-current-pack-name"]').text()).toContain('No extra capability Pack')
 
@@ -394,7 +394,7 @@ describe('WorldBook functional IA', () => {
     await nextTick()
 
     expect(systemStore.user.activeWorldPackId).toBe('survival_city')
-    expect(wrapper.get('[data-testid="worldbook-overview-world"]').text()).toContain('Current world setting')
+    expect(wrapper.get('[data-testid="worldbook-overview-world"]').text()).toContain('My world')
     expect(wrapper.get('[data-testid="worldbook-current-pack-state"]').text()).toContain('Active')
     expect(
       wrapper.find(`[data-testid="worldbook-template-toggle-${worldTemplate.id}"]`).exists(),
@@ -422,7 +422,7 @@ describe('WorldBook functional IA', () => {
 
     expect(systemStore.user.activeWorldPackId).toBe('default_world')
     expect(systemStore.user.enabledWorldPackIds).toEqual([])
-    expect(wrapper.get('[data-testid="worldbook-overview-world"]').text()).toContain('Current world setting')
+    expect(wrapper.get('[data-testid="worldbook-overview-world"]').text()).toContain('My world')
     expect(wrapper.get('[data-testid="worldbook-current-pack-reset-default"]').text()).toContain(
       'No extra capability Pack enabled',
     )

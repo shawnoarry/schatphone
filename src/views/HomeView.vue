@@ -46,6 +46,7 @@ import {
   BOOK_HOME_APP_ID,
   BOOK_ROUTE,
   CAMERA_HOME_APP_ID,
+  CHRONICLE_HOME_APP_ID,
   CONTROL_CENTER_HOME_APP_ID,
   COMMUNITY_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,
@@ -305,6 +306,7 @@ const resolveAppTileLabel = (tileId, fallback = '') => {
   if (tileId === MUSIC_HOME_APP_ID) return t('音乐', 'Music')
   if (tileId === 'app_calendar') return t('日历', 'Calendar')
   if (tileId === AGENDA_JOURNEY_HOME_APP_ID) return t('行程', 'Agenda Journey')
+  if (tileId === CHRONICLE_HOME_APP_ID) return t('生活志', 'Chronicle')
   if (tileId === 'app_reminders') return t('提醒事项', 'Reminders')
   if (tileId === 'app_stock') return t('股票', 'Stock')
   if (tileId === 'app_chat') return t('聊天', 'Chat')
@@ -722,19 +724,18 @@ const leftPageUtilityEntries = computed(() => [
     installed: true,
     fixed: true,
   },
-  {
-    id: 'world-hub',
-    title: t('世界中枢', 'World Hub'),
-    subtitle: isWorldHubAvailable.value
-      ? t('固定在今日视图', 'Fixed in Today View')
-      : t('条件开启后可用', 'Available when unlocked'),
-    status: isWorldHubAvailable.value ? t('已开放', 'Open') : t('未开放', 'Locked'),
-    icon: 'fas fa-wand-magic-sparkles',
-    route: widgetRegistry[CONTROL_CENTER_HOME_APP_ID].route,
-    installed: isWorldHubAvailable.value,
-    fixed: true,
-    lockedMessage: t('入口未开放', 'Entry locked'),
-  },
+  ...(isWorldHubAvailable.value
+    ? [{
+        id: 'world-hub',
+        title: t('世界中枢', 'World Hub'),
+        subtitle: t('高级世界审查', 'Advanced world review'),
+        status: t('已开放', 'Open'),
+        icon: 'fas fa-wand-magic-sparkles',
+        route: widgetRegistry[CONTROL_CENTER_HOME_APP_ID].route,
+        installed: true,
+        fixed: true,
+      }]
+    : []),
   {
     id: 'cheats',
     title: t('金手指', 'Cheats'),

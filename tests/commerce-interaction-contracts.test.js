@@ -125,7 +125,21 @@ describe('generic Event Instance V2 execution', () => {
         destination_anchor_id: 'anchor_8',
         requested_outcome: 'changed',
       },
+      worldBinding: {
+        worldId: 'world_local_primary',
+        semanticVersionId: 'semantic_1_abcdef123456',
+        semanticManifestRevision: 1,
+        semanticManifestHash: 'a'.repeat(64),
+        semanticSourceFingerprint: 'b'.repeat(64),
+      },
       now: 1786720000000,
+    })
+    expect(instance.contextRefs).toMatchObject({
+      world_id: 'world_local_primary',
+      world_semantic_version_id: 'semantic_1_abcdef123456',
+      world_semantic_manifest_revision: 1,
+      world_semantic_manifest_hash: 'a'.repeat(64),
+      world_semantic_source_fingerprint: 'b'.repeat(64),
     })
     const pending = advanceEventInstanceV2({
       instance,

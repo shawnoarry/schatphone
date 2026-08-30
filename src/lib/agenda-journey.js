@@ -8,12 +8,13 @@ import {
   ACTIVITY_SESSION_PAUSE_POLICY,
   createActivitySessionId,
 } from './activity-session'
+import { normalizeWorkScheduleExecutionProof } from './work-schedule-execution'
 
 const MAX_TIMESTAMP = 8_640_000_000_000_000
 const JOURNEY_LIMIT = 300
 const STEP_EVIDENCE_LIMIT = 24
 
-export const AGENDA_JOURNEY_SCHEMA_VERSION = 1
+export const AGENDA_JOURNEY_SCHEMA_VERSION = 2
 
 export const AGENDA_JOURNEY_SOURCE = Object.freeze({
   MANUAL: 'manual',
@@ -157,6 +158,16 @@ const normalizeEvidenceRefs = (raw) => {
 const appendEvidence = (current, evidence) =>
   normalizeEvidenceRefs([...(Array.isArray(current) ? current : []), evidence])
 
+const normalizeExecutionProofs = (raw) => {
+  if (!Array.isArray(raw)) return []
+  const byFingerprint = new Map()
+  raw.forEach((candidate) => {
+    const proof = normalizeWorkScheduleExecutionProof(candidate)
+    if (proof) byFingerprint.set(proof.calendarFingerprint, proof)
+  })
+  return [...byFingerprint.values()].slice(-8)
+}
+
 export const createCalendarAgendaJourneyId = (sourceCalendarEventId, occurrenceStartsAt) => {
   const eventId = trimLine(sourceCalendarEventId, '', 140)
   const startsAt = toTimestamp(occurrenceStartsAt, 0)
@@ -228,6 +239,17 @@ export const normalizeAgendaJourney = (raw) => {
     sourceOccurrenceId: trimLine(raw.sourceOccurrenceId, '', 180),
     scheduleOrchestrationId: trimLine(raw.scheduleOrchestrationId, '', 360),
     sourceCalendarFingerprint: trimLine(raw.sourceCalendarFingerprint, '', 80),
+    executionRevision: trimLine(
+      raw.executionRevision,
+      raw.sourceCalendarFingerprint,
+      80,
+    ),
+    executionProof: normalizeWorkScheduleExecutionProof(raw.executionProof),
+    pendingExecutionProof: normalizeWorkScheduleExecutionProof(raw.pendingExecutionProof),
+    priorExecutionProofs: normalizeExecutionProofs(raw.priorExecutionProofs),
+    executionNotificationRevision: trimLine(raw.executionNotificationRevision, '', 80),
+    executionNotificationId: trimLine(raw.executionNotificationId, '', 180),
+    executionNotifiedAt: toTimestamp(raw.executionNotifiedAt, 0),
     sourceState: raw.sourceState === 'retired' ? 'retired' : 'active',
     sourceRetiredAt: toTimestamp(raw.sourceRetiredAt, 0),
     sourceReviewRequired: raw.sourceReviewRequired === true,
@@ -378,7 +400,12 @@ export const materializeCalendarAgendaJourney = ({
     80,
   )
   const scheduleOrchestrationId = trimLine(request.orchestrationId, '', 360)
-  const journeyId = createCalendarAgendaJourneyId(sourceCalendarEventId, occurrenceStartsAt)
+  const derivedJourneyId = createCalendarAgendaJourneyId(
+    sourceCalendarEventId,
+    occurrenceStartsAt,
+  )
+  const journeyId = trimLine(request.agendaJourneyId, derivedJourneyId, 180)
+  const incomingExecutionProof = normalizeWorkScheduleExecutionProof(request.executionProof)
   if (
     !journeyId ||
     !sourceOccurrenceId ||
@@ -442,6 +469,22 @@ export const materializeCalendarAgendaJourney = ({
     sourceOccurrenceId,
     scheduleOrchestrationId,
     sourceCalendarFingerprint,
+    executionRevision:
+      executionStarted && fingerprintChanged
+        ? existing.executionRevision || existing.sourceCalendarFingerprint
+        : sourceCalendarFingerprint,
+    executionProof:
+      executionStarted && fingerprintChanged
+        ? existing.executionProof
+        : incomingExecutionProof,
+    pendingExecutionProof:
+      executionStarted && fingerprintChanged
+        ? incomingExecutionProof
+        : null,
+    priorExecutionProofs:
+      !executionStarted && fingerprintChanged && existing?.executionProof
+        ? [...existing.priorExecutionProofs, existing.executionProof]
+        : existing?.priorExecutionProofs || [],
     sourceState: 'active',
     sourceRetiredAt: 0,
     sourceReviewRequired: executionStarted && fingerprintChanged,
@@ -713,12 +756,15 @@ export const linkAgendaJourneyMapJourney = (
   }
 }
 
-const mapEvidenceForStep = (step, activeMapJourney, mapJourneyHistory) => {
+const mapEvidenceForStep = (journey, step, activeMapJourney, mapJourneyHistory) => {
   const active = activeMapJourney && typeof activeMapJourney === 'object' ? activeMapJourney : null
   const activeMatches = Boolean(
     active &&
       (active.sourceAgendaJourneyStepId === step.id ||
-        (step.mapJourneyId && active.journeyId === step.mapJourneyId)),
+        (step.mapJourneyId && active.journeyId === step.mapJourneyId)) &&
+      (!active.sourceAgendaJourneyId || active.sourceAgendaJourneyId === journey.id) &&
+      (!active.sourceAgendaExecutionRevision ||
+        active.sourceAgendaExecutionRevision === journey.executionRevision),
   )
   if (activeMatches) {
     return {
@@ -732,7 +778,10 @@ const mapEvidenceForStep = (step, activeMapJourney, mapJourneyHistory) => {
     (entry) =>
       entry &&
       (entry.sourceAgendaJourneyStepId === step.id ||
-        (step.mapJourneyId && entry.journeyId === step.mapJourneyId)),
+        (step.mapJourneyId && entry.journeyId === step.mapJourneyId)) &&
+      (!entry.sourceAgendaJourneyId || entry.sourceAgendaJourneyId === journey.id) &&
+      (!entry.sourceAgendaExecutionRevision ||
+        entry.sourceAgendaExecutionRevision === journey.executionRevision),
   )
   return match
     ? {
@@ -753,7 +802,7 @@ export const reconcileAgendaJourneyMapEvidence = (
   let changed = false
   const steps = journey.steps.map((step) => {
     if (step.kind !== AGENDA_JOURNEY_STEP_KIND.TRAVEL) return step
-    const evidence = mapEvidenceForStep(step, activeMapJourney, mapJourneyHistory)
+    const evidence = mapEvidenceForStep(journey, step, activeMapJourney, mapJourneyHistory)
     if (!evidence?.journeyId) return step
     if (evidence.status === 'arrived') {
       if (
@@ -829,6 +878,7 @@ export const prepareAgendaJourneyActivitySessionRequest = (
   }
   if (
     TERMINAL_JOURNEY_STATUSES.has(journey.status) ||
+    journey.sourceReviewRequired ||
     ![
       AGENDA_JOURNEY_STEP_STATUS.AVAILABLE,
       AGENDA_JOURNEY_STEP_STATUS.ACTIVE,
@@ -854,6 +904,7 @@ export const prepareAgendaJourneyActivitySessionRequest = (
       sourceStepStatus: step.status,
       agendaJourneyId: journey.id,
       agendaJourneyStepId: step.id,
+      agendaExecutionRevision: journey.executionRevision,
       sourceCalendarEventId: journey.sourceCalendarEventId,
       sourceMapJourneyId: travelStep?.mapJourneyId || '',
       plannedDurationMs: Math.max(60_000, step.scheduledEndsAt - step.scheduledStartsAt),
@@ -949,6 +1000,8 @@ export const applyAgendaJourneyActivitySessionEvidence = (
       trimLine(evidence.recordId, '', 220) === expectedSessionId &&
       trimLine(evidence.agendaJourneyId, '', 180) === journey?.id &&
       trimLine(evidence.agendaJourneyStepId, '', 180) === normalizedStepId &&
+      (!journey.executionRevision ||
+        trimLine(evidence.agendaExecutionRevision, '', 80) === journey.executionRevision) &&
       evidence.status === 'completed' &&
       Object.values(ACTIVITY_SESSION_COMPLETION_POLICY).includes(
         evidence.completionPolicy,

@@ -83,6 +83,73 @@ describe('Agenda Journey contract', () => {
     })
   })
 
+  test('reuses one untouched plan after a one-off Calendar reschedule', () => {
+    const first = materializeCalendarAgendaJourney({ occurrence, request, now: NOW })
+    const changedOccurrence = {
+      ...occurrence,
+      occurrenceId: `calendar_event_rehearsal::${occurrence.startsAt + HOUR_MS}`,
+      startsAt: occurrence.startsAt + HOUR_MS,
+      endsAt: occurrence.endsAt + HOUR_MS,
+    }
+    const changedRequest = {
+      ...request,
+      agendaJourneyId: first.journey.id,
+      sourceOccurrenceId: changedOccurrence.occurrenceId,
+      occurrenceStartsAt: changedOccurrence.startsAt,
+      occurrenceEndsAt: changedOccurrence.endsAt,
+      calendarFingerprint: 'fingerprint-v2',
+    }
+    const refreshed = materializeCalendarAgendaJourney({
+      occurrence: changedOccurrence,
+      request: changedRequest,
+      existingJourney: first.journey,
+      now: NOW + 1,
+    })
+    expect(refreshed).toMatchObject({ ok: true, code: 'AGENDA_JOURNEY_REFRESHED' })
+    expect(refreshed.journey).toMatchObject({
+      id: first.journey.id,
+      scheduledStartsAt: changedOccurrence.startsAt,
+      sourceReviewRequired: false,
+      executionRevision: 'fingerprint-v2',
+    })
+  })
+
+  test('preserves a started execution revision when Calendar changes', () => {
+    const first = materializeCalendarAgendaJourney({ occurrence, request, now: NOW })
+    const travelStep = first.journey.steps[0]
+    const started = linkAgendaJourneyMapJourney(first.journey, travelStep.id, {
+      ok: true,
+      journeyId: 'map_journey_started',
+      transportMode: 'public_transit',
+    }, { now: NOW + 1 })
+    const changedOccurrence = {
+      ...occurrence,
+      occurrenceId: `calendar_event_rehearsal::${occurrence.startsAt + HOUR_MS}`,
+      startsAt: occurrence.startsAt + HOUR_MS,
+      endsAt: occurrence.endsAt + HOUR_MS,
+    }
+    const refreshed = materializeCalendarAgendaJourney({
+      occurrence: changedOccurrence,
+      request: {
+        ...request,
+        agendaJourneyId: first.journey.id,
+        sourceOccurrenceId: changedOccurrence.occurrenceId,
+        occurrenceStartsAt: changedOccurrence.startsAt,
+        occurrenceEndsAt: changedOccurrence.endsAt,
+        calendarFingerprint: 'fingerprint-v2',
+      },
+      existingJourney: started.journey,
+      now: NOW + 2,
+    })
+    expect(refreshed.journey).toMatchObject({
+      id: first.journey.id,
+      scheduledStartsAt: occurrence.startsAt,
+      executionRevision: 'fingerprint-v1',
+      sourceCalendarFingerprint: 'fingerprint-v2',
+      sourceReviewRequired: true,
+    })
+  })
+
   test('accepts only linked Map Journey arrival as travel evidence and does not complete the activity', () => {
     const materialized = materializeCalendarAgendaJourney({ occurrence, request, now: NOW })
     const travelStep = materialized.journey.steps[0]

@@ -1,8 +1,10 @@
 # Personal Chronicle And Schedule Handoff Plan / 生活志与日程交接规划
 
-Updated: 2026-08-26
+Updated: 2026-08-30
 
-Status: `ACTIVE_REFERENCE_DIRECTION / ROADMAP_LINKED / NO_RUNTIME_IMPLEMENTATION`
+Status: `REFERENCE_DIRECTION_FULFILLED_BY_EVT-CHRONICLE-1_2026-08-30 / NOT_A_LIVE_ROADMAP`
+
+Implementation note: the approved core direction is now realized by `store:chronicle` schema V1, `/chronicle`, complete-backup V7 support, and a finite deterministic projection over verified owner records. The rest of this document remains the design record that led to the implementation; later AI recall, automatic diary generation, domain consequences, public projection, and CJA-6C are still unapproved.
 
 ## 1. 文档目的
 
@@ -315,11 +317,11 @@ AI 读取日记或 Narrative Timeline 必须满足：
 
 ## 11. 分阶段推进
 
-### 下一步建议与可前置小任务
+### 已完成顺序与原始前置小任务
 
-`来源 -> Calendar` 的首批 Mail/Work Hub 交接样板已经成立，但 Work Hub 仍只是 fixture/local-preview，不是生产 organization owner。当前接受的后续顺序是：先收敛 Work Hub 的组织 owner/authority 与普通无事件工作闭环，再接首条 Work Hub 原生事件，之后建设 `生活志 / Chronicle`。这样生活志首次出现时就能回看一条真实的“组织工作 -> Calendar -> Agenda Journey -> Map/Activity”来源链，而不是只有空壳或伪造摘要。
+本文件提出的顺序已经完成：生产 Work Hub organization owner/authority、普通无事件工作闭环、首条世界观中立 Work Hub 原生事件、revision-safe Calendar -> Agenda Journey -> Map/Activity 执行证据，以及 `生活志 / Chronicle` 均已落地。Chronicle 首次出现即可回看真实 Owner 链，而不是空壳或伪造摘要。
 
-生活志仍是下一项重要的新可见产品，但不是 Work Hub owner、普通工作闭环或首条事件的前置条件。Messages/SMS 也不是生活志前置条件；只有出现不能由 Notification Center、Mail、Chat 服务号或 Phone 承担的号码/短码场景时才单独晋升。
+Messages/SMS 仍不是 Chronicle 前置条件；只有出现不能由 Notification Center、Mail、Chat 服务号或 Phone 承担的号码/短码场景时才单独晋升。Chronicle 完成也不自动授权 AI 回忆、自动日记、领域后果或下一条事件线。
 
 建议先完成以下小切片，每项都可以独立验收和回滚。前六项已于 2026-08-25 落地，第七项于 2026-08-26 落地；前四项不创建 Calendar 事件，第五至第七项只有在用户明确确认后才创建并关联：
 
@@ -495,18 +497,18 @@ AI 读取日记或 Narrative Timeline 必须满足：
 - K-pop 原型中的周/月日历、通用 todo 和 dashboard 不应整体复制到 Work Hub；
 - 两个原型均不建立 SchatPhone 的 Owner、持久化、备份、导航或跨 App 合同。
 
-## 16. 已接受顺序与下一次实施门
+## 16. 已完成顺序与后续停止线
 
-产品侧已接受：`Work Hub = 组织工作`、`生活志 = 个人连续性`、Calendar 是确认后的长期时间 owner，Mail 与 Work Hub 复用同一 Schedule Handoff。当前实施门依次为：
+产品侧已接受并实现：`Work Hub = 组织工作`、`生活志 = 个人连续性`、Calendar 是确认后的长期时间 owner，Mail 与 Work Hub 复用同一 Schedule Handoff。完成顺序为：
 
 1. Work Hub 建立可信 organization membership/credential owner；
 2. Work Hub 完成不依赖 Event Runtime 的普通组织工作闭环；
 3. 首条 Work Hub 原生机构改期事件完成并产生可追溯 owner facts；
-4. 再确认生活志的最终名称、Diary Owner、首版只读投影范围、留存、迁移与 backup 合同；
-5. Narrative Timeline、AI 回忆和领域后果继续分别过门，不随生活志壳自动获批。
+4. `EVT-CHRONICLE-1` 确认并实现 Chronicle 名称、Diary Owner、首版有限只读投影、留存、断链、迁移与 backup 合同；
+5. AI 回忆、自动日记、自由文本事实提取、领域后果、公开投影与 CJA-6C 继续分别过门，不随 Chronicle 自动获批。
 
 ## 17. Roadmap And Status Impact
 
-`PLANNING_SEQUENCE_ALIGNED 2026-08-26`。
+`PLANNING_SEQUENCE_ALIGNED 2026-08-26 / EVT-WORK-1_THROUGH_4_AND_EVT-CHRONICLE-1_DONE 2026-08-30`。
 
-Roadmap 4.14/4.16 now records the Work Hub-first sequence and Chronicle timing. Tasks 1-7 remain the implemented Mail/Work Hub handoff baseline, but this alignment does not claim source update/cancellation review, the complete Schedule Handoff Phase 1, a production Work Hub Owner, the ordinary organization loop, a Work Hub event, Diary Owner, Chronicle UI, CJA-6B, Messages/SMS, or AI recall as implemented.
+Roadmap 4.12/4.14/4.16 now records the completed Work Hub-first sequence and Chronicle implementation. Tasks 1-7 remain the original Mail/Work Hub handoff baseline; production Work Hub, its ordinary loop and first event, Diary Owner, Chronicle UI, and CJA-6B are now implemented in their owning packages. Generic source update/cancellation review, complete Schedule Handoff Phase 1, Messages/SMS, AI recall, automatic diary generation, domain consequences, and CJA-6C remain unimplemented.

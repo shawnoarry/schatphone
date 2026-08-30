@@ -258,7 +258,7 @@ describe('Contacts profile template entity UI', () => {
 
     const updated = chatStore.getRoleProfileById(profile.id)
     expect(updated.templateLink).toMatchObject({
-      primaryWorldId: 'legacy_single_world',
+      primaryWorldId: 'world_local_primary',
       profileTemplateId: template.id,
       profileTemplateVersion: template.version,
     })
@@ -939,7 +939,7 @@ describe('Contacts profile template entity UI', () => {
       name: 'Persona save profile',
       entityType: CONTACTS_ENTITY_TYPES.SELF_PROFILE,
       templateLink: {
-        primaryWorldId: 'default_world',
+        primaryWorldId: 'world_local_primary',
         profileTemplateId: template.id,
         profileTemplateVersion: template.version,
       },

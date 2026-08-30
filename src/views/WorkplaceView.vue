@@ -1,10 +1,11 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watchEffect } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useCalendarStore } from '../stores/calendar'
+import { useWorkHubStore } from '../stores/workHub'
 import { useI18n } from '../composables/useI18n'
 import { useWorkplaceShellState } from '../composables/useWorkplaceShellState'
 import { resolveAppIconMeta } from '../lib/app-icon-presentation'
@@ -21,12 +22,15 @@ import {
   WORKPLACE_TEAM,
 } from '../lib/workplace-shell-data'
 import { pushReturnTarget } from '../lib/navigation-return'
+import { resolveActiveWorldSemanticBinding } from '../lib/world-setting-state'
+import WorkHubProductionWorkspace from '../components/workplace/WorkHubProductionWorkspace.vue'
 
 const router = useRouter()
 const route = useRoute()
 const systemStore = useSystemStore()
 const chatStore = useChatStore()
 const calendarStore = useCalendarStore()
+const workHubStore = useWorkHubStore()
 const { settings } = storeToRefs(systemStore)
 const { languageBase, t } = useI18n()
 const workplaceState = useWorkplaceShellState()
@@ -90,6 +94,24 @@ const contactsWorkIdentity = computed(() => {
   })
   return result.ok ? result.projection : null
 })
+const workHubRuntimeBinding = computed(() => {
+  const world = resolveActiveWorldSemanticBinding(systemStore.user.worldSetting)
+  const profileRef = contactsWorkIdentity.value?.profileRef
+  if (!world.worldId || !world.semanticManifestRevision || !profileRef?.profileId || !profileRef?.revision) {
+    return null
+  }
+  return {
+    worldId: world.worldId,
+    worldRevision: world.semanticManifestRevision,
+    contactsProfileId: String(profileRef.profileId),
+    contactsProfileRevision: profileRef.revision,
+  }
+})
+watchEffect(() => {
+  workHubStore.bindRuntimeContext(workHubRuntimeBinding.value || {})
+})
+const isPreviewMode = computed(() => route.query.preview === '1')
+const openPreview = () => router.replace({ query: { ...route.query, preview: '1' } })
 const calendarEventForProposal = (proposalId) =>
   calendarStore.findEventByScheduleHandoffSource('workplace', proposalId)
 
@@ -217,12 +239,33 @@ const closeApp = () => pushReturnTarget(router, route, '/home')
 </script>
 
 <template>
+  <WorkHubProductionWorkspace
+    v-if="workHubStore.hasActiveAuthority && !isPreviewMode"
+    :app-name="workplaceDisplayName"
+    :is-night="isNight"
+  />
+  <main v-else-if="!isPreviewMode" class="workplace-empty" :class="{ 'is-night': isNight }" data-testid="work-hub-empty">
+    <header class="workplace-empty__bar">
+      <button type="button" :aria-label="t('关闭', 'Close')" @click="closeApp"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+      <strong>{{ workplaceDisplayName }}</strong>
+    </header>
+    <section>
+      <span><i class="fas fa-building-circle-exclamation" aria-hidden="true"></i></span>
+      <p>{{ t('当前世界', 'Current world') }}</p>
+      <h1>{{ t('尚未连接组织', 'No organization connected') }}</h1>
+      <p>{{ t('当世界配置或正式组织签发你的成员身份后，通知、任务和排期会出现在这里。联系人资料只用于匹配，不会自动创建所属。', 'Notices, tasks, and schedule proposals will appear after the world configuration or an organization formally issues your membership. Contacts details can help match a workspace, but never create affiliation automatically.') }}</p>
+      <button type="button" data-testid="work-hub-open-preview" @click="openPreview"><i class="fas fa-eye" aria-hidden="true"></i>{{ t('查看功能演示', 'View feature demo') }}</button>
+    </section>
+  </main>
   <main
+    v-else
     class="workplace-app"
     :class="{ 'is-night': isNight }"
     data-app="workplace"
     data-testid="workplace-app"
+    data-preview="true"
   >
+    <p class="workplace-preview-banner"><i class="fas fa-flask" aria-hidden="true"></i>{{ t('功能演示 · 不代表当前世界的真实所属或权限', 'Feature demo · not real affiliation or authority in this world') }}</p>
     <header class="workplace-topbar">
       <button type="button" class="workplace-icon-button" :aria-label="t('返回主屏', 'Return Home')" data-testid="workplace-back" @click="closeApp">
         <i class="fas fa-chevron-left" aria-hidden="true"></i>
@@ -480,6 +523,17 @@ const closeApp = () => pushReturnTarget(router, route, '/home')
 </template>
 
 <style scoped>
+.workplace-empty { min-height: 100%; color: #17233a; background: #f4f1e9; }
+.workplace-empty.is-night { color: #f5f0e6; background: #171c25; }
+.workplace-empty__bar { display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 10px 16px; border-bottom: 1px solid rgba(23,35,58,.14); }
+.workplace-empty__bar button { display: grid; place-items: center; width: 42px; height: 42px; border: 0; border-radius: 50%; color: inherit; background: rgba(23,35,58,.07); }
+.workplace-empty > section { width: min(620px, calc(100% - 32px)); margin: 0 auto; padding: 96px 0; text-align: center; }
+.workplace-empty > section > span { display: grid; place-items: center; width: 68px; height: 68px; margin: 0 auto 22px; border-radius: 20px; color: #fff; background: #d76553; font-size: 24px; }
+.workplace-empty section > p { margin: 0 auto; max-width: 560px; color: #687285; font-size: 12px; line-height: 1.75; }
+.workplace-empty section > p:first-of-type { font-size: 10px; font-weight: 800; text-transform: uppercase; }
+.workplace-empty h1 { margin: 8px 0 16px; font-size: 34px; }
+.workplace-empty section > button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 24px; padding: 0 16px; border: 1px solid rgba(23,35,58,.18); border-radius: 8px; color: inherit; background: transparent; font-weight: 800; }
+.workplace-preview-banner { position: sticky; z-index: 30; top: 0; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 34px; margin: 0; padding: 6px 12px; color: #6d4b12; background: #fff1c7; font-size: 10px; font-weight: 800; text-align: center; }
 .workplace-app {
   --wp-ink: #17233a;
   --wp-ink-soft: #4f5c70;

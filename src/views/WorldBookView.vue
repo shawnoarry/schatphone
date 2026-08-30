@@ -65,6 +65,9 @@ const worldOverview = computed(() =>
     bookStore,
   }),
 )
+const currentWorldId = computed(
+  () => worldOverview.value.identity?.worldId || LEGACY_SINGLE_WORLD_ID,
+)
 const worldProfileTemplates = computed(() =>
   systemStore.listProfileTemplates().filter((template) => template.scope === 'world'),
 )
@@ -1076,7 +1079,7 @@ const acceptReviewedBookSource = () => {
 
 const copyProfileTemplatePreset = (presetId) => {
   const created = systemStore.createWorldProfileTemplateFromPreset(presetId, {
-    worldId: LEGACY_SINGLE_WORLD_ID,
+    worldId: currentWorldId.value,
   })
   if (!created) {
     uiNotice.value = t('模板复制失败。', 'Template copy failed.')
@@ -1090,7 +1093,7 @@ const openNewWorldProfileTemplate = () => {
   worldProfileTemplateProposalReview.value = null
   worldProfileTemplateProposalNotice.value = ''
   editingWorldProfileTemplate.value = createBlankWorldProfileTemplateDraft({
-    worldId: LEGACY_SINGLE_WORLD_ID,
+    worldId: currentWorldId.value,
     categoryLabel: t('基础资料', 'Basic profile'),
   })
   isCreatingWorldProfileTemplate.value = true
@@ -1129,9 +1132,9 @@ const proposeWorldProfileTemplateFromRules = () => {
     worldContextText: buildWorldAppTemplateContextText(),
     worldPack: activePack,
     worldPacks: enabledWorldPacks.value,
-    worldId: LEGACY_SINGLE_WORLD_ID,
+    worldId: currentWorldId.value,
     locale: settings.value.system?.language || 'zh-CN',
-    existingTemplates: systemStore.listWorldProfileTemplates(LEGACY_SINGLE_WORLD_ID),
+    existingTemplates: systemStore.listWorldProfileTemplates(currentWorldId.value),
   })
   if (!openWorldProfileTemplateProposal(review)) return
   worldProfileTemplateProposalNoticeTone.value = 'info'
@@ -1149,8 +1152,8 @@ const proposeWorldProfileTemplateWithAI = async () => {
     const result = await extractWorldProfileTemplateProposalWithAI({
       worldContextText: buildWorldAppTemplateContextText(),
       worldPacks: enabledWorldPacks.value,
-      existingTemplates: systemStore.listWorldProfileTemplates(LEGACY_SINGLE_WORLD_ID),
-      worldId: LEGACY_SINGLE_WORLD_ID,
+      existingTemplates: systemStore.listWorldProfileTemplates(currentWorldId.value),
+      worldId: currentWorldId.value,
       locale: settings.value.system?.language || 'zh-CN',
       settings: settings.value,
     })
@@ -1186,7 +1189,7 @@ const saveWorldProfileTemplateDraft = (draft) => {
   const saved = wasCreating
     ? systemStore.createWorldProfileTemplate({
         ...draft,
-        worldId: LEGACY_SINGLE_WORLD_ID,
+        worldId: currentWorldId.value,
       })
     : systemStore.updateWorldProfileTemplate(draft?.id, draft)
   if (!saved) {

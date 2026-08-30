@@ -1,12 +1,12 @@
 # Calendar, Agenda Journey, Activity Session, And Event Orchestration Architecture
 
-Updated: 2026-08-17
+Updated: 2026-08-30
 
-Status: `ARCHITECTURE_ACCEPTED / CALENDAR_DEPARTURE_READINESS_V1_IMPLEMENTED / CJA-1_IMPLEMENTED / CJA-2_IMPLEMENTED / CJA-3_IMPLEMENTED / CJA-4_IMPLEMENTED / CJA-5_IMPLEMENTED / CJA-6A_CONTRACT_DONE 2026-08-17`
+Status: `ARCHITECTURE_ACCEPTED / CALENDAR_DEPARTURE_READINESS_V1_IMPLEMENTED / CJA-1_IMPLEMENTED / CJA-2_IMPLEMENTED / CJA-3_IMPLEMENTED / CJA-4_IMPLEMENTED / CJA-5_IMPLEMENTED / CJA-6A_CONTRACT_DONE 2026-08-17 / EVT-WORK-4_EXECUTION_PROOF_DONE 2026-08-30`
 
 This contract defines how long-range schedule planning, short-range activity execution, map travel, timed activity sessions, runtime events, and future narrative summaries cooperate without becoming one owner.
 
-The bounded Calendar departure-readiness vertical and CJA-1 through CJA-5 described below are implemented. CJA-4 adds one time-only persistence owner and an embedded Focus Companion inside Agenda Journey. CJA-5 adds one midpoint-only low-impact Event Runtime family with silent `off` resolution or inline `text` interaction, while Activity Session retains all timer truth and validates the only approved 0/2-minute request. Appointment auto-entry, Gallery/Music activity callers, richer companion state, interactive HTML/Mini Scene presentation, and a visible Story/Diary app remain unimplemented. Live implementation status and priority belong only to `docs/roadmap/TODO_ROADMAP.md`.
+The bounded Calendar departure-readiness vertical and CJA-1 through CJA-5 described below are implemented. CJA-4 adds one time-only persistence owner and an embedded Focus Companion inside Agenda Journey. CJA-5 adds one midpoint-only low-impact Event Runtime family with silent `off` resolution or inline `text` interaction, while Activity Session retains all timer truth and validates the only approved 0/2-minute request. `EVT-WORK-4` adds a production-only, revision-safe execution proof from explicit Work Hub decision and Calendar Save through Agenda Journey, explicit Map departure/arrival, and explicit Activity Session start. Appointment auto-entry, inferred attendance/completion, Gallery/Music activity callers, richer companion state, interactive HTML/Mini Scene presentation, and a visible Story/Diary app remain unimplemented. Live implementation status and priority belong only to `docs/roadmap/TODO_ROADMAP.md`.
 
 ## 1. Product Model
 
@@ -81,6 +81,8 @@ Reconciliation requests materialization once when an occurrence enters the confi
 
 The hidden runtime waits for Calendar and orchestrator hydration, then reconciles on startup, Calendar changes, bounded timer wake, `pageshow`, and visible-document return. Browser suspension may delay the wake, but reopening recomputes from absolute timestamps and does not duplicate acknowledged requests. Complete backup keeps the existing top-level `calendar` section and nests the orchestrator snapshot inside it; older backups without that child restore an empty owner state and remain import-compatible.
 
+`EVT-WORK-4` upgrades the owner to schema V2. The Calendar fingerprint now includes normalized source and prior-source lineage, and one-off Calendar events use a stable logical key so an untouched saved replacement refreshes the existing orchestration/Agenda identity instead of creating a parallel execution. V1 records migrate through normalization. The orchestrator stores only the bounded execution proof/request lineage needed by Agenda Journey; it still cannot create Work Hub acceptance, Calendar Save, Map departure, arrival, or activity completion.
+
 Deletion test: if this Module were removed, every future caller would need to duplicate date-window materialization, source linking, deadline reconciliation, and idempotency. Concentrating those rules behind one Interface creates leverage and locality.
 
 ## 4. Agenda Journey
@@ -115,6 +117,8 @@ CJA-3 adds `store:agenda-journey` schema V1. One normalized record represents on
 The Agenda Journey runtime waits for Agenda Journey and Schedule Orchestrator hydration, then consumes pending materialization and deadline requests. Calendar source retirement cancels untouched plans or retains started/terminal execution as reviewable history. A changed Calendar fingerprint may refresh an untouched plan, but once execution has started the existing snapshot is preserved and marked for source review rather than silently rewritten.
 
 The visible app provides today, upcoming, in-progress, and finished filters plus a focused plan detail. Manual creation is explicit. Travel transport may be changed before departure; Map supplies the current origin, estimate, predicted arrival, and leave-by guidance. Activity actions remain explicit: start, complete, skip, or cancel. Required skip/deadline paths become missed; optional skips remain skipped. No random event is required for creation or completion.
+
+`EVT-WORK-4` upgrades Agenda Journey to schema V2. A production Work Hub replacement is materialized only when a pure verifier can prove exact authority package, world/profile/proposal revisions, accepted receipt, resolved Event Instance, correlated owner fact, Calendar time match, current source revision, and prior-source lineage. The journey persists one `executionRevision`, its normalized proof, prior/pending proof history, and a notification revision/ID ledger. An untouched journey may safely refresh under the same logical identity; once travel or activity execution has started, a changed Calendar source keeps the original execution revision and becomes `sourceReviewRequired` instead of silently rewriting the active plan. Manual and S1 preview schedules require no production proof.
 
 ## 5. Calendar-To-Journey Flow
 
@@ -211,7 +215,7 @@ This architecture does not change or block MJE-1, MJE-2, MJE-3, Footprints, or a
 
 An Activity Session is an execution timer attached to one Agenda Journey step. It may use a tomato-timer-like presentation, but its domain meaning is a duration-based activity session rather than a mandatory 25/5 Pomodoro cycle.
 
-CJA-4 implements the baseline with one deterministic session ID per stable Agenda Journey activity-step ID, the step's planned duration as the baseline clock, `duration_sufficient` or `user_confirmation`, continuous or user-pausable timing, deterministic midpoint/near-completion/duration-elapsed checkpoints, and owner-validated completion acknowledgement. CJA-5 upgrades `store:activity-session` to schema V2 with a bounded event-resolution ledger while preserving V1 migration. Travel steps and Map-owned clocks fail closed. The visible Focus Companion uses one built-in quiet scene, persists only minimized presentation state, and may render the one approved text interaction without becoming Event Runtime truth; Gallery/Music/companion references remain later slices.
+CJA-4 implements the baseline with one deterministic session ID per stable Agenda Journey activity-step ID, the step's planned duration as the baseline clock, `duration_sufficient` or `user_confirmation`, continuous or user-pausable timing, deterministic midpoint/near-completion/duration-elapsed checkpoints, and owner-validated completion acknowledgement. CJA-5 upgrades `store:activity-session` to schema V2 with a bounded event-resolution ledger while preserving V1 migration. `EVT-WORK-4` upgrades it to schema V3: an Agenda-derived session persists `agendaExecutionRevision`, rejects stale same-step reuse, and returns that revision in completion evidence. Travel steps and Map-owned clocks fail closed. The visible Focus Companion uses one built-in quiet scene, persists only minimized presentation state, and may render the one approved text interaction without becoming Event Runtime truth; Gallery/Music/companion references remain later slices.
 
 Minimum source record:
 
@@ -300,11 +304,11 @@ Randomness may change flavor, severity within approved bounds, or follow-up oppo
 
 ## 11. Narrative Timeline
 
-Status: `CJA-6A_CONTRACT_DONE 2026-08-17 / CJA-6B_PROJECTION_IMPLEMENTATION_TODO`
+Status: `CJA-6A_CONTRACT_DONE 2026-08-17 / CJA-6B_EVT-CHRONICLE-1_DONE 2026-08-30`
 
-The future visible product may be called Story, Diary, Journal, History, or something else. That naming, route, visibility, retention, and user-editing model remain intentionally undecided.
+The visible product is `生活志 / Chronicle`. It is an ordinary Home/App Store app for personal continuity, while World Hub remains an advanced audit surface and Settings remains the ordinary world/setup surface.
 
-The approved CJA-6A contract is a read-only, finite, source-linked Narrative Timeline projection. It is a cross-module account of confirmed outcomes, not a second business record, an Event Surface, a generic feed, or a universal event log. Calendar, Agenda Journey, Map Journey, Activity Session, Event Runtime, and every domain owner continue to own their canonical truth.
+CJA-6B implements the CJA-6A read-only, finite, source-linked Narrative Timeline as a deterministic Chronicle projection. It is a cross-module account of verified owner summaries, not a second business record, an Event Surface, a generic feed, or a universal event log. Calendar, Agenda Journey, Map Journey, Activity Session, Work Hub/Event Runtime, and every domain owner continue to own their canonical truth. The projection is rebuilt on read and is never persisted.
 
 A projection entry may reference only owner-confirmed or owner-committed summaries such as:
 
@@ -327,11 +331,11 @@ NarrativeSourceRef {
 }
 ```
 
-The source summary and references must be committed by the owner before they can enter the projection. Raw prompts, raw provider responses, unreviewed model output, pending proposals, free-form claims, and complete source bodies are not timeline inputs. If a source is deleted, retired, stale, inaccessible, or has a failed revision check, the projection fails closed and does not leave an orphaned narrative entry.
+The source summary and references must be committed by the owner before they can enter the projection. Raw prompts, raw provider responses, unreviewed model output, pending proposals, free-form claims, and complete source bodies are not timeline inputs. If a projected source is deleted, retired, stale, inaccessible, cross-world, or has a failed revision check, that projection entry fails closed. A user-authored diary entry is different: Chronicle retains its prose when an optional linked source becomes unavailable and marks only that reference as broken.
 
-Future Forum, Chat, and other AI callers may use a bounded read-only context Interface only after the caller supplies an explicit scope, permission, date/world range, recency rule, entry limit, and character/token budget. Ordinary Timeline reads must not call a provider, publish content, or write back to any owner; Timeline and AI context cannot authorize a domain mutation.
+Future Forum, Chat, and other AI callers may use a bounded read-only context Interface only after a separate stage supplies an explicit scope, permission, date/world range, recency rule, entry limit, and character/token budget. EVT-CHRONICLE-1 implements no AI caller. Ordinary Chronicle reads call no provider, publish nothing, and write back to no source owner; Timeline and any later AI context cannot authorize a domain mutation.
 
-CJA-6A approves this contract only. Until CJA-6B separately approves a persistence owner, visible product, retention/backup policy, review semantics, and implementation migration, no Narrative Timeline store, route, backup section, or user-facing App is authorized.
+CJA-6B adds `store:chronicle` schema V1 only for user-authored diary entries, complete-backup V7 support with older complete-backup compatibility, `/chronicle`, Home/App Store registration, and pure projection adapters. It does not create a persisted Timeline record. Diary deletion never deletes sources; projection refresh never rewrites diary prose. AI recall, automatic diary generation, free-text fact extraction, Community/Media publication, Wallet/Assets/relationship consequences, and CJA-6C remain separately gated.
 
 ## 12. Stable Cross-Module References
 
@@ -344,10 +348,10 @@ CalendarEvent.id
   -> MapJourney.sourceAgendaJourneyStepId
   -> ActivitySession.agendaJourneyStepId
   -> RuntimeEvent.sourceType + sourceRecordId + checkpointId
-  -> NarrativeEntry.sourceRefs[]
+  -> ChronicleProjectionEntry.sourceRefs[]
 ```
 
-CJA-3 implements the Agenda Journey V1 links through `sourceCalendarEventId`, `scheduleOrchestrationId`, step IDs, and Map's optional `sourceAgendaJourneyStepId`. CJA-4 implements `ActivitySession.agendaJourneyStepId` plus bounded completion evidence returned to Agenda Journey. CJA-6A now defines the typed `NarrativeSourceRef` contract; RuntimeEvent and NarrativeEntry persistence/implementation remain future CJA-6B work. Legacy Calendar, Map, and pre-CJA-4 backups remain valid when the Activity Session child is absent.
+CJA-3 implements the Agenda Journey links through `sourceCalendarEventId`, `scheduleOrchestrationId`, step IDs, and Map's optional `sourceAgendaJourneyStepId`. `EVT-WORK-4` adds `AgendaJourney.executionRevision`; Map V5 persists it as `sourceAgendaExecutionRevision` through active journey, arrival, cancellation, history, and backup, while Activity Session V3 persists the same revision and returns it with completion evidence. Reusing a Map journey or Activity Session from another execution revision fails closed. CJA-6B consumes these stable references through pure adapters and persists only Chronicle-owned diary entries. Legacy Calendar, Map, Agenda, Orchestrator, Activity, and pre-V7 complete backups remain readable through their named migrations and compatibility rules.
 
 ## 13. Ownership Matrix
 
@@ -361,7 +365,8 @@ CJA-3 implements the Agenda Journey V1 links through `sourceCalendarEventId`, `s
 | Focus Companion surface | timer projection, scene preference, and stable Gallery/Music/companion references | source clocks, Event Runtime truth, media binaries/playback, or broad values |
 | Event Runtime | eligibility, random/deterministic policy, cooldown/cap, proposal/review, logs | source-module records and final owner state |
 | Mini Scene Module | presentation policy, validated artifact, Presenter/fallback, interaction audit | source-event truth and state mutation |
-| Narrative Timeline | bounded source-linked projection contract; future read-only implementation | canonical schedule, journey, map, event, relationship, finance, or publication truth |
+| Chronicle Diary Owner | user-authored diary entries, stable IDs, optional typed source/media references, retention, migration, backup, and rollback | source-owner records or inferred domain truth |
+| Chronicle Narrative Timeline | finite deterministic source-linked projection rebuilt from verified owner summaries | persisted timeline copies or canonical schedule, journey, map, event, relationship, finance, asset, world, or publication truth |
 
 ## 14. Staged Delivery Gates
 
@@ -375,7 +380,8 @@ These stages define dependency order only. Live status and priority remain in th
 5. `CJA-4 DONE 2026-08-16`: one Activity Session with explicit completion policy, minimize/reopen reconciliation, and a restrained Focus Companion baseline; Gallery backgrounds, Music/ambient caller integration, richer companions, and broader event families remain separately promoted extensions.
 6. `CJA-5 DONE 2026-08-16`: one midpoint-only low-impact Event Runtime Adapter with `off` automatic `keep_rhythm`, inline Focus Companion `text` interaction, durable Runtime records, owner-validated 0/2-minute results, migration/backup, and reopen/idempotence coverage; interactive HTML remains separately gated by Mini Scene security.
 7. `CJA-6A DONE 2026-08-17`: Narrative Timeline contract, typed source references, owner-confirmed input rules, fail-closed invalid-source behavior, and bounded read-only AI-context Interface rules are documented; no persistence or UI is authorized.
-8. `CJA-6B TODO / SEPARATE_DECISION`: implement the projection only after a persistence owner, visible product, retention, review, migration, and backup contracts are separately approved.
+8. `EVT-WORK-4 DONE 2026-08-30`: production Work Hub schedule replacements require exact execution proof; Schedule Orchestrator V2, Agenda Journey V2, Map V5, Activity Session V3, and Notification Center preserve one revision through explicit execution with migration, rollback, backup, and stale-revision rejection.
+9. `CJA-6B / EVT-CHRONICLE-1 DONE 2026-08-30`: Chronicle product naming and route, schema-V1 Diary Owner, retention and broken-link semantics, complete-backup V7 compatibility, deterministic finite owner projections, stable deep links, Home/App Store integration, accessibility, and desktop/simulated Pixel 5 proof are implemented. No persisted Timeline, model caller, automatic diary generation, downstream consequence, or CJA-6C is authorized.
 
 Each stage requires separate user acceptance before implementation begins. No stage authorizes the next automatically.
 
@@ -403,4 +409,4 @@ Stop and reopen architecture review if an implementation would:
 
 Documentation-only acceptance requires `git diff --check` and `npm.cmd run governance:check`.
 
-Calendar Departure Readiness V1 requires deterministic projection, V1-to-V2 migration, owner-boundary, unique-journey, return-context, accessibility, desktop/mobile, and zero-overflow coverage. CJA-2 requires deterministic IDs/fingerprints, recurrence/multi-day fixtures, update/removal retirement, deadline once-only behavior, persistence/backup restore, missing-child legacy compatibility, and reopen reconciliation. CJA-3 requires manual and Calendar-derived identity, strict travel/activity transitions, required/optional deadline behavior, Calendar retirement/fingerprint handling, unique Map-step lineage through active/history/restore state, nested backup/rollback coverage, app registration, return context, accessibility, text fitting, and desktop/simulated-mobile zero-overflow evidence. CJA-4 requires stable activity-step identity, travel/Map-clock rejection, absolute-time and pause arithmetic, deterministic checkpoint idempotence, explicit completion policy, exact Agenda owner validation, persistence/restore/missing-child rollback coverage, startup/visibility/reopen reconciliation, no-event completion, accessible Focus Companion behavior, and desktop/simulated-mobile zero-overflow evidence. Later visible behavior stages require owner-Adapter tests, persistence and restore tests, suspended/reopen reconciliation, no-event and auto-resolution paths, and targeted desktop/mobile route coverage. Closed-app behavior must be tested only against capabilities the selected browser/PWA or push implementation can actually guarantee.
+Calendar Departure Readiness V1 requires deterministic projection, V1-to-V2 migration, owner-boundary, unique-journey, return-context, accessibility, desktop/mobile, and zero-overflow coverage. CJA-2 requires deterministic IDs/fingerprints, recurrence/multi-day fixtures, update/removal retirement, deadline once-only behavior, persistence/backup restore, missing-child legacy compatibility, and reopen reconciliation. CJA-3 requires manual and Calendar-derived identity, strict travel/activity transitions, required/optional deadline behavior, Calendar retirement/fingerprint handling, unique Map-step lineage through active/history/restore state, nested backup/rollback coverage, app registration, return context, accessibility, text fitting, and desktop/simulated-mobile zero-overflow evidence. CJA-4 requires stable activity-step identity, travel/Map-clock rejection, absolute-time and pause arithmetic, deterministic checkpoint idempotence, explicit completion policy, exact Agenda owner validation, persistence/restore/missing-child rollback coverage, startup/visibility/reopen reconciliation, no-event completion, accessible Focus Companion behavior, and desktop/simulated-mobile zero-overflow evidence. EVT-WORK-4 additionally requires exact production authority/runtime/receipt/owner-fact/Calendar proof, stable revision lineage, started-source conflict review, notification dedupe and rollback, stale Map/Activity rejection, schema migration/backup coverage, a zero-model path, and desktop/simulated-mobile explicit Save/depart/arrive/start proof. Later visible behavior stages require owner-Adapter tests, persistence and restore tests, suspended/reopen reconciliation, no-event and auto-resolution paths, and targeted desktop/mobile route coverage. Closed-app behavior must be tested only against capabilities the selected browser/PWA or push implementation can actually guarantee.

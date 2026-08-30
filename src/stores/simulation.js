@@ -47,9 +47,13 @@ import {
 import {
   advanceEventInstanceV2,
   createEventInstanceV2,
+  extractEventWorldBinding,
 } from '../lib/simulation/event-instance-v2'
 import { normalizeEventPolicySnapshot } from '../lib/simulation/event-policy'
-import { getBuiltInCommerceEventTemplate } from '../lib/simulation/commerce-event-templates'
+import {
+  getBuiltInEventTemplate,
+  getBuiltInEventTemplateMetadata,
+} from '../lib/simulation/built-in-event-templates'
 import {
   createEventNotebookRefKey,
   normalizeEventNotebookRef,
@@ -943,7 +947,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     now = Date.now(),
   } = {}) => {
     const existing = getEventInstanceV2(instanceId)
-    const template = existing ? getBuiltInCommerceEventTemplate(existing.templateId) : null
+    const template = existing ? getBuiltInEventTemplate(existing.templateId) : null
     if (!existing || !template) {
       return { ok: false, changed: false, reason: 'instance_or_template_missing', instance: null }
     }
@@ -959,17 +963,23 @@ export const useSimulationStore = defineStore('simulation', () => {
     const stored = upsertEventInstanceV2(result.instance)
     if (!stored) return { ok: false, changed: false, reason: 'instance_update_rejected', instance: existing }
     if (result.changed) {
+      const metadata = getBuiltInEventTemplateMetadata(stored.templateId)
       recordEventLog({
         id: `${stored.id}:${stored.currentNodeId}:${stored.updatedAt}`,
         eventId: stored.templateId,
-        moduleKey: 'commerce',
-        targetId: stored.contextRefs.order_id || stored.contextRefs.service_case_id || stored.id,
-        adapterKey: 'simulation.event_instance_v2',
+        moduleKey: metadata?.moduleKey || 'simulation',
+        targetId:
+          metadata?.targetRefKeys?.map((key) => stored.contextRefs[key]).find(Boolean) || stored.id,
+        adapterKey: metadata?.adapterKey || 'simulation.event_instance_v2',
         triggerSource: SIMULATION_TRIGGER_SOURCE.SYSTEM,
         status:
           stored.lifecycle === EVENT_INSTANCE_V2_LIFECYCLE.ACTIVE
             ? SIMULATION_EVENT_STATUS.TRIGGERED
-            : SIMULATION_EVENT_STATUS.RESOLVED,
+            : stored.lifecycle === EVENT_INSTANCE_V2_LIFECYCLE.FAILED
+              ? SIMULATION_EVENT_STATUS.FAILED
+              : stored.lifecycle === EVENT_INSTANCE_V2_LIFECYCLE.CANCELLED
+                ? SIMULATION_EVENT_STATUS.SKIPPED
+                : SIMULATION_EVENT_STATUS.TRIGGERED,
         reason: stored.resultCodes.at(-1) || stored.currentNodeId,
         at: stored.updatedAt,
       })
@@ -981,13 +991,20 @@ export const useSimulationStore = defineStore('simulation', () => {
     id = '',
     templateId = '',
     contextRefs = {},
+    worldBinding = {},
     randomValues = {},
     now = Date.now(),
   } = {}) => {
     const existing = getEventInstanceV2(id)
     if (existing) {
-      const template = getBuiltInCommerceEventTemplate(templateId)
-      const requested = createEventInstanceV2({ id, template, contextRefs, now: existing.createdAt })
+      const template = getBuiltInEventTemplate(templateId)
+      const requested = createEventInstanceV2({
+        id,
+        template,
+        contextRefs,
+        worldBinding: extractEventWorldBinding(existing.contextRefs),
+        now: existing.createdAt,
+      })
       if (
         !requested ||
         existing.templateId !== requested.templateId ||
@@ -1009,19 +1026,21 @@ export const useSimulationStore = defineStore('simulation', () => {
         instance: existing,
       }
     }
-    const template = getBuiltInCommerceEventTemplate(templateId)
-    const instance = createEventInstanceV2({ id, template, contextRefs, now })
+    const template = getBuiltInEventTemplate(templateId)
+    const instance = createEventInstanceV2({ id, template, contextRefs, worldBinding, now })
     const stored = instance ? upsertEventInstanceV2(instance) : null
     if (!stored) return { ok: false, changed: false, reason: 'instance_create_rejected', instance: null }
+    const metadata = getBuiltInEventTemplateMetadata(stored.templateId)
     recordEventLog({
       id: `${stored.id}:created`,
       eventId: stored.templateId,
-      moduleKey: 'commerce',
-      targetId: stored.contextRefs.order_id || stored.contextRefs.service_case_id || stored.id,
-      adapterKey: 'simulation.event_instance_v2',
-      triggerSource: SIMULATION_TRIGGER_SOURCE.MANUAL,
+      moduleKey: metadata?.moduleKey || 'simulation',
+      targetId:
+        metadata?.targetRefKeys?.map((key) => stored.contextRefs[key]).find(Boolean) || stored.id,
+      adapterKey: metadata?.adapterKey || 'simulation.event_instance_v2',
+      triggerSource: metadata?.startTriggerSource || SIMULATION_TRIGGER_SOURCE.MANUAL,
       status: SIMULATION_EVENT_STATUS.TRIGGERED,
-      reason: 'user_service_interaction',
+      reason: metadata?.startReason || 'event_instance_started',
       at: stored.createdAt,
     })
     return {

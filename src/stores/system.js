@@ -1,6 +1,11 @@
 import { defineStore } from 'pinia'
 import { computed, reactive, ref, watch } from 'vue'
-import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
+import {
+  readPersistedState,
+  readPersistedStateAsync,
+  waitForPendingPersistedStateWrites,
+  writePersistedState,
+} from '../lib/persistence'
 import { DEFAULT_SYSTEM_LANGUAGE, normalizeSystemLanguage } from '../lib/locale'
 import { DEFAULT_UI_SFX_PROFILE, normalizeUiSfxProfile, playUiCue } from '../lib/ui-sfx'
 import { DEFAULT_RINGTONE_ID, normalizeRingtoneId } from '../lib/ringtone'
@@ -35,6 +40,7 @@ import {
   BROWSER_HOME_APP_ID,
   BOOK_HOME_APP_ID,
   CAMERA_HOME_APP_ID,
+  CHRONICLE_HOME_APP_ID,
   CONTROL_CENTER_HOME_APP_ID,
   COMMUNITY_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,
@@ -156,6 +162,19 @@ import {
   listInstalledWorldResources,
   normalizeWorldSuiteInventory,
 } from '../lib/world-suite-inventory'
+import {
+  activateWorldSemanticVersion as activateWorldSemanticVersionState,
+  createDefaultWorldSettingState,
+  createWorldSemanticCandidateVersion as createWorldSemanticCandidateVersionState,
+  inspectPersistedWorldSettingState,
+  normalizeWorldSettingState,
+  observeWorldSettingSource as observeWorldSettingSourceState,
+  PRIMARY_PERSISTED_WORLD_ID,
+  resolveActiveWorldSemanticBinding,
+  resolveWorldSettingVersionStatus,
+  rollbackWorldSemanticVersion as rollbackWorldSemanticVersionState,
+} from '../lib/world-setting-state'
+import { WORLD_SEMANTIC_RUNTIME_REGISTRY } from '../lib/simulation/world-semantic-runtime-registry'
 
 const AVAILABLE_THEMES = APPEARANCE_COLOR_MODE_OPTIONS.map((option) => ({
   id: option.legacyThemeId,
@@ -458,6 +477,7 @@ const CORE_HOME_TILE_IDS = [
   MUSIC_HOME_APP_ID,
   'app_calendar',
   AGENDA_JOURNEY_HOME_APP_ID,
+  CHRONICLE_HOME_APP_ID,
   REMINDERS_HOME_APP_ID,
   'app_stock',
   'app_chat',
@@ -493,6 +513,22 @@ const MIN_HOME_PAGES = 5
 const MIN_VISIBLE_HOME_PAGES = 2
 const MAX_VISIBLE_HOME_PAGES = 5
 const DEFAULT_VISIBLE_HOME_PAGE_COUNT = 4
+const PRE_CHRONICLE_DEFAULT_WIDGET_PAGES = PREVIOUS_DEFAULT_WIDGET_PAGES.map((page) => [...page])
+const PRE_CHRONICLE_APP_STORE_PAGE_INDEX = PRE_CHRONICLE_DEFAULT_WIDGET_PAGES.findIndex((page) =>
+  page.includes(APP_STORE_HOME_APP_ID),
+)
+if (PRE_CHRONICLE_APP_STORE_PAGE_INDEX >= 0) {
+  const page = PRE_CHRONICLE_DEFAULT_WIDGET_PAGES[PRE_CHRONICLE_APP_STORE_PAGE_INDEX]
+  const appStoreIndex = page.indexOf(APP_STORE_HOME_APP_ID)
+  if (appStoreIndex < 0) page.push(CONTROL_CENTER_HOME_APP_ID)
+  else page.splice(appStoreIndex, 0, CONTROL_CENTER_HOME_APP_ID)
+} else {
+  PRE_CHRONICLE_DEFAULT_WIDGET_PAGES[1] = [
+    ...(PRE_CHRONICLE_DEFAULT_WIDGET_PAGES[1] || []),
+    CONTROL_CENTER_HOME_APP_ID,
+  ]
+}
+
 const DEFAULT_HOME_TILE_ORDER_PAGES = PREVIOUS_DEFAULT_WIDGET_PAGES.map((page) => [...page])
 const DEFAULT_APP_STORE_HOME_PAGE_INDEX = DEFAULT_HOME_TILE_ORDER_PAGES.findIndex((page) =>
   page.includes(APP_STORE_HOME_APP_ID),
@@ -500,15 +536,12 @@ const DEFAULT_APP_STORE_HOME_PAGE_INDEX = DEFAULT_HOME_TILE_ORDER_PAGES.findInde
 if (DEFAULT_APP_STORE_HOME_PAGE_INDEX >= 0) {
   const page = DEFAULT_HOME_TILE_ORDER_PAGES[DEFAULT_APP_STORE_HOME_PAGE_INDEX]
   const appStoreIndex = page.indexOf(APP_STORE_HOME_APP_ID)
-  if (appStoreIndex < 0) {
-    page.push(CONTROL_CENTER_HOME_APP_ID)
-  } else {
-    page.splice(appStoreIndex, 0, CONTROL_CENTER_HOME_APP_ID)
-  }
+  if (appStoreIndex < 0) page.push(CHRONICLE_HOME_APP_ID)
+  else page.splice(appStoreIndex, 0, CHRONICLE_HOME_APP_ID)
 } else {
   DEFAULT_HOME_TILE_ORDER_PAGES[1] = [
     ...(DEFAULT_HOME_TILE_ORDER_PAGES[1] || []),
-    CONTROL_CENTER_HOME_APP_ID,
+    CHRONICLE_HOME_APP_ID,
   ]
 }
 
@@ -621,7 +654,7 @@ const DEFAULT_CHAT_TRUTH_METRICS = Object.freeze({
 
 const SYSTEM_STORAGE_KEY = 'store:system'
 const SYSTEM_STORAGE_VERSION = 1
-const HOME_DESKTOP_SETUP_VERSION = 14
+const HOME_DESKTOP_SETUP_VERSION = 15
 
 const AI_AUTOMATION_MODULE_KEYS = ['chat', 'map', 'shopping']
 const DEFAULT_AI_AUTOMATION_SETTINGS = Object.freeze({
@@ -1063,17 +1096,30 @@ const normalizeUserWorldKernel = (rawUser = {}, fallbackGlobalWorldview = DEFAUL
         ? source.worldBook
         : fallbackGlobalWorldview
 
+  const worldSetting = normalizeWorldSettingState(source.worldSetting)
+  const legacyWorldScopeAliases = new Set([
+    'default_world',
+    'legacy_single_world',
+    ...normalizeWorldPacks(source.worldPacks).map((pack) => pack.id),
+  ])
+  const profileTemplates = normalizeProfileTemplates(
+    Array.isArray(source.profileTemplates) && source.profileTemplates.length > 0
+      ? source.profileTemplates
+      : createDefaultProfileTemplatePresets(),
+  ).map((template) =>
+    template.scope === PROFILE_TEMPLATE_SCOPES.WORLD && legacyWorldScopeAliases.has(template.worldId)
+      ? { ...template, worldId: worldSetting.identity.worldId }
+      : template,
+  )
+
   return {
     globalWorldview: normalizeWorldText(rawGlobalWorldview, fallbackGlobalWorldview),
     encyclopediaEntries: normalizeEncyclopediaEntryList(
       Array.isArray(source.encyclopediaEntries) ? source.encyclopediaEntries : source.knowledgePoints,
     ),
     worldBookSourceLinks: normalizeWorldBookSourceLinks(source.worldBookSourceLinks),
-    profileTemplates: normalizeProfileTemplates(
-      Array.isArray(source.profileTemplates) && source.profileTemplates.length > 0
-        ? source.profileTemplates
-        : createDefaultProfileTemplatePresets(),
-    ),
+    profileTemplates,
+    worldSetting,
     worldPacks: normalizeWorldPacks(source.worldPacks),
     worldProfileAnalysis: normalizeWorldProfile(source.worldProfileAnalysis),
     enabledWorldPackIds,
@@ -1772,6 +1818,7 @@ export const useSystemStore = defineStore('system', () => {
     encyclopediaEntries: [],
     profileTemplates: createDefaultProfileTemplatePresets(),
     worldSuiteInventory: createEmptyWorldSuiteInventory(),
+    worldSetting: createDefaultWorldSettingState(),
   })
   user.knowledgePoints = user.encyclopediaEntries
 
@@ -2490,6 +2537,7 @@ export const useSystemStore = defineStore('system', () => {
         CURATED_RELEASE_DEFAULT_WIDGET_PAGES,
       ) ||
       areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PREVIOUS_DEFAULT_WIDGET_PAGES) ||
+      areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PRE_CHRONICLE_DEFAULT_WIDGET_PAGES) ||
       isLegacyCrowdedHomeDesktopSetup(settings.appearance.homeWidgetPages)
 
     if (shouldResetToCleanSetup) {
@@ -3639,8 +3687,22 @@ export const useSystemStore = defineStore('system', () => {
       (template) => template.scope === PROFILE_TEMPLATE_SCOPES.GLOBAL_PRESET,
     )
 
+  const normalizeWorldProfileTemplateWorldId = (worldId = '') => {
+    const normalizedWorldId = typeof worldId === 'string' && worldId.trim()
+      ? worldId.trim()
+      : DEFAULT_WORLD_PACK_ID
+    const currentWorldId = user.worldSetting?.identity?.worldId || PRIMARY_PERSISTED_WORLD_ID
+    const currentWorldAliases = new Set([
+      DEFAULT_WORLD_PACK_ID,
+      'legacy_single_world',
+      currentWorldId,
+      ...normalizeWorldPacks(user.worldPacks).map((pack) => pack.id),
+    ])
+    return currentWorldAliases.has(normalizedWorldId) ? currentWorldId : normalizedWorldId
+  }
+
   const listWorldProfileTemplates = (worldId = '', options = {}) => {
-    const targetWorldId = typeof worldId === 'string' && worldId.trim() ? worldId.trim() : 'default_world'
+    const targetWorldId = normalizeWorldProfileTemplateWorldId(worldId)
     return listProfileTemplates().filter(
       (template) =>
         template.scope === PROFILE_TEMPLATE_SCOPES.WORLD &&
@@ -3660,7 +3722,13 @@ export const useSystemStore = defineStore('system', () => {
   }
 
   const upsertProfileTemplate = (templateInput = {}) => {
-    const template = normalizeProfileTemplate(templateInput)
+    const normalizedTemplate = normalizeProfileTemplate(templateInput)
+    const template = normalizedTemplate.scope === PROFILE_TEMPLATE_SCOPES.WORLD
+      ? {
+          ...normalizedTemplate,
+          worldId: normalizeWorldProfileTemplateWorldId(normalizedTemplate.worldId),
+        }
+      : normalizedTemplate
     const current = listProfileTemplates()
     const index = current.findIndex((item) => item.id === template.id)
     if (index >= 0) {
@@ -3679,7 +3747,7 @@ export const useSystemStore = defineStore('system', () => {
       ...preset,
       id: `world_template_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       scope: PROFILE_TEMPLATE_SCOPES.WORLD,
-      worldId: options.worldId || 'default_world',
+      worldId: options.worldId || PRIMARY_PERSISTED_WORLD_ID,
       title: options.title || preset.title,
       version: 1,
       createdAt: Date.now(),
@@ -3693,7 +3761,7 @@ export const useSystemStore = defineStore('system', () => {
       ...templateInput,
       id: `world_template_${now}_${Math.random().toString(36).slice(2, 8)}`,
       scope: PROFILE_TEMPLATE_SCOPES.WORLD,
-      worldId: templateInput.worldId || 'default_world',
+      worldId: templateInput.worldId || PRIMARY_PERSISTED_WORLD_ID,
       version: 1,
       createdAt: now,
       updatedAt: now,
@@ -3708,7 +3776,7 @@ export const useSystemStore = defineStore('system', () => {
       ...updates,
       id: existing.id,
       scope: PROFILE_TEMPLATE_SCOPES.WORLD,
-      worldId: updates.worldId || existing.worldId || 'default_world',
+      worldId: updates.worldId || existing.worldId || PRIMARY_PERSISTED_WORLD_ID,
       version: Math.max(1, Number(existing.version) || 1) + 1,
       createdAt: existing.createdAt,
       updatedAt: Date.now(),
@@ -4600,6 +4668,8 @@ export const useSystemStore = defineStore('system', () => {
 
   const applyPersistedSnapshot = (persisted = {}) => {
     if (!persisted || typeof persisted !== 'object') return false
+    const worldSettingInspection = inspectPersistedWorldSettingState(persisted?.user?.worldSetting)
+    if (!worldSettingInspection.ok) return false
     let persistedHomeDesktopSetupVersion = HOME_DESKTOP_SETUP_VERSION
     const persistedWorldAppHomeTileIds = worldAppHomeTileIdsFromUserSnapshot(persisted.user)
 
@@ -4837,6 +4907,7 @@ export const useSystemStore = defineStore('system', () => {
     user.encyclopediaEntries = normalizedWorldKernel.encyclopediaEntries
     user.knowledgePoints = user.encyclopediaEntries
     user.profileTemplates = normalizedWorldKernel.profileTemplates
+    user.worldSetting = normalizedWorldKernel.worldSetting
     user.worldSuiteInventory = normalizeWorldSuiteInventory(
       persistedUser?.worldSuiteInventory,
     )
@@ -5014,8 +5085,7 @@ export const useSystemStore = defineStore('system', () => {
     })
 
     if (!persisted || typeof persisted !== 'object') return false
-    applyPersistedSnapshot(persisted)
-    return true
+    return applyPersistedSnapshot(persisted)
   }
 
   const hydrateFromStorageAsync = async () => {
@@ -5024,8 +5094,7 @@ export const useSystemStore = defineStore('system', () => {
     })
     if (storageWriteRequestedBeforeHydration) return false
     if (!persisted || typeof persisted !== 'object') return false
-    applyPersistedSnapshot(persisted)
-    return true
+    return applyPersistedSnapshot(persisted)
   }
 
   const restoreFromBackup = (snapshot = {}) => {
@@ -5157,6 +5226,7 @@ export const useSystemStore = defineStore('system', () => {
             : [],
           profileTemplates: normalizeProfileTemplates(user.profileTemplates).map(cloneProfileTemplate),
           worldSuiteInventory: normalizeWorldSuiteInventory(user.worldSuiteInventory),
+          worldSetting: normalizeWorldSettingState(user.worldSetting),
         },
         notifications: notifications.value.map((note) => ({ ...note })),
         apiReports: apiReports.value.map((report) => ({ ...report })),
@@ -5191,6 +5261,140 @@ export const useSystemStore = defineStore('system', () => {
 
   const getWorldSuiteInventorySnapshot = () =>
     normalizeWorldSuiteInventory(user.worldSuiteInventory)
+
+  const getWorldSettingState = () => normalizeWorldSettingState(user.worldSetting)
+
+  const commitWorldSettingState = (nextState) => {
+    const before = getWorldSettingState()
+    user.worldSetting = normalizeWorldSettingState(nextState)
+    const persistence = persistToStorage()
+    if (persistence?.ok === true) {
+      return { ok: true, state: getWorldSettingState(), persistence }
+    }
+    user.worldSetting = before
+    return {
+      ok: false,
+      reason: persistence?.error || 'persistence_failed',
+      state: before,
+      persistence,
+    }
+  }
+
+  const commitWorldSettingStateAsync = async (nextState) => {
+    const committed = commitWorldSettingState(nextState)
+    if (!committed.ok) return committed
+    await waitForPendingPersistedStateWrites()
+    return committed
+  }
+
+  const observeWorldSettingSource = ({ snapshot, now = Date.now() } = {}) => {
+    const result = observeWorldSettingSourceState({ state: user.worldSetting, snapshot, now })
+    if (!result.ok) return result
+    const committed = commitWorldSettingState(result.state)
+    return committed.ok
+      ? { ...result, state: committed.state, persistence: committed.persistence }
+      : { ...committed, change: result.change }
+  }
+
+  const createWorldSemanticCandidateVersion = async ({
+    proposal,
+    confirmation,
+    modelReceipt = null,
+    runtimeRegistry = WORLD_SEMANTIC_RUNTIME_REGISTRY,
+    now = Date.now(),
+  } = {}) => {
+    const result = await createWorldSemanticCandidateVersionState({
+      state: user.worldSetting,
+      proposal,
+      confirmation,
+      runtimeRegistry,
+      modelReceipt,
+      now,
+    })
+    if (!result.ok) return result
+    const committed = commitWorldSettingState(result.state)
+    return committed.ok
+      ? { ...result, state: committed.state, persistence: committed.persistence }
+      : committed
+  }
+
+  const confirmAndActivateWorldSemanticProposal = async ({
+    snapshot,
+    proposal,
+    confirmation,
+    modelReceipt = null,
+    runtimeRegistry = WORLD_SEMANTIC_RUNTIME_REGISTRY,
+    now = Date.now(),
+  } = {}) => {
+    const before = getWorldSettingState()
+    const observed = observeWorldSettingSourceState({ state: before, snapshot, now })
+    if (!observed.ok) return observed
+    const candidate = await createWorldSemanticCandidateVersionState({
+      state: observed.state,
+      proposal,
+      confirmation,
+      runtimeRegistry,
+      modelReceipt,
+      now,
+    })
+    if (!candidate.ok) return candidate
+    const activated = await activateWorldSemanticVersionState({
+      state: candidate.state,
+      versionId: candidate.version.versionId,
+      runtimeRegistry,
+      currentSourceFingerprint: snapshot?.sourceFingerprint,
+      now,
+    })
+    if (!activated.ok) return activated
+    const committed = await commitWorldSettingStateAsync(activated.state)
+    return committed.ok
+      ? {
+          ...activated,
+          reason: 'version_confirmed_and_activated',
+          state: committed.state,
+          persistence: committed.persistence,
+        }
+      : committed
+  }
+
+  const activateWorldSemanticVersion = async ({
+    versionId = '',
+    currentSourceFingerprint = '',
+    runtimeRegistry = WORLD_SEMANTIC_RUNTIME_REGISTRY,
+    now = Date.now(),
+  } = {}) => {
+    const result = await activateWorldSemanticVersionState({
+      state: user.worldSetting,
+      versionId,
+      runtimeRegistry,
+      currentSourceFingerprint,
+      now,
+    })
+    if (!result.ok) return result
+    const committed = await commitWorldSettingStateAsync(result.state)
+    return committed.ok
+      ? { ...result, state: committed.state, persistence: committed.persistence }
+      : committed
+  }
+
+  const rollbackWorldSemanticVersion = async ({
+    runtimeRegistry = WORLD_SEMANTIC_RUNTIME_REGISTRY,
+    now = Date.now(),
+  } = {}) => {
+    const result = await rollbackWorldSemanticVersionState({
+      state: user.worldSetting,
+      runtimeRegistry,
+      now,
+    })
+    if (!result.ok) return result
+    const committed = await commitWorldSettingStateAsync(result.state)
+    return committed.ok
+      ? { ...result, state: committed.state, persistence: committed.persistence }
+      : committed
+  }
+
+  const getWorldSettingVersionStatus = () => resolveWorldSettingVersionStatus(user.worldSetting)
+  const getActiveWorldSemanticBinding = () => resolveActiveWorldSemanticBinding(user.worldSetting)
 
   const replaceWorldSuiteInventory = (inventory = {}) => {
     user.worldSuiteInventory = normalizeWorldSuiteInventory(inventory)
@@ -5364,6 +5568,14 @@ export const useSystemStore = defineStore('system', () => {
     getWorldSuiteInventorySnapshot,
     replaceWorldSuiteInventory,
     getInstalledWorldResources,
+    getWorldSettingState,
+    observeWorldSettingSource,
+    createWorldSemanticCandidateVersion,
+    confirmAndActivateWorldSemanticProposal,
+    activateWorldSemanticVersion,
+    rollbackWorldSemanticVersion,
+    getWorldSettingVersionStatus,
+    getActiveWorldSemanticBinding,
     lockPhone,
     unlockPhone,
     saveNow,

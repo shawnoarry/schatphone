@@ -10,7 +10,7 @@ import { resolveScheduleHandoffSourceDraftV1 } from '../src/lib/schedule-handoff
 
 const DummyView = { template: '<div />' }
 
-const mountWorkplace = async (path = '/workplace?from=home&homePage=1') => {
+const mountWorkplace = async (path = '/workplace?from=home&homePage=1&preview=1') => {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
@@ -33,6 +33,17 @@ describe('Work Hub Organization Workplace S1 shell', () => {
   beforeEach(() => {
     localStorage.clear()
     resetWorkplaceShellStateForTesting()
+  })
+
+  test('keeps the fictional S1 workspace behind an explicit demo entry', async () => {
+    const { wrapper } = await mountWorkplace('/workplace?from=home&homePage=1')
+    expect(wrapper.get('[data-testid="work-hub-empty"]').text()).toContain('尚未连接组织')
+    expect(wrapper.text()).not.toContain('Morrow Entertainment')
+    await wrapper.get('[data-testid="work-hub-open-preview"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-testid="workplace-app"]').attributes('data-preview')).toBe('true')
+    expect(wrapper.text()).toContain('不代表当前世界的真实所属或权限')
+    wrapper.unmount()
   })
 
   test('renders the artist-first Today viewport and real owner handoffs', async () => {
@@ -121,7 +132,7 @@ describe('Work Hub Organization Workplace S1 shell', () => {
     wrapper.unmount()
 
     const reopened = await mountWorkplace(
-      '/workplace?section=tasks&sourceRecordId=proposal-radio-20260827',
+      '/workplace?section=tasks&sourceRecordId=proposal-radio-20260827&preview=1',
     )
     expect(reopened.wrapper.get('[data-testid="workplace-work"]').exists()).toBe(true)
     expect(reopened.wrapper.get('[data-testid="workplace-proposal-decision"]').text()).toContain(

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useSystemStore } from '../src/stores/system'
+import { createDefaultWorldSettingState } from '../src/lib/world-setting-state'
 
 describe('system world kernel', () => {
   beforeEach(() => {
@@ -23,6 +24,30 @@ describe('system world kernel', () => {
     expect(store.user.worldBook).toBe('Legacy worldview')
     expect(Array.isArray(store.user.encyclopediaEntries)).toBe(true)
     expect(store.user.knowledgePoints).toBe(store.user.encyclopediaEntries)
+  })
+
+  test('rejects malformed world version pointers before mutating the current save', () => {
+    const store = useSystemStore()
+    store.user.name = 'Current player'
+    store.setGlobalWorldview('Current world remains authoritative.')
+    const beforeWorldSetting = structuredClone(store.getWorldSettingState())
+    const malformedWorldSetting = structuredClone(createDefaultWorldSettingState({ now: 10 }))
+    malformedWorldSetting.semantic.activeVersionId = 'missing_world_version'
+
+    const restored = store.restoreFromBackup({
+      system: {
+        user: {
+          name: 'Imported player',
+          globalWorldview: 'This payload must not be applied.',
+          worldSetting: malformedWorldSetting,
+        },
+      },
+    })
+
+    expect(restored).toBe(false)
+    expect(store.user.name).toBe('Current player')
+    expect(store.user.globalWorldview).toBe('Current world remains authoritative.')
+    expect(store.getWorldSettingState()).toEqual(beforeWorldSetting)
   })
 
   test('supports encyclopedia entry add/toggle/remove lifecycle', () => {
@@ -170,5 +195,47 @@ describe('system world kernel', () => {
         limit: 1,
       }).map((item) => item.id),
     ).toEqual([entry.id])
+  })
+
+  test('canonicalizes known single-world template aliases without claiming unknown scopes', () => {
+    const store = useSystemStore()
+    const fromDefault = store.createWorldProfileTemplate({
+      worldId: 'default_world',
+      title: 'Default alias template',
+    })
+    const fromLegacy = store.upsertProfileTemplate({
+      id: 'legacy_alias_template',
+      scope: 'world',
+      worldId: 'legacy_single_world',
+      title: 'Legacy alias template',
+    })
+    const fromPack = store.createWorldProfileTemplate({
+      worldId: 'survival_city',
+      title: 'Pack alias template',
+    })
+    const external = store.createWorldProfileTemplate({
+      worldId: 'external_world_scope',
+      title: 'External world template',
+    })
+
+    expect([fromDefault.worldId, fromLegacy.worldId, fromPack.worldId]).toEqual([
+      'world_local_primary',
+      'world_local_primary',
+      'world_local_primary',
+    ])
+    expect(external.worldId).toBe('external_world_scope')
+    expect(store.listWorldProfileTemplates()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: fromDefault.id, worldId: 'world_local_primary' }),
+        expect.objectContaining({ id: fromLegacy.id, worldId: 'world_local_primary' }),
+        expect.objectContaining({ id: fromPack.id, worldId: 'world_local_primary' }),
+      ]),
+    )
+    expect(store.listWorldProfileTemplates('legacy_single_world')).toEqual(
+      store.listWorldProfileTemplates('world_local_primary'),
+    )
+    expect(store.listWorldProfileTemplates('external_world_scope')).toEqual([
+      expect.objectContaining({ id: external.id, worldId: 'external_world_scope' }),
+    ])
   })
 })

@@ -12,6 +12,7 @@ defineProps({
 
 const emit = defineEmits([
   'open-profile',
+  'open-world-setup',
   'open-worldbook',
   'open-general',
   'open-software-update',
@@ -57,8 +58,8 @@ const { t } = useI18n()
     <p class="settings-tip-copy text-[11px] mt-1">
       {{
         t(
-          '推荐顺序：先配置“网络与 API”，再进入会话手动触发回复，最后按需要开启自动响应。',
-          'Recommended flow: set up Network & API first, then use manual trigger in chat, and enable automation only when needed.',
+          '推荐顺序：先配置“网络与 API”，再完成一次“世界准备”，然后开始对话；自动响应可以稍后再开。',
+          'Recommended flow: set up Network & API, check World Setup once, then start chatting. Automation can wait until later.',
         )
       }}
     </p>
@@ -95,6 +96,16 @@ const { t } = useI18n()
     {{ t('内容设置', 'Content Settings') }}
   </div>
   <div class="settings-group rounded-2xl overflow-hidden">
+    <SettingsMenuItem
+      title-zh="世界准备"
+      title-en="World Setup"
+      subtitle-zh="检查当前世界是否能被正确理解"
+      subtitle-en="Check how the current world is understood"
+      icon="fas fa-earth-asia"
+      icon-class="bg-cyan-600"
+      data-testid="settings-world-setup-entry"
+      @select="emit('open-world-setup')"
+    />
     <SettingsMenuItem
       title-zh="世界书"
       title-en="World Book"

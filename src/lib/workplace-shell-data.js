@@ -153,6 +153,7 @@ export const WORKPLACE_SCHEDULE_PROPOSALS = Object.freeze([
         query: Object.freeze({
           section: 'tasks',
           sourceRecordId: 'proposal-radio-20260827',
+          preview: '1',
         }),
       }),
       proposalStatus: 'pending_review',
