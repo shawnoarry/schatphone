@@ -204,6 +204,8 @@ Still incomplete:
 
 The first successful Chat activation loop, explicit custom role -> Chat journey, ordinary Shopping consequence, Wallet quote detail, configurable multi-screen Home release curation, release-local complete backup/recovery, and the automated hosted-browser PWA/offline/backup proof are implemented. No additional page-local visual slice is active while exact remote confirmation, OS-installed PWA behavior, external protection policy, and named true-device product proof remain the next P1 release gate.
 
+`PAUSED_HANDOFF 2026-09-01`: the credential-free Hosted Product Proof repair is local-only at `4112875` plus `7938e3a`; exact-SHA local hosted acceptance passes 4/4, but the image-bed KV daily read limit still returned HTTP 500 and `origin/main` remains `d26de0d`. The user stopped the stage and the scheduled continuation was deleted. The next execution must follow the single-probe, focused asset E2E, Pages, automatic hosted proof, then manual CI order in `docs/qa/HOSTED_PRODUCT_PROOF_2026-08-31.md`; do not start another visual slice while that remote evidence remains open.
+
 1. preserve the curated multi-screen Home defaults and page-layout independence while using the automated hosted-browser proof as the baseline for OS install/relaunch and named true-device backup recovery;
 2. fold World Pack, Chat, and Home touch/safe-area checks into the named true-device release matrix rather than treating another archetype as progress;
 3. fix only observed release-surface problems; do not refill Home merely because a module exists;
