@@ -40,6 +40,8 @@ import {
   isMapTransportMode,
 } from '../lib/map-journey'
 import { MAP_JOURNEY_EVENT_PROPOSAL_STATUS } from '../lib/simulation/adapters/map-journey-events'
+import { WORLD_SEMANTIC_ACCESS_RESULT } from '../lib/simulation/world-semantic-access-runtime'
+import { WORLD_SEMANTIC_ACCESS_EVENT_RESULT } from '../lib/simulation/world-semantic-access-event-templates'
 import {
   MAP_PLACE_ENTRY_RADIUS_KM,
   createMapPlaceSessionEventPreview,
@@ -111,6 +113,7 @@ const rolePositionMode = ref(false)
 const rolePositionNotice = ref('')
 const selectedMapPlace = ref(null)
 const selectedPlaceAnchor = ref(null)
+const selectedPlaceEntryFeedback = ref('')
 const selectedPlaceCategory = ref('all')
 const selectedSearchCategory = ref('all')
 const defaultMapDestination = mapStore.addresses?.[1]?.detail || ''
@@ -862,16 +865,61 @@ const focusCurrentLocation = () => {
 const closePlaceDetail = () => {
   selectedMapPlace.value = null
   selectedPlaceAnchor.value = null
+  selectedPlaceEntryFeedback.value = ''
 }
+
+watch(
+  () => selectedMapPlace.value?.placeId || selectedMapPlace.value?.id || '',
+  () => {
+    selectedPlaceEntryFeedback.value = ''
+  },
+)
 
 const enterSelectedPlace = () => {
   const placeId = selectedMapPlace.value?.placeId || selectedMapPlace.value?.id
   if (!placeId) return
-  mapStore.enterPlace(placeId)
+  const result = mapStore.enterPlace(placeId)
+  if (result.ok) {
+    selectedPlaceEntryFeedback.value = result.accessEvent?.resultCodes?.includes(
+      WORLD_SEMANTIC_ACCESS_EVENT_RESULT.GRANTED_REVIEWED,
+    )
+      ? t('身份已复核，可以进入', 'Identity reviewed. Entry granted.')
+      : result.access
+        ? t('身份已验证，可以进入', 'Identity verified. Entry granted.')
+        : ''
+    return
+  }
+  const copyByCode = {
+    [WORLD_SEMANTIC_ACCESS_RESULT.ACTOR_EVIDENCE_MISSING]: t(
+      '缺少可验证的身份，暂时不能进入',
+      'No verifiable identity is available for entry.',
+    ),
+    [WORLD_SEMANTIC_ACCESS_RESULT.ACTOR_EVIDENCE_STALE]: t(
+      '身份凭据已过期，请更新后再试',
+      'Identity evidence is out of date. Update it and try again.',
+    ),
+    [WORLD_SEMANTIC_ACCESS_RESULT.DENIED]: t(
+      '当前身份不符合这里的通行规则',
+      'The current identity does not satisfy this place\'s access rule.',
+    ),
+    [WORLD_SEMANTIC_ACCESS_RESULT.VERSION_MISSING]: t(
+      '请先在设置中完成世界规则准备',
+      'Finish preparing the world rules in Settings first.',
+    ),
+    [WORLD_SEMANTIC_ACCESS_RESULT.VERSION_STALE]: t(
+      '世界规则已变化，请先在设置中确认最新版本',
+      'The world rules changed. Confirm the latest version in Settings first.',
+    ),
+  }
+  selectedPlaceEntryFeedback.value = copyByCode[result.code] || t(
+    '通行检查未完成，请稍后重试',
+    'The access check could not finish. Please try again.',
+  )
 }
 
 const leaveSelectedPlace = () => {
-  mapStore.leavePlace()
+  const result = mapStore.leavePlace()
+  if (result.ok) selectedPlaceEntryFeedback.value = ''
 }
 
 const previewEventSurface = computed(() => {
@@ -3028,6 +3076,7 @@ onBeforeUnmount(() => {
       :context-tone="selectedPlaceContextTone"
       :primary-action="selectedPlacePrimaryAction"
       :entry-action="selectedPlaceEntryAction"
+      :entry-feedback="selectedPlaceEntryFeedback"
       :anchor="selectedPlaceAnchor"
       :event-invitation="selectedPlaceEventInvitation"
       :event-preview-available="

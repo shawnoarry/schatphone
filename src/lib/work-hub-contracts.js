@@ -199,6 +199,10 @@ const normalizeRecord = (raw, recordType, binding, packageIssuerId) => {
   if (recordType === WORK_HUB_RECORD_TYPES.MEMBERSHIP) {
     const subjectProfileId = trimLine(String(raw.subjectProfileId || ''), 120)
     const subjectProfileRevision = toRevision(raw.subjectProfileRevision)
+    const semanticConceptIds = normalizeStringArray(raw.semanticConceptIds, {
+      limit: 24,
+      itemLength: 180,
+    })
     if (!subjectProfileId || !subjectProfileRevision) return null
     return {
       ...common,
@@ -206,6 +210,7 @@ const normalizeRecord = (raw, recordType, binding, packageIssuerId) => {
       subjectProfileRevision,
       status: trimLine(raw.status, 40).toLowerCase() || 'active',
       displayLabel: trimLine(raw.displayLabel, 120),
+      semanticConceptIds: semanticConceptIds || [],
     }
   }
 
@@ -214,8 +219,20 @@ const normalizeRecord = (raw, recordType, binding, packageIssuerId) => {
     const roleKey = trimLine(raw.roleKey, 120).toLowerCase()
     const scopes = normalizeStringArray(raw.scopes)
     const teamIds = normalizeStringArray(raw.teamIds, { itemLength: 180 })
+    const semanticConceptIds = normalizeStringArray(raw.semanticConceptIds, {
+      limit: 24,
+      itemLength: 180,
+    })
     if (!membershipId || !roleKey || !scopes || !teamIds) return null
-    return { ...common, membershipId, roleKey, ...labels, scopes, teamIds }
+    return {
+      ...common,
+      membershipId,
+      roleKey,
+      ...labels,
+      scopes,
+      teamIds,
+      semanticConceptIds: semanticConceptIds || [],
+    }
   }
 
   if (recordType === WORK_HUB_RECORD_TYPES.TEAM) {

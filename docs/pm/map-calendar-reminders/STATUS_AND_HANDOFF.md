@@ -1,12 +1,12 @@
 # Map Calendar Reminders Status And Handoff
 
-Updated: 2026-08-30
+Updated: 2026-08-31
 
 This file is the handoff page for Map, Calendar, and Reminders work.
 
 ## Mail And Work Hub Calendar Prefill And Shared Handoff Contract
 
-Status: `INTEGRATED_LOCAL / MAIL_AND_WORKPLACE_PERSISTED_IDEMPOTENT_VERTICALS / PRODUCTION_WORK_HUB_HANDOFF_DONE_2026-08-29 / EVT_WORK_3_CALENDAR_REPLACEMENT_DONE_2026-08-30 / EVT_WORK_4_EXECUTION_PROOF_DONE_2026-08-30 / EVT_CHRONICLE_1_DONE_2026-08-30 / CALENDAR_STORAGE_V4 / SCHEDULE_ORCHESTRATOR_V2 / AGENDA_JOURNEY_V2 / MAP_V5 / ACTIVITY_SESSION_V3 / CHRONICLE_V1 / SOURCE_CONFLICT_ACTIONS_NOT_STARTED`
+Status: `INTEGRATED_LOCAL / MAIL_AND_WORKPLACE_PERSISTED_IDEMPOTENT_VERTICALS / PRODUCTION_WORK_HUB_HANDOFF_DONE_2026-08-29 / EVT_WORK_3_CALENDAR_REPLACEMENT_DONE_2026-08-30 / EVT_WORK_4_EXECUTION_PROOF_DONE_2026-08-30 / EVT_CHRONICLE_1_DONE_2026-08-30 / WORLD_SEMANTIC_4_RESTRICTED_PLACE_ACCESS_DONE_2026-08-31 / CALENDAR_STORAGE_V4 / SCHEDULE_ORCHESTRATOR_V2 / AGENDA_JOURNEY_V2 / MAP_V5 / ACTIVITY_SESSION_V3 / CHRONICLE_V1 / SOURCE_CONFLICT_ACTIONS_NOT_STARTED`
 
 Mail's confirmed health-check fixture owns a structured appointment draft and passes only its stable mail record ID into Calendar. The validated draft contains a bilingual title, the local `2026-08-28 07:50-10:50` range, and the existing stable Map destination `real-seoul-v1 / seoul-national-university-hospital`; Calendar does not parse subject, body, displayed time, or displayed location prose. A bounded source resolver accepts the known Mail record and fails closed for unknown or forged IDs. Calendar opens its existing unified event editor with those values prefilled. Closing or cancelling the editor, using the backdrop, returning to Mail, or presenting an invalid ID creates no Calendar event, Agenda Journey, Map record, or source-side persistence. Only explicit Calendar Save creates the confirmed event.
 
@@ -21,6 +21,16 @@ Mail, production Work Hub, and the isolated Work Hub preview intentionally deriv
 Planning alignment accepted on 2026-08-26, the Work Hub foundation completed on 2026-08-29, and `EVT-WORK-3`, `EVT-WORK-4`, plus `EVT-CHRONICLE-1` completed on 2026-08-30. The world-neutral `organization.work_schedule_change.v1` family carries one authority-bound schedule change through native Work Hub decisions, explicit Calendar review/Save, near-term Agenda preparation, explicit Map departure and arrival, and explicit Activity Session start. Calendar continues to own confirmed time; Agenda Journey owns execution state; Map owns travel/arrival; Activity Session owns the timer; Chronicle owns only user-authored diary entries and a derived review projection. Generic Calendar source-revision/cancellation actions outside this production proof path remain open. NEXT remains external-opportunity-only and Messages/SMS waits for a concrete number/short-code use case. No automatic attendance/completion, AI recall, automatic diary writing, or downstream consequence chain is claimed.
 
 `EVT-WORK-4` final validation on 2026-08-30 passes the focused execution-proof/runtime/store set at 10 files / 56 tests, the backup workflow at 1 file / 8 tests, and the full Vitest suite at 352 files / 2725 tests. Full ESLint, the 725-module production build, governance at 2 files / 19 tests, `git diff --check`, and targeted desktop Chromium plus simulated Pixel 5 Playwright at 4/4 pass. Browser coverage proves explicit Calendar Save, one revision-deduplicated Agenda notification/deep link, explicit Map departure, owner-confirmed arrival evidence, explicit Activity start, reload recovery, retained return context, and zero horizontal overflow. The build retains only the existing chunk-size warning, and JSDOM continues to emit known non-failing media/canvas warnings. No physical-device or closed-page execution evidence is claimed.
+
+## World Semantic Restricted Place Entry
+
+Status: `WORLD-SEMANTIC-4 DONE 2026-08-31 / MAP_OWNER_FACT_AND_NATIVE_ENTRY / EVENT_INSTANCE_V2_DURABLE_SETTLEMENT`
+
+Map places may declare bounded `semanticConceptIds` without changing their canonical identity, coordinates, media, or ordinary entry behavior. When an annotated place is entered from valid nearby or journey-arrival evidence, Map resolves the current confirmed semantic version and currently valid Work Hub membership/role concepts through the generic restricted-place capability. Event Runtime creates or reuses one occurrence keyed by world semantic version, map pack, place, and position evidence; it emits one Map owner request, accepts one correlated Map validation fact, and stores one routine/reviewed terminal result. Only the stored granted result creates the existing place session.
+
+Missing or stale semantic rules, missing or stale identity evidence, and concept mismatch fail closed with ordinary-language feedback on the place card and a Settings return path. Unannotated places stay on the prior direct path. Randomness can make a valid check routine or reviewed but cannot manufacture membership, change concepts, reverse denial, or write Map truth. Refresh, reopen, repeated taps, and complete backup restore reuse the same event/fact/result; a later confirmed world version affects only new occurrences. Modern K-pop, magic academy, and Tide Contract City pass the same Store/runtime path with no type branch, provider call during play, default World Hub entry, or model-authored owner fact.
+
+Focused semantic resolver/Event Runtime/Map Store/UI coverage and dedicated desktop Chromium plus simulated Pixel 5 Playwright prove the three-world path, native feedback, one owner fact, no reroll after refresh, accessibility, and zero horizontal overflow. Final validation passes all 359 Vitest files / 2753 tests with two workers, full ESLint, the 733-module production build, governance at 2 files / 19 tests, `git diff --check`, and the dedicated Playwright flow at 2/2. JSDOM retains its known non-failing media/canvas notices, and the build retains the existing chunk-size warning. No physical-device or closed-page evidence is claimed.
 
 ## Chronicle Owner And Bounded Personal Continuity
 

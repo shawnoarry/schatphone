@@ -1,8 +1,8 @@
 # Work Hub Organization Status And Handoff
 
-Updated: 2026-08-30
+Updated: 2026-08-31
 
-Status: `EVT-WORK-1 DONE 2026-08-29 / EVT-WORK-2 DONE 2026-08-29 / EVT-WORK-3 DONE 2026-08-30 / EVT-WORK-4 DONE 2026-08-30`
+Status: `EVT-WORK-1 DONE 2026-08-29 / EVT-WORK-2 DONE 2026-08-29 / EVT-WORK-3 DONE 2026-08-30 / EVT-WORK-4 DONE 2026-08-30 / WORLD-SEMANTIC-4 DONE 2026-08-31`
 
 ## Accepted Scope
 
@@ -19,6 +19,7 @@ Status: `EVT-WORK-1 DONE 2026-08-29 / EVT-WORK-2 DONE 2026-08-29 / EVT-WORK-3 DO
 - replacement proposals leave the old Calendar commitment untouched before review, then update the same Calendar event ID after explicit Save while retaining prior source references;
 - complete backup/restore and legacy-missing-section recovery;
 - explicit preview mode for the old S1 fixture, never silent promotion.
+- bounded membership/role `semanticConceptIds` supplied only by an already-valid production authority package for reusable world-capability checks.
 
 ## Acceptance
 
@@ -29,6 +30,7 @@ Status: `EVT-WORK-1 DONE 2026-08-29 / EVT-WORK-2 DONE 2026-08-29 / EVT-WORK-3 DO
 5. Refresh restores authority, receipts, Calendar linkage, and return context.
 6. Ordinary users see organization/work language, not schema, hashes, compiler stages, or model internals.
 7. Desktop and simulated Pixel 5 cover empty, active, all decisions, Calendar Save, reload, and write failure.
+8. Restricted-place checks can consume valid membership/role concepts without granting or modifying Work Hub authority, and missing/stale/mismatched evidence fails closed.
 
 ## Completed Foundation
 
@@ -37,6 +39,7 @@ Status: `EVT-WORK-1 DONE 2026-08-29 / EVT-WORK-2 DONE 2026-08-29 / EVT-WORK-3 DO
 - `EVT-WORK-3` adds `organization.work_schedule_change.v1`, generic built-in Event Instance V2 template resolution, exact authority/source binding, one-time Work Hub owner requests, policy-controlled randomness, deadline/cooldown/cap audit, rollback-safe owner-fact progression, and Calendar replacement lineage.
 - `EVT-WORK-4` adds the production execution-proof gate after explicit Calendar Save. Exact Work Hub authority/runtime/receipt/owner-fact/time/source lineage becomes one durable proof carried through Schedule Orchestrator, Agenda Journey, explicit Map departure/arrival, and explicit Activity Session start. Changed or stale revisions fail closed instead of silently reusing an old execution. Manual and S1 preview schedules remain on the ordinary path.
 - The ordinary flow requires no model call. AI remains optional wording assistance and cannot grant membership, select a decision, confirm time, or mutate another owner.
+- `WORLD-SEMANTIC-4` keeps Work Hub read-only during place entry: valid membership/role concept evidence is projected into the generic resolver, while Map writes the access owner fact and Event Runtime settles the stable occurrence. Modern K-pop, magic academy, and Tide Contract City use the same contract path.
 
 ## Validation Evidence
 
@@ -44,14 +47,16 @@ Status: `EVT-WORK-1 DONE 2026-08-29 / EVT-WORK-2 DONE 2026-08-29 / EVT-WORK-3 DO
 - full Vitest: 352 files / 2725 tests passed;
 - production Work Hub and schedule-change Playwright: 4/4 across desktop Chromium and simulated Pixel 5;
 - full ESLint and the 725-module production build passed; governance passed 2 files / 19 tests and `git diff --check` passed. The build retains only the existing chunk-size warning, and JSDOM retains its known non-failing media/canvas notices.
+- `WORLD-SEMANTIC-4` final integration passes all 359 Vitest files / 2753 tests, full ESLint, the 733-module production build, governance 2 files / 19 tests, `git diff --check`, and 2/2 dedicated desktop Chromium plus simulated Pixel 5 Playwright.
 
 ## Recommended Next Slice
 
-Stop here for Work Hub. `EVT-CHRONICLE-1` is now complete in the Map/Calendar package under its own Diary Owner and read-only projection contract; Work Hub gained no Chronicle write authority. SMS, downstream consequences, public knowledge, relationship/Wallet effects, automatic attendance/completion, closed-page autonomy, and any next event lane remain later decisions.
+Stop here for Work Hub. `EVT-CHRONICLE-1` is complete in the Map/Calendar package under its own Diary Owner and read-only projection contract, and `WORLD-SEMANTIC-4` is complete without adding Work Hub write authority during entry. SMS, downstream consequences, public knowledge, relationship/Wallet effects, automatic attendance/completion, closed-page autonomy, and any later event lane remain later decisions.
 
 ## Do Not Do
 
 - Do not infer membership from Contacts prose, app names, locations, preview fixtures, or model output.
+- Do not treat a semantic concept ID as membership, role authority, or permission when the underlying authority package is absent, stale, revoked, expired, cross-world, or revision-mismatched.
 - Do not let AI grant authority, choose a user decision, or write Calendar truth.
 - Do not let Work Hub write Chronicle diary records or broaden the approved schedule-change coordination into SMS, Wallet, relationship, public-opinion, Mini Scene, CG, or autonomous execution consequences.
 - Do not rename the S1 preview storage key or migrate it into `store:work-hub`.

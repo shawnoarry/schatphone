@@ -410,6 +410,13 @@ const normalizeCatalogMapPlace = (raw, factionIds) => {
         .filter(Boolean),
     ),
   ].slice(0, 16)
+  const semanticConceptIds = [
+    ...new Set(
+      (Array.isArray(raw.semanticConceptIds) ? raw.semanticConceptIds : [])
+        .map((conceptId) => normalizeMapPackText(conceptId, '', 180))
+        .filter(Boolean),
+    ),
+  ].slice(0, 24)
   const categoryIcon = getMapPlaceCategoryVisual(category).icon
   const icon = normalizeMapPackText(raw.icon, '', 80)
   return {
@@ -423,6 +430,7 @@ const normalizeCatalogMapPlace = (raw, factionIds) => {
     icon: MAP_PLACE_ICON_PATTERN.test(icon) ? icon : categoryIcon,
     position,
     aliases,
+    semanticConceptIds,
   }
 }
 

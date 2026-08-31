@@ -1,6 +1,6 @@
 # Event Runtime And World Hub Implementation Workstreams / 事件运行时与世界中枢实施工作流
 
-Updated: 2026-08-29
+Updated: 2026-08-31
 
 ## 1. Workstream A: Event Engine Foundation
 
@@ -81,7 +81,9 @@ World Hub may link to a separately unlocked Cheats surface and share selected-ev
 - before a location-aware family is promoted, name its authored activation scope, discoverability, accepted position provenance, place-entry requirement, module permission, intensity behavior, and no-event path; do not overload EVE-1 stale-source availability with eligibility
 - ordinary place focus and event-pin selection remain distinct host paths; a place card has no permanent Event button and Map `Enter` remains a Map-owned transition
 - EVE-3 is complete: Event Notebook reads owner/runtime truth through stable refs, fails safely when linked hot records rotate, and retains exact notes without becoming a second event store, Reminders queue, Calendar plan list, or Cheats editing surface
-- arbitrary-world runtime work follows `WORLD_SEMANTIC_RUNTIME_FOUNDATION_PLAN_2026-08-29.md`: the provider-neutral proposal, separate model receipt, exact user-confirmation seam, runtime registry, and deterministic pure compiler boundary are frozen and fixture-tested; persisted activation remains gated by W2 identity and the atomic rules in `WORLD_SEMANTIC_CONFIRMATION_VERSIONING_ROLLBACK_CONTRACT_2026-08-29.md`; do not extend the engine through genre-name branches or treat the K-pop pack as the complete product
+- arbitrary-world runtime work follows `WORLD_SEMANTIC_RUNTIME_FOUNDATION_PLAN_2026-08-29.md`: the provider-neutral proposal, separate model receipt, exact user-confirmation seam, runtime registry, deterministic pure compiler, and W2 persisted activation/rollback boundary are landed; do not extend the engine through genre-name branches or treat the K-pop pack as the complete product
+- `WORLD-SEMANTIC-4` lands the first reusable runtime proof: exact Map place concepts and Work Hub membership/role concepts resolve through `runtime:access:restricted_place`, create one stable version-bound Event Instance V2, request one Map validation fact, and settle one durable routine/reviewed result; missing or stale evidence fails closed, unannotated places retain the ordinary path, and later semantic versions affect new occurrences only
+- keep AI outside the play loop: it cannot create access evidence, select the random result, write the owner fact, grant entry, reroll an occurrence, or turn World Hub into the ordinary preparation surface
 - EVE-4A is `TECHNICAL_SPIKE_COMPLETE / PRODUCT_ACCEPTANCE_WITHDRAWN`: remove the Food Delivery production host, order-card `Dispatch brief`, local expansion/acknowledgement, and manual query-that-manufactures-delay path
 - preserve exact one-to-one Food Delivery order/event/runtime-log lineage, reject injected/reused/mismatched links, and keep lineage linking inside the Food Delivery owner action
 - legitimate `rider_delay` or `eta_update` execution updates Food Delivery's canonical order ETA, appends the native order timeline, and may push the existing Chat dispatch notification; it is not a no-mutation projection

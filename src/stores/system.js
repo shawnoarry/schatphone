@@ -171,6 +171,7 @@ import {
   observeWorldSettingSource as observeWorldSettingSourceState,
   PRIMARY_PERSISTED_WORLD_ID,
   resolveActiveWorldSemanticBinding,
+  resolveActiveWorldSemanticVersion,
   resolveWorldSettingVersionStatus,
   rollbackWorldSemanticVersion as rollbackWorldSemanticVersionState,
 } from '../lib/world-setting-state'
@@ -5395,6 +5396,7 @@ export const useSystemStore = defineStore('system', () => {
 
   const getWorldSettingVersionStatus = () => resolveWorldSettingVersionStatus(user.worldSetting)
   const getActiveWorldSemanticBinding = () => resolveActiveWorldSemanticBinding(user.worldSetting)
+  const getActiveWorldSemanticVersion = () => resolveActiveWorldSemanticVersion(user.worldSetting)
 
   const replaceWorldSuiteInventory = (inventory = {}) => {
     user.worldSuiteInventory = normalizeWorldSuiteInventory(inventory)
@@ -5576,6 +5578,7 @@ export const useSystemStore = defineStore('system', () => {
     rollbackWorldSemanticVersion,
     getWorldSettingVersionStatus,
     getActiveWorldSemanticBinding,
+    getActiveWorldSemanticVersion,
     lockPhone,
     unlockPhone,
     saveNow,

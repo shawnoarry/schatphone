@@ -1,6 +1,6 @@
 # Work Hub Organization Implementation Workstreams
 
-Updated: 2026-08-30
+Updated: 2026-08-31
 
 ## WH-1 Contract And Authority
 
@@ -59,6 +59,14 @@ Updated: 2026-08-30
 - Activity Session V3 explicit start/completion evidence with the same execution revision;
 - manual and S1 preview schedules remain on the ordinary zero-proof path.
 
+## WH-8 World Semantic Evidence
+
+- normalize bounded `semanticConceptIds` on production membership and role records without changing the authority chain;
+- expose concept evidence only after exact world/profile/revision/issuer/expiry/revocation validation succeeds;
+- let the generic restricted-place resolver consume that read-only evidence while Map owns place/access/session truth and Event Runtime owns the occurrence and settlement;
+- keep missing, stale, cross-world, and mismatched evidence fail-closed;
+- never infer or upgrade production concept evidence from Contacts prose, preview fixtures, app labels, world genre, or model output.
+
 ## Deferred
 
-Chronicle, SMS, Wallet/relationship/public consequences, inferred attendance/completion, Mini Scene/CG, W3 switching, and closed-page autonomy remain separately gated.
+Chronicle is complete under its separate owner. SMS, Wallet/relationship/public consequences, inferred attendance/completion, Mini Scene/CG, W3 switching, closed-page autonomy, and any broader semantic authority automation remain separately gated.

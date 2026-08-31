@@ -617,6 +617,13 @@ export const resolveActiveWorldSemanticBinding = (state) => {
   })
 }
 
+export const resolveActiveWorldSemanticVersion = (state) => {
+  const current = normalizeWorldSettingState(state)
+  return current.semantic.versions.find(
+    (item) => item.versionId === current.semantic.activeVersionId,
+  ) || null
+}
+
 export const resolveWorldSettingVersionStatus = (state) => {
   const current = normalizeWorldSettingState(state)
   const active = current.semantic.versions.find(

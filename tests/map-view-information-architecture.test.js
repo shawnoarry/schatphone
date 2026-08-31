@@ -10,6 +10,8 @@ import { useMusicStore } from '../src/stores/music'
 import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
 import { SIMULATION_SURPRISE_MODE, useSimulationStore } from '../src/stores/simulation'
 import { useSystemStore } from '../src/stores/system'
+import { WORLD_SEMANTIC_ACCESS_RESULT } from '../src/lib/simulation/world-semantic-access-runtime'
+import { WORLD_SEMANTIC_ACCESS_EVENT_RESULT } from '../src/lib/simulation/world-semantic-access-event-templates'
 import { resetDialogServiceForTest, useDialog } from '../src/composables/useDialog'
 
 const DummyView = { template: '<div />' }
@@ -346,6 +348,45 @@ describe('MapView information architecture', () => {
       position: place.position,
     })
     expect(mapStore.placeSession).toMatchObject({ state: 'inside', placeId: place.placeId })
+  })
+
+  test('explains semantic access denial and reviewed success inside the existing place card', async () => {
+    const mapStore = useMapStore()
+    const place = mapStore.activeMapPlaces.find((item) => item.placeId === 'seoul-mbc-hq')
+    mapStore.setCurrentLocation({
+      label: place.nameEn,
+      detail: place.detailEn,
+      source: 'map_pack',
+      mapPackId: place.mapPackId,
+      placeId: place.placeId,
+      position: place.position,
+    })
+    wrapper.findComponent({ name: 'MapSceneCanvas' }).vm.$emit('select-pin', place)
+    await nextTick()
+
+    const enterPlace = vi.spyOn(mapStore, 'enterPlace').mockReturnValue({
+      ok: false,
+      code: WORLD_SEMANTIC_ACCESS_RESULT.ACTOR_EVIDENCE_MISSING,
+    })
+    await wrapper.get('[data-testid="map-place-enter"]').trigger('click')
+    await nextTick()
+    expect(wrapper.get('[data-testid="map-place-entry-notice"]').text()).toMatch(
+      /缺少可验证的身份|No verifiable identity/,
+    )
+
+    enterPlace.mockReturnValue({
+      ok: true,
+      code: WORLD_SEMANTIC_ACCESS_RESULT.GRANTED,
+      access: { applies: true },
+      accessEvent: {
+        resultCodes: [WORLD_SEMANTIC_ACCESS_EVENT_RESULT.GRANTED_REVIEWED],
+      },
+    })
+    await wrapper.get('[data-testid="map-place-enter"]').trigger('click')
+    await nextTick()
+    expect(wrapper.get('[data-testid="map-place-entry-notice"]').text()).toMatch(
+      /身份已复核|Identity reviewed/,
+    )
   })
 
   test('persists a blank map point as the role position and locks reselection during a journey', async () => {

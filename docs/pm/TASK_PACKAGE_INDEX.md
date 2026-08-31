@@ -1,6 +1,6 @@
 # SchatPhone Task Package Index
 
-Updated: 2026-08-30
+Updated: 2026-08-31
 
 This file is the PM-facing and handoff-facing index for all current task packages.
 
@@ -26,21 +26,21 @@ Current routing note:
 - roadmap 4.11 Map renderer, packs, places, pins, trips, and validation belong only to `map-calendar-reminders`; the functional group remains Map-only.
 - the accepted Calendar/Agenda Journey orchestration direction belongs primarily to `map-calendar-reminders` for Calendar, Agenda Journey, Activity Session, and schedule handoffs. Engage `event-runtime-and-world-hub` only for eligibility/randomness/review/log semantics, `module-architecture-governance` for the hidden Schedule Orchestrator and persistence Interfaces, and `visual-and-ia-governance` when the Calendar or Agenda Journey frontend slice is promoted. This direction does not change roadmap 4.11 Map ownership.
 - roadmap 4.13 Music belongs to `visual-and-ia-governance` for installed-app identity, Home/App Store entry, Now Playing, and mini-player acceptance, and to `module-architecture-governance` for provider/playback contracts, persistence, credentials, backup, and bounded Chat/Map Interfaces. Chat and Map packages are engaged only when an actual caller is separately promoted.
-- roadmap 4.14 cross-module Event Experience belongs primarily to `event-runtime-and-world-hub` for the Event Surface Projection, host registration, event review/notebook semantics, and World Hub/Cheats separation. Engage `map-calendar-reminders` only for EVE-2 Map anchor/card rendering and Map-owned interaction, `module-architecture-governance` only when shared persistence or Mini Scene Interfaces change, and a source package only when its event family is explicitly promoted.
+- roadmap 4.14 cross-module Event Experience belongs primarily to `event-runtime-and-world-hub` for Event Instance lifecycle/settlement/audit, the Event Surface Projection, host registration, event review/notebook semantics, and World Hub/Cheats separation. `WORLD-SEMANTIC-4` additionally engages `map-calendar-reminders` for place concepts, position evidence, owner facts, native feedback, and place-session creation; `work-hub-organization` supplies only currently valid membership/role concept evidence. Engage `module-architecture-governance` only when shared persistence or Mini Scene Interfaces change, and a source package only when its event family is explicitly promoted.
 - the landed Player Context V1 eligibility seam and the still-documentation-only world-evolution/information-propagation direction route first to `event-runtime-and-world-hub`; engage `contacts-relationship-system-v2` for the Contacts-owned Self Profile revision and stable identity meaning. A future Community/Media or Investigation owner must receive its own accepted product package before routes, Stores, posts, feeds, or clues are implemented.
 - roadmap 4.15 shared runtime TTS belongs primarily to `module-architecture-governance` for provider Adapters, Cloudflare Worker behavior, persistence, credentials, preview-media lifecycle, and future caller contracts. Engage `chat-and-chat-directory` for the current Settings entry and any later read-aloud/voice-message behavior; development-time ElevenLabs Skills remain tooling rather than runtime ownership.
 - roadmap 4.16 app shell previews belong to `visual-and-ia-governance` for S1 fixture shells, entry/IA, and visual identity acceptance. Engage `module-architecture-governance` only when a shell is promoted from S1 fixture preview to S2 owner implementation, and `event-runtime-and-world-hub` only when a shell is promoted to an S3 event chain; a future shell's canonical owner must receive its own accepted product package before production routes, Stores, or schemas are implemented.
-- production Work Hub organization authority, ordinary work, and owner-native decisions belong to `work-hub-organization`. The completed `EVT-WORK-3` schedule-change family additionally engages `event-runtime-and-world-hub` for eligibility/lifecycle/audit and `map-calendar-reminders` for explicit replacement review and Save. `EVT-WORK-4` execution proof remains separately gated.
+- production Work Hub organization authority, ordinary work, and owner-native decisions belong to `work-hub-organization`. The completed `EVT-WORK-3` schedule-change family engages `event-runtime-and-world-hub` for eligibility/lifecycle/audit and `map-calendar-reminders` for explicit replacement review and Save; completed `EVT-WORK-4` carries that exact revision through Agenda/Map/Activity execution. For completed `WORLD-SEMANTIC-4`, Work Hub exposes bounded read-only membership/role concepts but never grants access or writes Map truth.
 
 ## Current Alignment Check
 
-Checked against integrated baseline `98f1250` on 2026-08-28:
+Checked against integrated baseline `98f1250` and the pending `WORLD-SEMANTIC-4` integration on 2026-08-31:
 
 - all eight package quartets remain present and retain their own detailed milestones, validation, exclusions, and next-safe-slice records;
 - the Module Architecture handoff records `CMG-08` through `CMG-10` complete without creating another execution board;
 - the Commerce handoff header now covers its integrated 2026-08-24 checkout/support work;
 - Chat records the CMG-09 bounded prompt-consumer contract; Contacts retains its separate lifecycle and relationship-owner detail;
-- Event and Map/Calendar handoffs already carry the current integrated scoped state;
+- Event, Map/Calendar, and Work Hub handoffs carry the shared `WORLD-SEMANTIC-4` ownership split without creating a second roadmap;
 - uncommitted Visual/IA work remains outside integrated whole-project claims and is not flattened into this index.
 
 This check is routing metadata only. The package handoffs remain the detail owners.

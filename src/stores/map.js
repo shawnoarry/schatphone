@@ -109,12 +109,31 @@ import {
   normalizeOwnerActionRequestV1,
   normalizeOwnerFactV1,
 } from '../lib/simulation/commerce-interaction-contracts'
+import {
+  WORLD_SEMANTIC_ACCESS_RESULT,
+  createMapSemanticPlaceEvidence,
+  createWorkHubSemanticActorEvidence,
+  resolveWorldSemanticRestrictedPlaceAccess,
+} from '../lib/simulation/world-semantic-access-runtime'
+import {
+  createWorldSemanticAccessEventContext,
+  createWorldSemanticAccessEventInstanceId,
+  createWorldSemanticAccessOwnerFact,
+  isWorldSemanticAccessGrantedInstance,
+  worldSemanticAccessResultForInstance,
+} from '../lib/simulation/world-semantic-access-event-runtime'
+import {
+  WORLD_SEMANTIC_ACCESS_OWNER_ACTION_KEY,
+  WORLD_SEMANTIC_ACCESS_RANDOM_DECISION_KEY,
+  WORLD_SEMANTIC_ACCESS_EVENT_TEMPLATE_ID,
+} from '../lib/simulation/world-semantic-access-event-templates'
 import { resolveWorldContextFromSystemStore } from '../lib/simulation/world-context'
 import { useSystemApiReports } from '../composables/useSystemApiReports'
 import { useSystemNotifications } from '../composables/useSystemNotifications'
 import { useSimulationStore } from './simulation'
 import { useSystemStore } from './system'
 import { useBookStore } from './book'
+import { useWorkHubStore } from './workHub'
 
 const MAP_STORAGE_KEY = 'store:map'
 const MAP_STORAGE_VERSION = 5
@@ -1450,6 +1469,7 @@ export const useMapStore = defineStore('map', () => {
   const getSystemStore = () => useSystemStore()
   const getBookStore = () => useBookStore()
   const getSimulationStore = () => useSimulationStore()
+  const getWorkHubStore = () => useWorkHubStore()
   const getSystemApiReports = () => useSystemApiReports({ systemStore: getSystemStore() })
   const getSystemNotifications = () => useSystemNotifications({ systemStore: getSystemStore() })
   const customMapPacks = ref([])
@@ -1481,6 +1501,7 @@ export const useMapStore = defineStore('map', () => {
   let mapEventTextProviderRunnerOverride = null
   let journeyCheckpointEventEvaluationEnabled = false
   let journeyEventRandomValueOverride
+  let worldSemanticAccessRandomValueOverride
   let skipNextManagedMapPackWatchedWrite = false
   let storageInitializationPromise = Promise.resolve()
   const hasFinishedStorageHydration = ref(false)
@@ -3313,6 +3334,109 @@ export const useMapStore = defineStore('map', () => {
     })
   }
 
+  const resolveRestrictedPlaceAccess = (place) => {
+    if (!Array.isArray(place?.semanticConceptIds) || place.semanticConceptIds.length === 0) {
+      return {
+        ok: true,
+        applies: false,
+        allowed: false,
+        code: WORLD_SEMANTIC_ACCESS_RESULT.NOT_APPLICABLE,
+      }
+    }
+    const systemStore = getSystemStore()
+    const worldBinding = systemStore.getActiveWorldSemanticBinding()
+    return resolveWorldSemanticRestrictedPlaceAccess({
+      semanticVersion: systemStore.getActiveWorldSemanticVersion(),
+      worldBinding,
+      actorEvidence: createWorkHubSemanticActorEvidence({
+        authority: getWorkHubStore().authorityInspection,
+        worldBinding,
+      }),
+      placeEvidence: createMapSemanticPlaceEvidence({
+        place,
+        mapPack: activeMapPack.value,
+        worldBinding,
+      }),
+    })
+  }
+
+  const settleRestrictedPlaceAccess = ({ access, positionEvidenceAt, now }) => {
+    const simulationStore = getSimulationStore()
+    const instanceId = createWorldSemanticAccessEventInstanceId({
+      worldBinding: access.worldBinding,
+      placeEvidence: access.placeEvidenceRef,
+      positionEvidenceAt,
+    })
+    if (!instanceId) {
+      return { ok: false, code: 'semantic_access_event_identity_invalid', access }
+    }
+    const randomValues = worldSemanticAccessRandomValueOverride === undefined
+      ? {}
+      : { [WORLD_SEMANTIC_ACCESS_RANDOM_DECISION_KEY]: worldSemanticAccessRandomValueOverride }
+    const started = simulationStore.startEventInstanceV2({
+      id: instanceId,
+      templateId: WORLD_SEMANTIC_ACCESS_EVENT_TEMPLATE_ID,
+      contextRefs: createWorldSemanticAccessEventContext({ access, positionEvidenceAt }),
+      worldBinding: access.worldBinding,
+      randomValues,
+      now,
+    })
+    if (!started.ok || !started.instance) {
+      return {
+        ok: false,
+        code: started.reason || 'semantic_access_event_start_failed',
+        access,
+        accessEvent: started.instance || null,
+      }
+    }
+    if (started.instance.lifecycle !== 'active') {
+      const code = worldSemanticAccessResultForInstance(started.instance) || access.code
+      return {
+        ok: isWorldSemanticAccessGrantedInstance(started.instance),
+        code,
+        access,
+        accessEvent: started.instance,
+      }
+    }
+    const ownerRequest = started.instance.pendingOwnerRequests.find(
+      (request) =>
+        request.targetModule === 'map' &&
+        request.actionKey === WORLD_SEMANTIC_ACCESS_OWNER_ACTION_KEY &&
+        request.status === 'pending',
+    )
+    const ownerFact = createWorldSemanticAccessOwnerFact({
+      instance: started.instance,
+      ownerRequest,
+      access,
+      now,
+    })
+    if (!ownerFact) {
+      return {
+        ok: false,
+        code: 'semantic_access_owner_fact_invalid',
+        access,
+        accessEvent: started.instance,
+      }
+    }
+    const settled = simulationStore.recordOwnerFactAndAdvance(ownerFact, { randomValues, now })
+    if (!settled.ok || !settled.instance) {
+      return {
+        ok: false,
+        code: settled.reason || 'semantic_access_owner_settlement_failed',
+        access,
+        accessEvent: settled.instance || started.instance,
+      }
+    }
+    const code = worldSemanticAccessResultForInstance(settled.instance) || access.code
+    return {
+      ok: isWorldSemanticAccessGrantedInstance(settled.instance),
+      code,
+      access,
+      accessEvent: settled.instance,
+      ownerFact: settled.fact || ownerFact,
+    }
+  }
+
   const enterPlace = (placeId, { now = Date.now() } = {}) => {
     const place = findMapPlaceById(placeId)
     if (!place) return { ok: false, code: 'PLACE_SESSION_PLACE_MISSING' }
@@ -3348,6 +3472,28 @@ export const useMapStore = defineStore('map', () => {
         position: place.position,
         evidenceAt: now,
       })
+    }
+    const access = resolveRestrictedPlaceAccess(place)
+    if (access.code !== WORLD_SEMANTIC_ACCESS_RESULT.NOT_APPLICABLE) {
+      if (!access.applies) return { ok: false, code: access.code, access }
+      const accessResult = settleRestrictedPlaceAccess({
+        access,
+        positionEvidenceAt: currentLocation.value.positionEvidence?.evidenceAt || now,
+        now,
+      })
+      if (!accessResult.ok) return accessResult
+      const result = enterMapPlaceSession({
+        previousSession: placeSession.value,
+        currentLocation: currentLocation.value,
+        place,
+        worldPackId: activeWorldPackId.value,
+        mapPackVersion: activeMapPack.value.version || 1,
+        now,
+      })
+      if (result.ok) placeSession.value = result.session
+      return result.ok
+        ? { ...result, code: WORLD_SEMANTIC_ACCESS_RESULT.GRANTED, ...accessResult }
+        : result
     }
     const result = enterMapPlaceSession({
       previousSession: placeSession.value,
@@ -3639,6 +3785,10 @@ export const useMapStore = defineStore('map', () => {
 
   const setMapEventTextProviderRunnerForTesting = (runner) => {
     mapEventTextProviderRunnerOverride = typeof runner === 'function' ? runner : null
+  }
+
+  const setWorldSemanticAccessRandomValueForTesting = (value) => {
+    worldSemanticAccessRandomValueOverride = value === undefined ? undefined : Number(value)
   }
 
   const setTripEndpoint = (endpoint, detail) => {
@@ -4996,6 +5146,7 @@ export const useMapStore = defineStore('map', () => {
     mapEventTextProviderRunnerOverride = null
     journeyCheckpointEventEvaluationEnabled = false
     journeyEventRandomValueOverride = undefined
+    worldSemanticAccessRandomValueOverride = undefined
     runtimeNow.value = Date.now()
   }
 
@@ -5343,6 +5494,7 @@ export const useMapStore = defineStore('map', () => {
     resetTripRuntimeForTesting,
     setMapAiProviderRunnerForTesting,
     setMapEventTextProviderRunnerForTesting,
+    setWorldSemanticAccessRandomValueForTesting,
     setJourneyCheckpointEventEvaluationEnabled,
     setJourneyEventRandomValueForTesting,
     saveNow,

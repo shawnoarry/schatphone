@@ -1,6 +1,6 @@
 # Work Hub Organization Product Boundary
 
-Updated: 2026-08-30
+Updated: 2026-08-31
 
 ## Owner Truth
 
@@ -10,15 +10,19 @@ Work Hub is the canonical owner of work inside an organization. Its smallest aut
 
 Every actionable record binds to one world, organization, positive revision, issuer, validity window, and revocation state. The active user membership additionally binds to one Contacts profile ID and revision.
 
+Membership and role records may expose bounded semantic concept IDs only as evidence attached to that already-valid authority chain. A concept ID cannot create membership, repair stale authority, cross worlds, or substitute for issuer, revision, expiry, revocation, profile, and world checks.
+
 ## Collaboration
 
 - Contacts owns stable identity and bounded matching projections.
 - World Setting owns the active world and semantic revision.
 - Work Hub owns organization authority and work decisions.
 - Event Runtime owns schedule-change eligibility, deterministic policy/random gating, cooldown/cap accounting, one-time owner requests, deadlines, lifecycle, and audit for the approved event family.
+- For the restricted-place proof, Event Runtime owns the version-bound occurrence and settlement, Map owns the place/access fact/session, and Work Hub supplies read-only membership/role concept evidence from a currently valid authority package.
 - Calendar owns confirmed time.
 - Agenda Journey, Map, and Activity Session consume explicitly saved Calendar truth under their own contracts and carry the accepted execution revision without taking Work Hub or Calendar ownership.
 - AI may draft optional wording only. Code validates, persists, deduplicates, and determines reproducible state transitions.
+- AI cannot add semantic concept evidence to a production membership/role, grant place access, or write the Map owner fact.
 
 For `organization.work_schedule_change.v1`, an organization-issued replacement proposal remains Work Hub truth. Accepting it creates a durable Work Hub receipt but does not alter Calendar. The old Calendar commitment remains unchanged until the user explicitly reviews and saves the replacement; Calendar then updates the same event ID and retains prior source lineage. Only the exact accepted authority/runtime/receipt/owner-fact/time/source chain can create a production execution proof. Agenda Journey materializes it, Map requires explicit departure and owns arrival, and Activity Session requires explicit start. A stale revision, notification, elapsed time, or model output cannot prove attendance or completion.
 

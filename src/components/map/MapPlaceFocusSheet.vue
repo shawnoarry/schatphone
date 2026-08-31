@@ -27,6 +27,7 @@ const props = defineProps({
     default: 'unavailable',
     validator: (value) => ['unavailable', 'enter', 'leave'].includes(value),
   },
+  entryFeedback: { type: String, default: '' },
   eventInvitation: { type: Object, default: null },
   eventPreviewAvailable: { type: Boolean, default: false },
   eventPreviewCompleted: { type: Boolean, default: false },
@@ -204,6 +205,7 @@ const entryLabel = computed(() => (
 const entryIcon = computed(() => (
   props.entryAction === 'leave' ? 'fas fa-arrow-right-from-bracket' : 'fas fa-door-open'
 ))
+const displayedEntryNotice = computed(() => entryNotice.value || props.entryFeedback)
 
 const moveDetailMedia = (direction) => {
   const count = detailGallery.value.length
@@ -623,8 +625,8 @@ onBeforeUnmount(() => {
             <i :class="entryIcon" aria-hidden="true"></i>
             <span class="map-place-action-label">{{ entryLabel }}</span>
           </button>
-          <p v-if="entryNotice" class="map-place-entry-notice" role="status" data-testid="map-place-entry-notice">
-            {{ entryNotice }}
+          <p v-if="displayedEntryNotice" class="map-place-entry-notice" role="status" data-testid="map-place-entry-notice">
+            {{ displayedEntryNotice }}
           </p>
         </div>
       </div>

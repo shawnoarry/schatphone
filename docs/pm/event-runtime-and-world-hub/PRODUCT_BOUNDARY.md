@@ -1,6 +1,6 @@
 # Event Runtime Product Boundary / 事件运行时语义边界
 
-Updated: 2026-08-29
+Updated: 2026-08-31
 
 ## 1. Core Rule
 
@@ -9,6 +9,8 @@ The runtime lane coordinates cross-module causal chains; it is not a replacement
 An event chain may begin in one Module, be evaluated and audited by Event Runtime, write canonical truth through another owner's Adapter, and continue through later owner-native records. A Module can participate in that chain without registering an Event Surface. Messages, order state, calls, posts, information feeds, journeys, Map encounters, and later scene presentations are owner-native forms; an Event Surface is only one optional Presentation Adapter when the host interaction has been separately accepted.
 
 Role continuity is the primary product consumer of cross-module context, not Event Runtime itself. Event Runtime records event causality and provenance and may expose a bounded, role-scoped memory candidate after an owner-confirmed result. It never writes Chat memory, role memory, or relationship truth directly. Relationship Runtime decides whether a candidate becomes durable role memory. Public world evolution is a separate world-scoped knowledge projection; public knowledge may be available to same-world roles when relevant, but it is not copied into every role memory or injected into every Chat prompt.
+
+The first arbitrary-world runtime proof is deliberately narrower than a genre pack. A confirmed semantic version may connect Map-owned place concepts to Work Hub-owned membership/role concepts through a generic runtime capability. Event Runtime owns the stable version-bound Event Instance V2, one-time random settlement, lifecycle, and audit. Map owns place identity, current position evidence, the access-validation owner fact, and the existing place session. Work Hub owns organization membership and role evidence. The model owns none of those facts and is not called during entry. A later semantic version applies only to newly created event identities; it never rerolls or reinterprets an existing occurrence.
 
 ## 2. Ownership Split
 
@@ -24,6 +26,7 @@ Owns:
 - adapter orchestration
 - Event Surface Projection normalization and registered-host capability rules
 - reusable event-template eligibility and normalized Event Instance lifecycle/provenance once separately implemented
+- version-bound restricted-place access lifecycle and one-time settlement after exact owner evidence is supplied
 - optional event-text materialization policy and validation, while local variants remain the required fallback
 - generated social-event eligibility/review/audit for role-initiated greetings, refusal, block, restore, and unblock proposals
 - future bounded player-context eligibility, world-arc progression references, and information-publication requests only after their separate Interfaces and owners are accepted
@@ -37,6 +40,7 @@ Does not own:
 - applied Chat channel state after a social event is confirmed
 - Contacts Self Profile values, arbitrary dynamic player/world state, owner-confirmed world facts, future Community/Media publication bodies, or investigation/clue records
 - role memory or a universal role-awareness graph; event participants and public-knowledge consumers are references supplied to the relevant Owner or projection
+- Map place truth, Work Hub membership/role truth, access owner facts, or authority to infer those records from model output
 
 ### Relationship Runtime / 关系运行时
 

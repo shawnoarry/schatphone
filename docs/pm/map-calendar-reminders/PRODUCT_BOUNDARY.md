@@ -1,6 +1,6 @@
 # Map Calendar Reminders Product Boundary
 
-Updated: 2026-08-28
+Updated: 2026-08-31
 
 This file defines ownership boundaries for Map, Calendar, Agenda Journey, Activity Session, Reminders, and Phone-like callback support.
 
@@ -22,6 +22,7 @@ Map owns:
 - place-media selection, authenticity labeling, alt text, detail-sheet placement, and source/license attribution as a projection keyed by canonical Map place ID
 - Event Surface Projection anchor validation, pin/card placement, clustering/stacking, selection, explicit expansion, and return context for the single approved Map host
 - current-position provenance, explicit place sessions, Calendar departure estimates, and Map-owned `sourceCalendarEventId` journey lineage
+- authored place `semanticConceptIds`, exact place-version evidence, restricted-access owner facts, user-facing access feedback, and final creation of the existing place session after a granted result
 
 Map does not own:
 
@@ -38,10 +39,13 @@ Map does not own:
 - Gallery asset bytes, image-generation credentials, or temporary generated candidates
 - third-party copyright ownership, unreviewed source candidates, or authority to treat a photo as coordinate/place truth
 - Music credentials, provider endpoints, audio URLs, local media IDs, playable-track resolution, queue/radio construction, audio runtime, or global floating-player ownership
+- Work Hub membership/role authority, confirmed world semantic versions, Event Runtime settlement, or any ability to infer access from model output
 
 Map may expose an immutable World Suite inspection projection over its own pack metadata and bounded cross-owner references, but this does not make World Suite a Map, Gallery, Event Runtime, or Chat owner. The projection may classify built-in, user custom, and explicitly Catalog-managed native identity; report active, historical, Gallery, capacity, and user-modification evidence; and project only stable reference IDs from persisted Event records and Chat location cards. It cannot copy chat/event bodies, activate a pack, bind a world, relocate the role, alter a place or Journey, or delete a Gallery asset. Catalog provenance/authored-place round-trip, structured Map write receipts, Gallery deletion/replacement hard-reference protection, current/historical Event/Chat inspection, rollback-safe native mutations, and the resolver-backed Owner Adapter are implemented. The Owner Adapter resolves content outside the manifest, accepts only trusted normalized canvas packs, consumes a pre-existing Gallery asset, preserves topology unless an explicit migration exists, and never crosses into activation or Gallery mutation. It remains unavailable to product callers until real Catalog and registry composition is separately registered.
 
 Map may later request a Mini Scene from a confirmed trip/location event using canonical Map facts. Its per-module popup mode remains a user setting, and any interaction that requests a route/location change returns to Map validation.
+
+Restricted-place access is a separate owner-native entry chain rather than another generic card. Map owns the place annotation, position evidence, one correlated access-validation owner fact, visible feedback, and place-session creation. Work Hub supplies read-only concepts only from a currently valid authority package. World Setting supplies the exact confirmed semantic version. Event Runtime owns the stable event identity and one-time routine/reviewed settlement. A missing or stale dependency fails closed; an unannotated place remains ordinary. Repeated entry and restore reuse the same world-version/map/place/position occurrence, and later semantic versions affect only newly created occurrences.
 
 Everyday place use does not mutate coordinates by dragging. Map Settings owns new-place creation, edit/delete management, category assignment, and explicit arbitrary-point coordinate creation/reselection for player pins; the everyday Map browses, filters, controls visibility, selects destinations, and links to that manager without hosting a second creation form. Map-pack places remain versioned read-only content. Address or description text is display/search metadata and never geocodes or places a marker. A canonical coordinate is required for rendered pins: geographic packs store provider-neutral latitude/longitude, while fictional/custom packs store normalized canvas coordinates. Coordinate creation/reselection is an exclusive interaction mode: saved markers become pointer-transparent until the new coordinate is accepted or cancelled, and label, description, category, and existing coordinate drafts remain editor-owned throughout the round trip. Seoul V1's curated real-place catalog is a dated local snapshot with stable Map IDs and provider-neutral coordinates, not a live POI mirror. `MapSceneCanvas` is the renderer seam: OpenFreeMap + MapLibre renders geographic packs, while `LocalMapCanvas` renders fictional/custom packs and the geographic fallback. External style, network, or WebGL startup failure before the first ready state cannot mutate saved place, trip, world-binding, or coordinate truth, and local interactions remain available through the fallback. The renderer cannot load POI, public-transit, or route services or make provider identifiers canonical Map identity. The old `/map/labs/kakao-compare` path is compatibility-only and redirects to `/map`.
 
