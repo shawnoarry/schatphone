@@ -56,12 +56,10 @@ async function fixturePublishCliRepo() {
     `${JSON.stringify(createEmptyAssetRegistry(), null, 2)}\n`,
   )
   runFixtureGit(root, ['init'])
+  runFixtureGit(root, ['config', 'user.name', 'SchatPhone Test'])
+  runFixtureGit(root, ['config', 'user.email', 'test@schatphone.invalid'])
   runFixtureGit(root, ['add', '.gitignore', 'config/project-assets.json'])
-  runFixtureGit(root, [
-    '-c', 'user.name=SchatPhone Test',
-    '-c', 'user.email=test@schatphone.invalid',
-    'commit', '-m', 'fixture baseline',
-  ])
+  runFixtureGit(root, ['commit', '-m', 'fixture baseline'])
   return root
 }
 
