@@ -26,6 +26,22 @@ const evidenceDir = fileURLToPath(
   new URL('../output/e2e/work-schedule-execution/', import.meta.url),
 )
 
+const formatDateTimeInputInBrowser = (page, timestamp) => page.evaluate((value) => {
+  const date = new Date(value)
+  const pad = (part) => String(part).padStart(2, '0')
+  return [
+    date.getFullYear(),
+    '-',
+    pad(date.getMonth() + 1),
+    '-',
+    pad(date.getDate()),
+    'T',
+    pad(date.getHours()),
+    ':',
+    pad(date.getMinutes()),
+  ].join('')
+}, timestamp)
+
 const createActiveWorldSetting = async () => {
   const worldId = 'world_work_hub_e2e'
   const overview = {
@@ -307,7 +323,9 @@ test('schedule change event continues through notification, Map arrival, and exp
   await waitForAppRouteReady(page, '/calendar')
   await expect(page.getByTestId('calendar-source-handoff')).toContainText('来源有更新')
   await expect(page.getByTestId('calendar-editor-title-zh')).toHaveValue('本周协作会时间变更')
-  await expect(page.getByTestId('calendar-editor-starts-at')).toHaveValue('2026-09-01T17:00')
+  const changedStartsAt = STARTS_AT + 2 * 60 * 60 * 1000
+  const changedStartsAtInput = await formatDateTimeInputInBrowser(page, changedStartsAt)
+  await expect(page.getByTestId('calendar-editor-starts-at')).toHaveValue(changedStartsAtInput)
   await page.getByTestId('calendar-editor-save').click()
   await expect(page.getByTestId('calendar-source-handoff')).toContainText('已关联日程')
 
@@ -318,7 +336,7 @@ test('schedule change event continues through notification, Map arrival, and exp
   expect(calendarEvents).toHaveLength(1)
   expect(calendarEvents[0]).toMatchObject({
     id: originalCalendarEvent.id,
-    startsAt: STARTS_AT + 2 * 60 * 60 * 1000,
+    startsAt: changedStartsAt,
     sourceRef: {
       sourceOwner: 'workplace',
       sourceRecordId: 'proposal_weekly_sync_change_4',

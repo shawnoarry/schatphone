@@ -16,14 +16,13 @@ const seedCalendar = async (page, theme) => {
     ({ currentTheme, calendarEventId, eventTitle }) => {
       const now = Date.now()
       const startsAt = now + 2 * 60 * 60_000
-      const tomorrow = new Date(now)
-      tomorrow.setHours(0, 0, 0, 0)
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      const multiDayStartsAt = tomorrow.getTime()
+      const today = new Date(now)
+      today.setHours(0, 0, 0, 0)
+      const multiDayStartsAt = today.getTime()
       const multiDayEndsAt = new Date(
-        tomorrow.getFullYear(),
-        tomorrow.getMonth(),
-        tomorrow.getDate() + 3,
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate() + 3,
       ).getTime()
       window.localStorage.setItem(
         'schatphone:store:system',

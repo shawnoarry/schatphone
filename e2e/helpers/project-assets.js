@@ -86,8 +86,9 @@ export const fetchProjectAsset = async (
           return result
         }
 
-        if (!isRetryableStatus(response.status()) || attempt === attempts) return result
+        if (!isRetryableStatus(response.status())) return result
         lastError = new Error(`HTTP ${response.status()}`)
+        if (attempt === attempts) break
       } catch (error) {
         lastError = error
         if (attempt === attempts) break
@@ -133,17 +134,14 @@ export const prewarmRequiredProjectAssets = async (page, options = {}) => {
   return prewarmProjectAssets(page.request, urls, options)
 }
 
-export const installProjectAssetRoute = async (
-  page,
-  { attempts = DEFAULT_ATTEMPTS, timeout = DEFAULT_TIMEOUT_MS } = {},
-) => {
+export const installProjectAssetRoute = async (page) => {
   await page.route(`${PROJECT_ASSET_PREFIX}**`, async (route) => {
     const url = route.request().url()
-    try {
-      const result = await fetchProjectAsset(page.request, url, { attempts, timeout })
-      await route.fulfill(result)
-    } catch {
-      await route.abort('failed')
+    const cached = assetCache.get(url)
+    if (!cached) {
+      await route.continue()
+      return
     }
+    await route.fulfill(cached)
   })
 }
