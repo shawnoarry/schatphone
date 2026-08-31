@@ -1,4 +1,10 @@
 import { expect, test } from '@playwright/test'
+import { MAP_PLACE_CATEGORY_GROUPS } from '../src/lib/map-place-categories.js'
+import {
+  calculateMapDistanceKm,
+  DEFAULT_MAP_PACK_ID,
+  getMapPackById,
+} from '../src/lib/map-packs.js'
 import { projectUiAssetUrl } from '../src/lib/project-assets.js'
 import {
   navigateInsideUnlockedApp,
@@ -7,6 +13,27 @@ import {
 
 const OPENFREEMAP_HOST = 'tiles.openfreemap.org'
 const CUSTOM_MAP_FIXTURE_URL = projectUiAssetUrl('apps/map/seoul-street-map-v1.webp')
+const MAP_PLACE_CATEGORY_GROUP_COUNT = MAP_PLACE_CATEGORY_GROUPS.length
+const MAP_PLACE_ICON_TYPE_COUNT = MAP_PLACE_CATEGORY_GROUPS.reduce(
+  (count, group) => count + group.iconTypes.length,
+  0,
+)
+const getExpectedPackDistanceKm = (packId, fromPlaceId, toPlaceId) => {
+  const pack = getMapPackById(packId)
+  const fromPlace = pack.places.find((place) => place.id === fromPlaceId)
+  const toPlace = pack.places.find((place) => place.id === toPlaceId)
+  const measuredDistanceKm = calculateMapDistanceKm(pack, fromPlace?.position, toPlace?.position)
+
+  if (!Number.isFinite(measuredDistanceKm)) {
+    throw new Error(`Cannot measure ${fromPlaceId} -> ${toPlaceId} in map pack ${packId}`)
+  }
+  return Math.round(measuredDistanceKm * 1000) / 1000
+}
+const GANGNAM_TO_SAMSUNG_DISTANCE_KM = getExpectedPackDistanceKm(
+  DEFAULT_MAP_PACK_ID,
+  'seoul-gangnam-station',
+  'seoul-samsung-town',
+)
 const DETERMINISTIC_STYLE = {
   version: 8,
   name: 'SchatPhone deterministic map style',
@@ -73,6 +100,53 @@ const clickMapLibreCanvas = async (scope, xRatio, yRatio) => {
     force: true,
     position: { x: bounds.width * xRatio, y: bounds.height * yRatio },
   })
+}
+
+const clickMapLibrePlacementPoint = async (scope) => {
+  const canvas = scope.locator('.maplibregl-canvas')
+  await expect(canvas).toBeVisible()
+  const position = await canvas.evaluate((element) => {
+    const bounds = element.getBoundingClientRect()
+    const candidates = [0.45, 0.55, 0.35, 0.65].flatMap((yRatio) =>
+      [0.85, 0.75, 0.65, 0.55, 0.45, 0.35, 0.25, 0.15].map((xRatio) => [xRatio, yRatio]),
+    )
+
+    for (const [xRatio, yRatio] of candidates) {
+      const x = bounds.width * xRatio
+      const y = bounds.height * yRatio
+      const hit = document.elementFromPoint(bounds.left + x, bounds.top + y)
+      if (!(hit instanceof Element)) continue
+      if (hit.closest('.maplibregl-marker, .maplibregl-ctrl')) continue
+      if (hit === element || element.parentElement?.contains(hit)) return { x, y }
+    }
+    return null
+  })
+
+  expect(position).toBeTruthy()
+  await canvas.click({ force: true, position })
+}
+
+const clickLeafletPlacementPoint = async (canvas) => {
+  await expect(canvas).toBeVisible()
+  const position = await canvas.evaluate((element) => {
+    const bounds = element.getBoundingClientRect()
+    const candidates = [0.45, 0.55, 0.35, 0.65].flatMap((yRatio) =>
+      [0.85, 0.75, 0.65, 0.55, 0.45, 0.35, 0.25, 0.15].map((xRatio) => [xRatio, yRatio]),
+    )
+
+    for (const [xRatio, yRatio] of candidates) {
+      const x = bounds.width * xRatio
+      const y = bounds.height * yRatio
+      const hit = document.elementFromPoint(bounds.left + x, bounds.top + y)
+      if (!(hit instanceof Element) || (hit !== element && !element.contains(hit))) continue
+      if (hit.closest('.leaflet-marker-icon, .leaflet-control')) continue
+      return { x, y }
+    }
+    return null
+  })
+
+  expect(position).toBeTruthy()
+  await canvas.click({ force: true, position })
 }
 
 test.describe('world-bound narrative maps', () => {
@@ -148,7 +222,9 @@ test.describe('world-bound narrative maps', () => {
     expect(rolePositionOption.label).toMatch(/角色位置|Role position/)
     await tripFromPicker.selectOption({ label: '江南站' })
     await page.getByTestId('map-trip-to-picker').selectOption({ label: '三星城' })
-    await expect(page.getByTestId('map-trip-estimate')).toContainText('0.3 km')
+    await expect(page.getByTestId('map-trip-estimate')).toContainText(
+      `${GANGNAM_TO_SAMSUNG_DISTANCE_KM} km`,
+    )
     await page
       .getByTestId('map-secondary-drawer')
       .getByRole('button', { name: /Close|关闭/ })
@@ -159,7 +235,7 @@ test.describe('world-bound narrative maps', () => {
 
     await page.getByTestId('map-set-current-location').click()
     await expect(page.getByTestId('map-role-position-mode')).toContainText(
-      /Tap any blank map point|点击地图任意空白位置/,
+      /Tap any blank map point|点击地图(?:任意)?空白(?:处|位置)/,
     )
     await clickMapLibreCanvas(mapCanvas, 0.54, 0.58)
     await expect(page.getByTestId('map-role-position-feedback')).toContainText(
@@ -313,8 +389,12 @@ test.describe('world-bound narrative maps', () => {
 
     await page.getByTestId('map-pin-create').click()
     const creator = page.getByTestId('map-pin-editor')
-    await expect(creator.locator('[data-testid^="map-pin-icon-group-"]')).toHaveCount(14)
-    await expect(creator.locator('[data-testid^="map-pin-icon-type-"]')).toHaveCount(31)
+    await expect(creator.locator('[data-testid^="map-pin-icon-group-"]')).toHaveCount(
+      MAP_PLACE_CATEGORY_GROUP_COUNT,
+    )
+    await expect(creator.locator('[data-testid^="map-pin-icon-type-"]')).toHaveCount(
+      MAP_PLACE_ICON_TYPE_COUNT,
+    )
     await creator.getByTestId('map-pin-name').fill('Skyline residence')
     await creator.getByTestId('map-pin-detail').fill('Seongdong residential tower')
     await creator.getByTestId('map-pin-icon-type-residence_luxury').click()
@@ -327,7 +407,7 @@ test.describe('world-bound narrative maps', () => {
     })
     await creator.getByTestId('map-pin-reselect-coordinate').click()
     await expect(page.getByTestId('map-pin-coordinate-mode')).toBeVisible()
-    await clickMapLibreCanvas(page.getByTestId('map-pin-management-canvas'), 0.72, 0.43)
+    await clickMapLibrePlacementPoint(page.getByTestId('map-pin-management-canvas'))
     await expect(creator).toBeVisible()
     await creator.getByTestId('map-pin-save').click()
     await expect(page.getByTestId('map-user-pin-list')).toContainText('Skyline residence')
@@ -562,12 +642,7 @@ test.describe('world-bound narrative maps', () => {
     const localCanvas = page
       .getByTestId('map-pin-management-canvas')
       .getByTestId('map-scene-leaflet')
-    const bounds = await localCanvas.boundingBox()
-    expect(bounds).toBeTruthy()
-    await localCanvas.click({
-      force: true,
-      position: { x: bounds.width * 0.63, y: bounds.height * 0.47 },
-    })
+    await clickLeafletPlacementPoint(localCanvas)
     await expect(page.getByTestId('map-pin-editor')).toBeVisible()
     await page.getByTestId('map-pin-save').click()
     await expect(page.getByTestId('map-user-pin-list')).toContainText('Offline studio')
@@ -674,8 +749,12 @@ test.describe('world-bound narrative maps', () => {
     await page.getByTestId('map-pin-category-guide-trigger').click()
     const categoryGuide = page.getByTestId('map-pin-category-guide')
     await expect(categoryGuide).toBeVisible()
-    await expect(categoryGuide.locator('[data-testid^="map-pin-category-guide-group-"]')).toHaveCount(14)
-    await expect(categoryGuide.locator('[data-testid^="map-pin-category-guide-icon-"]')).toHaveCount(31)
+    await expect(
+      categoryGuide.locator('[data-testid^="map-pin-category-guide-group-"]'),
+    ).toHaveCount(MAP_PLACE_CATEGORY_GROUP_COUNT)
+    await expect(
+      categoryGuide.locator('[data-testid^="map-pin-category-guide-icon-"]'),
+    ).toHaveCount(MAP_PLACE_ICON_TYPE_COUNT)
     await page
       .getByTestId('map-pin-category-guide')
       .getByRole('button', { name: /Close|关闭/ })
@@ -685,7 +764,7 @@ test.describe('world-bound narrative maps', () => {
     await page.getByTestId('map-pin-name').fill('Seoul home')
     await page.getByTestId('map-pin-reselect-coordinate').click()
     await expect(page.getByTestId('map-pin-coordinate-mode')).toBeVisible()
-    await clickMapLibreCanvas(page.getByTestId('map-pin-management-canvas'), 0.58, 0.46)
+    await clickMapLibrePlacementPoint(page.getByTestId('map-pin-management-canvas'))
     await expect(page.getByTestId('map-pin-editor')).toBeVisible()
     await page.getByTestId('map-pin-save').click()
     await expect(page.getByTestId('map-user-pin-1')).toContainText('Seoul home')

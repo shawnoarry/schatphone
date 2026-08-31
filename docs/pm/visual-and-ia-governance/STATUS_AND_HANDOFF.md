@@ -1,6 +1,6 @@
 # Visual And IA Governance Status And Handoff
 
-Updated: 2026-08-29
+Updated: 2026-08-31
 
 This file is the handoff page for visual hierarchy, information architecture, and rebuild-vs-polish decisions.
 
@@ -19,6 +19,8 @@ Status: `PARTIAL_DONE`
 2026-08-17 hosted-product-proof asset hardening: the Playwright evidence path now retrieves real project CDN bytes with bounded timeout/retry, completed-response caching, request-context-scoped in-flight de-duplication, settle-before-fail prewarm batches, and fail-closed route fulfillment. Food Delivery, Shopping, and Map proof specs use explicit approved packs where assets are mounted after interaction; lazy campaign media is scrolled into view before visual assertions. The scoped 34-test desktop + simulated Pixel 5 Chromium focus set passes with both two-worker and default four-worker execution. This remains local/simulated evidence only: hosted deployment, installed-PWA/relaunch, and physical-device acceptance remain separate release gates; no hosted or true-device claim is made here.
 
 2026-08-28 complete-backup evidence refresh: the Settings sensitive-backup Playwright path now verifies the current schema v5 package, Contacts lifecycle schema v1, Mini Scene schema v2, Chat identity restore/reopen, and full current-Store rollback after an interrupted restore across desktop Chromium and simulated Pixel 5. This remains local browser and emulated-viewport evidence only; installed-PWA/relaunch and physical-device backup proof remain open release gates.
+
+2026-08-31 hosted browser/PWA proof automation: commit `38dc329` adds an exact-commit release marker plus a separate post-Pages Playwright workflow. The focused journey keeps all user actions in the ordinary product surface: Settings exports a complete backup, a blank browser container selects that file for restore, and the restored owner identity/credential state plus completed recovery journal survive reopen. A separate PWA journey verifies `/schatphone/`, manifest metadata/icons, Service Worker control/cache, offline reload, and a second offline page across desktop Chromium and simulated Pixel 5. Local static-preview acceptance passes 4/4. Playwright's expected `in-incognito` installability result is recorded as an automation boundary, so this does not claim an OS-installed PWA, platform file-picker ergonomics, or a physical-device matrix.
 
 What is already landed:
 
@@ -198,9 +200,9 @@ Still incomplete:
 
 ## 2. Recommended Next Slice
 
-The first successful Chat activation loop, explicit custom role -> Chat journey, ordinary Shopping consequence, Wallet quote detail, configurable multi-screen Home release curation, and release-local complete v3 backup/recovery boundary are complete. Vercel/Cloudflare root infrastructure is deployed, and the restricted dynamic-relay UI/code is locally validated but still unpushed. No additional page-local visual slice is active while deployed relay, PWA, and true-device product proof remain the next P1 release gate.
+The first successful Chat activation loop, explicit custom role -> Chat journey, ordinary Shopping consequence, Wallet quote detail, configurable multi-screen Home release curation, release-local complete backup/recovery, and the automated hosted-browser PWA/offline/backup proof are implemented. No additional page-local visual slice is active while exact remote confirmation, OS-installed PWA behavior, external protection policy, and named true-device product proof remain the next P1 release gate.
 
-1. preserve the curated multi-screen Home defaults and page-layout independence while proving deployed PWA/install/relaunch behavior, hosted-provider Chat, and named true-device backup recovery;
+1. preserve the curated multi-screen Home defaults and page-layout independence while using the automated hosted-browser proof as the baseline for OS install/relaunch and named true-device backup recovery;
 2. fold World Pack, Chat, and Home touch/safe-area checks into the named true-device release matrix rather than treating another archetype as progress;
 3. fix only observed release-surface problems; do not refill Home merely because a module exists;
 4. defer Gallery Photos-first, wide-viewport shell redesign, app-by-app visual consistency, and Mini Scene Presenter work until the roadmap 4.9 gates are complete.

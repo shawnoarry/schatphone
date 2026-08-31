@@ -1,14 +1,14 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-08-29
+Updated: 2026-08-31
 
-Integrated alignment baseline: `98f1250`.
+Integrated alignment baseline: `38dc329`.
 
 This is the current handoff for architecture cleanup, state ownership, persistence, security, and release-quality work.
 
 ## 1. Current Status
 
-Status: `CMG_SEQUENCE_DONE / CMG-00 THROUGH CMG-10 DONE 2026-08-28 / WORLD_SETTING_W2_DONE 2026-08-29`
+Status: `CMG_SEQUENCE_DONE / WORLD_SETTING_W2_DONE / HOSTED_PRODUCT_PROOF_AUTOMATION_IMPLEMENTED 2026-08-31`
 
 Roadmap owner: 4.5 Architecture, Security, And Documentation Maintenance.
 
@@ -17,6 +17,7 @@ SchatPhone's domain architecture is sound enough to preserve. The current proble
 Current active architecture slice:
 
 - ordinary browsers and installable PWAs remain complete first-class clients;
+- `HOSTED PRODUCT PROOF AUTOMATION IMPLEMENTED 2026-08-31` at `38dc329`: every GitHub build emits a small exact-commit `release.json`; a successful Pages deployment triggers an independent credential-free Playwright workflow against the public origin; desktop Chromium and simulated Pixel 5 verify `/schatphone/` base resolution, manifest and icon metadata, Service Worker scope/control/cache, controlled offline reload/new-page reopen, and complete backup export into a blank isolated container followed by verified restore and reopen. The same flow deliberately treats incognito installability as an automation-environment limitation, not OS-installed PWA evidence;
 - one isolated browser/Web App storage container owns one current save; different isolated entry containers remain independent and move state only through a user-selected complete backup, never automatic sync or silent merge;
 - same-container tabs use a fail-closed writer boundary: after the safe wait times out, the later page remains a read-only preview with retry and refresh-current-save actions; cooperative release triggers the same bounded retry automatically, while force takeover and last-write-wins remain excluded;
 - persistent-storage permission is never requested on first launch; the first qualifying high-volume durable action asks in context, while Settings exposes current status and explicit retry;
@@ -72,7 +73,7 @@ Current active architecture slice:
 - a valid legacy core may restore as `legacy_degraded` after a missing-material summary; unresolved image/GIF/audio/video/file references render a type-appropriate placeholder, and saved caption/alternative/generation-description text may remain readable without retaining raw AI transport payloads;
 - a complete self-checking Cloudflare setup, backup, recovery, revocation, quota, and troubleshooting guide is required before this can become an implementation slice;
 - this is a promoted architecture-decision slice; beyond the completed Book-only cutover, it does not approve migration of any additional application owner.
-- first successful Chat activation and the explicit custom-role-to-Chat journey are completed product evidence rather than architecture prerequisites; GitHub Pages now has direct user-configured provider model discovery, connection, one real Chat reply, reload persistence, and real-provider restricted-relay evidence through both deployed Vercel and Cloudflare backends, while hosted PWA and true-device proof remain release work.
+- first successful Chat activation and the explicit custom-role-to-Chat journey are completed product evidence rather than architecture prerequisites; GitHub Pages has direct user-configured provider model discovery, connection, one real Chat reply, reload persistence, and real-provider restricted-relay evidence through both deployed Vercel and Cloudflare backends. Automated hosted-browser PWA/offline and backup recovery are now implemented; OS-installed PWA, external protection, and named true-device proof remain release work.
 
 ### Product Decision Checkpoint - 2026-07-21
 
@@ -384,7 +385,7 @@ Current execution record:
 | Field | Value |
 | --- | --- |
 | Plan baseline | `DCF-04 DONE 2026-08-22` at `26534bd`; `DCF-06 DONE 2026-08-22` at `ec31855`; both commits are based on synchronized Calendar-evidence baseline `1d41869`. Earlier CMG/DCF completion evidence remains in the completion log below. |
-| Next dependency-safe items | The CMG sequence is complete. Product-preview release proof is the next project-level gate; Contacts V3-5, Work Hub event promotion, and visual work remain separate. |
+| Next dependency-safe items | The CMG sequence is complete and automated hosted-browser proof is implemented. Exact remote confirmation, external protection policy, OS-installed PWA/relaunch, and named true-device evidence are the remaining release gates; Contacts V3-5 and later infrastructure remain separate. |
 | Active item | `CMG-10 / MIGRATION_AND_RECOVERY_CLOSURE / DONE 2026-08-28` |
 | Integration controller PC | current local Codex task |
 | PC-A physical machine / role | current PC / shared-`main` implementation, validation, and documentation alignment |

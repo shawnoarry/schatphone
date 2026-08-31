@@ -2,7 +2,7 @@
 
 Updated: 2026-08-31
 
-Integrated baseline: `98f1250`
+Integrated baseline: `38dc329`
 
 Working tree: excluded local tool caches and QA/visual artifacts remain outside integrated capability claims.
 
@@ -16,7 +16,7 @@ The project is not yet a production-hardened final release. Named physical-devic
 
 ## 2. Current Execution Order
 
-1. Complete the remaining hosted product proof: installed PWA, relaunch, backup round trip, external protections, and named true-device evidence.
+1. Confirm the new exact-commit hosted-browser automation remotely, then complete OS-installed PWA/relaunch, external protections, and named true-device evidence.
 2. Preserve the completed `CMG-00` through `CMG-10` continuity contracts while fixing only failures found by product-preview proof.
 3. Run World Pack true-device validation only where it overlaps the release device matrix.
 
@@ -34,8 +34,8 @@ This table summarizes package status. It does not replace any package's named mi
 | Work Hub Organization | `EVT-WORK-1 THROUGH EVT-WORK-4 DONE 2026-08-30 / WORLD-SEMANTIC-4 DONE 2026-08-31` | world-neutral production organization authority, membership/role/team/channel/work records, explicit user decisions/status, rollback-safe persistence, complete backup/restore, S1 preview isolation, authority-bound Calendar replacement, revision-safe Agenda/Map/Activity execution proof, a read-only Chronicle handoff, and bounded membership/role semantic evidence without authority mutation | SMS, automatic attendance/completion, semantic authority inference, and downstream consequence chains remain unimplemented | `docs/pm/work-hub-organization/STATUS_AND_HANDOFF.md` |
 | Map / Calendar / Reminders | `INTEGRATED_LOCAL / EVT-WORK-4 EXECUTION PROOF DONE / CJA-6B EVT-CHRONICLE-1 DONE 2026-08-30 / WORLD-SEMANTIC-4 DONE 2026-08-31 / scoped milestones` | Calendar storage V4 handoffs, Schedule Orchestrator V2, Agenda Journey V2, Map V5, Activity Session V3, revision-safe execution lineage, Chronicle Diary Owner and deterministic owner projection, Map journeys/Footprints, reviewed Seoul place media, and native fail-closed restricted-place entry with durable owner fact/result reuse | generic source-conflict actions, AI recall/automatic diary generation, remaining place-media decisions, PWA/true-device proof, later MJE stages | `docs/pm/map-calendar-reminders/STATUS_AND_HANDOFF.md` |
 | Commerce / Finance / Assets | `PARTIAL_DONE` | eleven Shopping storefronts, paid checkout and support flows, fifteen Food Delivery entries with scoped carts/orders, Wallet cards/activity/statements/payees/receipt sharing, ordinary consequence proof | refund/cancellation settlement, tracking shares, Assets/Stock depth, named physical-device proof | `docs/pm/commerce-finance-and-assets/STATUS_AND_HANDOFF.md` |
-| Visual / IA | `PARTIAL_DONE` | Home/App Store systems, thirteen S1 App previews plus Notification Center, day/night and authored theme/icon foundations, visual workflow and Playwright quality gate | cross-module consistency, real-device polish, and later approved focused slices | `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md` |
-| Module Architecture | `CMG-00 THROUGH CMG-10 DONE / WORLD_SETTING_W2_DONE` | release-local backup/recovery, same-container writer safety, Book Repository cutover, shared Image/TTS/Music contracts, complete CMG continuity closure, DCF repairs, and canonical single-world identity/version persistence with rollback-safe restore boundaries | product-preview proof is next; W3 switching and later hotspot/adapter/type work remain gated | `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` |
+| Visual / IA | `PARTIAL_DONE / HOSTED_BROWSER_PROOF_AUTOMATION_IMPLEMENTED` | Home/App Store systems, thirteen S1 App previews plus Notification Center, day/night and authored theme/icon foundations, visual workflow and Playwright quality gate, plus desktop/simulated-mobile hosted base/manifest/offline/backup smoke | OS-installed PWA, named true-device polish, cross-module consistency, and later approved focused slices | `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md` |
+| Module Architecture | `CMG-00 THROUGH CMG-10 DONE / WORLD_SETTING_W2_DONE / HOSTED_PRODUCT_PROOF_AUTOMATION_IMPLEMENTED` | release-local backup/recovery, same-container writer safety, Book Repository cutover, shared Image/TTS/Music contracts, complete CMG continuity closure, canonical single-world identity/version persistence, exact-commit deployment markers, and post-Pages hosted recovery/offline proof | exact remote confirmation, external protections, OS-installed PWA/true-device evidence; W3 switching and later hotspot/adapter/type work remain gated | `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` |
 
 ## 4. What Users Can Do Now
 
@@ -56,7 +56,7 @@ This table summarizes package status. It does not replace any package's named mi
 
 ## 5. What Is Not Finished
 
-- no named complete physical-device matrix or installed-PWA/relaunch acceptance;
+- no named complete physical-device matrix or OS-installed-PWA/relaunch acceptance; the automated browser proof is not a substitute for either;
 - no production-grade authenticated push backend or closed-page autonomous simulation;
 - no automatic personal R2 backup implementation despite the accepted architecture direction;
 - no general multi-world W3 persistence and switching;
@@ -69,9 +69,9 @@ This table summarizes package status. It does not replace any package's named mi
 
 ## 6. Release Posture
 
-PR CI and main Pages deployment definitions run separate production/full audits, lint, unit tests, production build, and one full Playwright collection. Hosted GitHub Pages, Vercel, and Cloudflare baselines plus direct/restricted-provider Chat smokes are recorded in the roadmap and architecture handoff.
+PR CI and main Pages deployment definitions run separate production/full audits, lint, unit tests, production build, and one full Playwright collection. Build artifacts now carry their exact commit, and successful Pages deployments trigger an independent credential-free hosted-browser proof for base-path/manifest/Service Worker/offline reopen and complete backup recovery. Hosted GitHub Pages, Vercel, and Cloudflare baselines plus direct/restricted-provider Chat smokes remain recorded in the roadmap and architecture handoff.
 
-This proves a strong integrated browser baseline. It does not prove external branch protections, every provider, installed-PWA behavior, OS permission behavior, weak-network recovery, or physical-device ergonomics.
+This proves a strong integrated browser baseline. It does not prove external branch protections, every provider, OS-installed-PWA behavior, platform permission/file-picker behavior, arbitrary weak-network recovery, or physical-device ergonomics.
 
 ## 7. Status Preservation Rule
 
