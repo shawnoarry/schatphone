@@ -53,6 +53,8 @@ jobs:
         run: npm test
 
       - name: Build
+        env:
+          SCHATPHONE_RELEASE_COMMIT: ${{ github.sha }}
         run: npm run build:github
 
       - name: Install Playwright Chromium

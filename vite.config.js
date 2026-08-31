@@ -76,6 +76,19 @@ const deploymentBrandAssets = (brand) => {
   }
 }
 
+const hostedReleaseProof = {
+  name: 'hosted-release-proof',
+  apply: 'build',
+  generateBundle() {
+    const commit = process.env.SCHATPHONE_RELEASE_COMMIT?.trim() || 'local'
+    this.emitFile({
+      type: 'asset',
+      fileName: 'release.json',
+      source: `${JSON.stringify({ schemaVersion: 1, commit }, null, 2)}\n`,
+    })
+  },
+}
+
 const resolveAppBase = () => {
   const configured = process.env.SCHATPHONE_BASE_PATH?.trim()
   if (configured) {
@@ -91,6 +104,7 @@ export default defineConfig(({ mode }) => ({
     tailwindcss(),
     maplibreWorkerRuntimeAssets,
     deploymentBrandAssets(resolveDeploymentBrand(mode)),
+    hostedReleaseProof,
   ],
   base: resolveAppBase(),
   optimizeDeps: {

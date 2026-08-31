@@ -31,6 +31,7 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:hosted": "playwright test --config playwright.hosted.config.js",
     "test:visual": "playwright test e2e/visual-quality.spec.js",
     "governance:check": "vitest run tests/workflow-governance.test.js tests/mojibake-guard.test.js"
   },
