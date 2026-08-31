@@ -111,7 +111,7 @@ const personaChatSnapshot = {
       revision: 7,
       bio: 'A profile used to prove review-only persona classification.',
       templateLink: {
-        primaryWorldId: 'default_world',
+        primaryWorldId: 'world_local_primary',
         profileTemplateId: 'world_template_persona_e2e',
         profileTemplateVersion: 4,
       },

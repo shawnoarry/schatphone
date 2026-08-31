@@ -315,6 +315,8 @@ test('installs the Weather app entry from App Store and opens the standalone Wea
   await page.locator('.home-empty-slot-action.is-compatible').first().click()
   await expect(page.locator('[data-home-tile-id="app_weather"]')).toBeVisible()
   await page.getByTestId('home-edit-done').click()
+  await expect(page.getByTestId('home-edit-done')).toHaveCount(0)
+  await page.waitForTimeout(250)
 
   const weatherAppTile = page.locator('[data-home-tile-id="app_weather"]')
   await expect(weatherAppTile).not.toHaveClass(/is-drop-confirm/)

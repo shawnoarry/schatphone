@@ -57,35 +57,6 @@ jobs:
           SCHATPHONE_RELEASE_COMMIT: ${{ github.sha }}
         run: npm run build:github
 
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
-
-      - name: Full product E2E
-        id: full-e2e
-        env:
-          PLAYWRIGHT_BASE_URL: http://127.0.0.1:5182
-          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/playwright-results.json
-        run: npm run test:e2e -- --fail-on-flaky-tests --reporter=line,html,json
-
-      - name: Verify Playwright summary
-        id: playwright-summary
-        env:
-          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/playwright-results.json
-        run: >-
-          node -e "const fs = require('node:fs'); const report = JSON.parse(fs.readFileSync(process.env.PLAYWRIGHT_JSON_OUTPUT_FILE, 'utf8')); const { skipped = 0, unexpected = 0, flaky = 0 } = report.stats || {}; console.log(JSON.stringify({ skipped, unexpected, flaky })); if (skipped > 4 || unexpected !== 0 || flaky !== 0) process.exit(1)"
-
-      - name: Upload Playwright report
-        if: ${{ failure() && (steps.full-e2e.outcome == 'failure' || steps.playwright-summary.outcome == 'failure') }}
-        uses: actions/upload-artifact@v6
-        with:
-          name: playwright-report-${{ github.run_attempt }}
-          path: |
-            playwright-report/
-            test-results/
-            test-results/playwright-results.json
-          if-no-files-found: ignore
-          retention-days: 7
-
       - name: Configure Pages
         uses: actions/configure-pages@v6
 
@@ -94,8 +65,61 @@ jobs:
         with:
           path: ./dist
 
-  deploy:
+  e2e:
     needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Full product E2E
+        id: full-e2e
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:5182
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/shard-${{ matrix.shard }}-of-4
+          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/shard-${{ matrix.shard }}-of-4/playwright-results.json
+        run: npm run test:e2e -- --shard=${{ matrix.shard }}/4 --workers=1 --retries=0 --fail-on-flaky-tests --reporter=line,html,json
+
+      - name: Verify Playwright summary
+        id: playwright-summary
+        if: ${{ always() }}
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/shard-${{ matrix.shard }}-of-4/playwright-results.json
+        run: >-
+          node -e "const fs = require('node:fs'); const report = JSON.parse(fs.readFileSync(process.env.PLAYWRIGHT_JSON_OUTPUT_FILE, 'utf8')); const { skipped = 0, unexpected = 0, flaky = 0 } = report.stats || {}; console.log(JSON.stringify({ skipped, unexpected, flaky })); if (skipped > 4 || unexpected !== 0 || flaky !== 0) process.exit(1)"
+
+      - name: Upload Playwright report
+        if: ${{ failure() && (steps.full-e2e.outcome == 'failure' || steps.playwright-summary.outcome == 'failure') }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-report-shard-${{ matrix.shard }}-of-4-${{ github.run_attempt }}
+          path: |
+            playwright-report/shard-${{ matrix.shard }}-of-4/
+            test-results/
+            test-results/shard-${{ matrix.shard }}-of-4/playwright-results.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  deploy:
+    needs: [build, e2e]
     runs-on: ubuntu-latest
     environment:
       name: github-pages

@@ -1055,6 +1055,7 @@ describe('wallet store', () => {
     })
 
     const first = store.commitCommercePayment({
+      title: 'Restaurant order',
       amount: '32.80',
       currency: 'CNY',
       accountId: 'wallet_account_icbc_cny',
@@ -1063,15 +1064,18 @@ describe('wallet store', () => {
       sourceModule: 'wallet_commerce_payment',
       sourceId: 'food_order_1',
       idempotencyKey: 'food_checkout_1',
+      sharedExperienceId: 'meal:food_order_1',
     })
 
     expect(first).toMatchObject({ ok: true, reason: '' })
     expect(first.transaction).toMatchObject({
       type: 'expense',
+      title: 'Restaurant order',
       paymentKind: 'commerce_order',
       paymentStatus: 'completed',
       idempotencyKey: 'food_checkout_1',
       sourceId: 'food_order_1',
+      sharedExperienceId: 'meal:food_order_1',
     })
     expect(first.transaction.receiptNumber).toMatch(/^SP20260101\d{6}$/)
     expect(store.primaryBalance.amountCents).toBe(6720)

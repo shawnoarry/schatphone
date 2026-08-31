@@ -88,7 +88,7 @@ test.describe('Home entry navigation', () => {
 
     await unlockToHome(page)
 
-    await expect(page.locator('.home-dot')).toHaveCount(3)
+    await expect(page.locator('.home-dot')).toHaveCount(4)
     await expect(page.locator('[data-home-tile-id="app_network"]')).toHaveCount(0)
     await expect(page.locator('[data-home-tile-id="app_stock"]')).toHaveCount(0)
     await expect(page.locator('[data-home-tile-id="app_assets"]')).toHaveCount(0)
@@ -123,7 +123,7 @@ test.describe('Home entry navigation', () => {
     await unlockToHome(page)
     await navigateInsideUnlockedApp(page, '/appearance')
 
-    await expect(page.getByTestId('appearance-home-page-count-3')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByTestId('appearance-home-page-count-4')).toHaveAttribute('aria-pressed', 'true')
     await page.getByTestId('appearance-home-page-count-2').click()
     await expect(page.getByTestId('appearance-home-page-count-2')).toHaveAttribute('aria-pressed', 'true')
 

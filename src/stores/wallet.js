@@ -934,6 +934,7 @@ export const useWalletStore = defineStore('wallet', () => {
   }
 
   const commitCommercePayment = ({
+    title = '',
     amount,
     amountCents,
     currency = '',
@@ -945,6 +946,7 @@ export const useWalletStore = defineStore('wallet', () => {
     sourceId = '',
     idempotencyKey = '',
     quoteSnapshot = null,
+    sharedExperienceId = '',
     createdAt = Date.now(),
   } = {}) => {
     const normalizedKey = normalizeText(idempotencyKey, '', 180)
@@ -998,7 +1000,7 @@ export const useWalletStore = defineStore('wallet', () => {
     const transaction = addTransaction({
       type: 'expense',
       direction: 'outgoing',
-      title: 'Food Delivery payment',
+      title: normalizeText(title, 'Food Delivery payment', 120),
       amountCents: normalizedAmountCents,
       currency: normalizedCurrency,
       accountId: account.id,
@@ -1011,6 +1013,7 @@ export const useWalletStore = defineStore('wallet', () => {
       paymentStatus: 'completed',
       idempotencyKey: normalizedKey,
       quoteSnapshot,
+      sharedExperienceId,
       transferStatus: 'completed',
       receiptNumber: createWalletReceiptNumber(createdAt),
       createdAt,

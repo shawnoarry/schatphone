@@ -1070,12 +1070,28 @@ const commitCheckoutCart = () => {
     note: t('Shopping checkout', 'Shopping checkout'),
   })
   const order = result.order
+  const transaction = result.payment?.transaction || null
   if (order?.giftRecipient) {
+    const relationshipSuggestion = buildShoppingGiftRelationshipSuggestion({
+      relationshipRuntimeStore,
+      order,
+    })
     recordShoppingGiftRelationshipFact({
       chatStore,
       relationshipRuntimeStore,
       order,
+      transaction,
     })
+    if (transaction && relationshipSuggestion.available) {
+      recordWalletOrderSupportRelationshipFact({
+        chatStore,
+        relationshipRuntimeStore,
+        target: relationshipSuggestion.target,
+        transaction,
+        memoryKey: relationshipSuggestion.memoryKey,
+        summary: `Wallet payment recorded for the same Shopping gift with ${relationshipSuggestion.targetName || 'a relationship contact'}.`,
+      })
+    }
   }
   if (order) {
     clearGiftDraft()

@@ -71,6 +71,25 @@ test('one Shopping gift reaches delivery and Phone feedback as one relationship 
   await page.getByTestId('wallet-primary-currency').selectOption('USD')
   await page.getByTestId('wallet-save-primary-currency').click()
   await expect(page.getByRole('status')).toContainText(/Display currency updated|显示币种已更新/)
+  await page.getByTestId('wallet-header-back').click()
+  await page.getByTestId('wallet-open-transfer').click()
+  await page.getByTestId('wallet-transfer-incoming').click()
+  await page.getByTestId('wallet-transfer-account').selectOption('wallet_account_chase_usd')
+  await page.getByTestId('wallet-transfer-counterparty').fill('Opening USD balance')
+  await page.getByTestId('wallet-transfer-amount').fill('100')
+  await page.getByTestId('wallet-submit-transfer').click()
+  await expect(page.getByRole('status')).toContainText(/Payment received|收款已记入账户/)
+  await pollPersistedData(page, STORAGE_KEYS.wallet, (snapshot) =>
+    snapshot?.primaryCurrency === 'USD' &&
+    snapshot?.transactions?.some(
+      (transaction) =>
+        transaction.type === 'income' &&
+        transaction.currency === 'USD' &&
+        transaction.amountCents === 10000,
+    )
+      ? snapshot
+      : null,
+  )
 
   await navigateInsideUnlockedApp(page, '/chat-contacts?section=service')
   await page.getByTestId('chat-directory-service-management-header').click()
@@ -87,22 +106,24 @@ test('one Shopping gift reaches delivery and Phone feedback as one relationship 
 
   await navigateInsideUnlockedApp(page, '/shopping?category=mall')
   await page.getByTestId('shopping-add-cart-shopping_seed_mall_card').click()
+  await page.getByRole('button', { name: 'Cart' }).first().click()
   await page.getByTestId('shopping-gift-enabled').check()
   await page.getByTestId('shopping-gift-contact').selectOption('1')
   await page.getByTestId('shopping-checkout').click()
-
-  const orderCard = page.locator('article[data-testid^="shopping-order-"]').first()
-  await expect(orderCard).toContainText('Eva')
-  await expect(orderCard).toContainText('12.22 USD')
-  const orderId = (await orderCard.getAttribute('data-testid')).replace('shopping-order-', '')
-  expect(orderId).toBeTruthy()
+  await expect(page.getByTestId('shopping-checkout-settlement')).toBeVisible()
+  await page.getByTestId('shopping-checkout-recipient').fill('Eva')
+  await expect(page.getByTestId('shopping-payment-submit')).toBeEnabled()
+  await page.getByTestId('shopping-payment-submit').click()
 
   const shoppingOrder = await pollPersistedData(page, STORAGE_KEYS.shopping, (snapshot) =>
-    snapshot?.orders?.find((order) => order.id === orderId),
+    snapshot?.orders?.[0],
   )
+  const orderId = shoppingOrder.id
+  expect(orderId).toBeTruthy()
   expect(shoppingOrder).toMatchObject({
     id: orderId,
     status: 'placed',
+    paymentStatus: 'completed',
     sharedExperienceId: `gift:${orderId}`,
     giftRecipient: {
       name: 'Eva',
@@ -115,6 +136,8 @@ test('one Shopping gift reaches delivery and Phone feedback as one relationship 
       targetCurrency: 'USD',
     },
   })
+  const orderCard = page.getByTestId(`shopping-order-${orderId}`)
+  await expect(orderCard).toContainText('12.22 USD')
 
   await navigateInsideUnlockedApp(page, `/chat/${shoppingServiceContact.id}`)
   await expect(
@@ -161,10 +184,7 @@ test('one Shopping gift reaches delivery and Phone feedback as one relationship 
   await page.getByTestId('shopping-order-detail-complete').click()
   await page.getByTestId('shopping-close-order-detail').click()
 
-  const walletRecordButton = page.getByTestId(`shopping-transfer-wallet-${orderId}`)
-  await expect(walletRecordButton).toBeVisible()
-  await walletRecordButton.click()
-  await expect(walletRecordButton).toBeDisabled()
+  await expect(page.getByTestId(`shopping-transfer-wallet-${orderId}`)).toHaveCount(0)
 
   const walletTransaction = await pollPersistedData(page, STORAGE_KEYS.wallet, (snapshot) =>
     snapshot?.transactions?.find(
@@ -181,6 +201,8 @@ test('one Shopping gift reaches delivery and Phone feedback as one relationship 
     sourceModule: 'shopping_wallet_expense',
     sourceId: orderId,
     sharedExperienceId: shoppingOrder.sharedExperienceId,
+    paymentKind: 'commerce_order',
+    paymentStatus: 'completed',
   })
 
   const relationshipMemoryKey = `shared_experience__${shoppingOrder.sharedExperienceId}`
@@ -305,7 +327,7 @@ test('one Shopping gift reaches delivery and Phone feedback as one relationship 
 
   await navigateInsideUnlockedApp(page, `/shopping?category=mall&orderId=${orderId}`)
   await page.getByTestId('shopping-close-order-detail').click()
-  await expect(page.getByTestId(`shopping-transfer-wallet-${orderId}`)).toBeDisabled()
+  await expect(page.getByTestId(`shopping-transfer-wallet-${orderId}`)).toHaveCount(0)
 
   const finalWallet = await readPersistedData(page, STORAGE_KEYS.wallet)
   const finalRelationship = await readPersistedData(page, STORAGE_KEYS.relationship)

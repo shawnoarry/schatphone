@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
+import { COMPLETE_BACKUP_SCHEMA_VERSION } from '../src/lib/complete-backup-package.js'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
 
 test.use({
@@ -309,7 +310,7 @@ test('Settings warns before exporting a complete backup and preserves the config
   ).toBe(true)
   expect(exported.backupMeta).toMatchObject({
     magic: 'schatphone-complete-backup',
-    schemaVersion: 5,
+    schemaVersion: COMPLETE_BACKUP_SCHEMA_VERSION,
     exportMode: 'metadata_with_asset_package',
   })
   expect(exported.backupMeta.manifest.sectionCount).toBeGreaterThan(20)

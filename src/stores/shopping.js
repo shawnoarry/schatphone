@@ -2011,9 +2011,11 @@ export const useShoppingStore = defineStore('shopping', () => {
       sourceTotal.currency,
       walletStore.currencyOptions,
     )
-    const quoteSnapshot = normalizeMoneyQuote(providedQuoteSnapshot) || (sourceMoney
-      ? walletStore.quoteMoney(sourceMoney, walletStore.primaryCurrency, { quotedAt: now })
-      : null)
+    const quoteSnapshot = normalizeMoneyQuote(providedQuoteSnapshot) || normalizeMoneyQuote(
+      sourceMoney
+        ? walletStore.quoteMoney(sourceMoney, walletStore.primaryCurrency, { quotedAt: now })
+        : null,
+    )
     const order = normalizeShoppingOrder({
       id: normalizeText(orderId, createShoppingOrderId(), 140),
       status: SHOPPING_ORDER_STATUS.PLACED,
@@ -2037,7 +2039,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       deliveryAddress,
       deliveryAnchor,
       paymentRef,
-      quoteSnapshot: quoteSnapshot?.ok ? quoteSnapshot : null,
+      quoteSnapshot,
       sourceModule: normalizeText(sourceModule, SHOPPING_SOURCE_KEYS.ORDER_UPDATE, 40),
       sourceId,
       createdAt: now,
@@ -2123,7 +2125,9 @@ export const useShoppingStore = defineStore('shopping', () => {
     }
 
     const orderId = createShoppingOrderId()
+    const sharedExperienceId = resolveShoppingGiftExperienceId({ id: orderId, giftRecipient })
     const payment = walletStore.commitCommercePayment({
+      title: 'Shopping order',
       amountCents: quoteSnapshot.quotedMoney.amountMinor,
       currency: quoteSnapshot.quotedMoney.currency,
       accountId,
@@ -2134,6 +2138,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       sourceId: orderId,
       idempotencyKey: normalizedIdempotencyKey || `shopping_checkout:${orderId}`,
       quoteSnapshot,
+      sharedExperienceId,
       createdAt: now,
     })
     if (!payment.ok) {

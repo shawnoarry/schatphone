@@ -8325,7 +8325,7 @@ onBeforeUnmount(() => {
           :data-store-template="activeStoreTemplate"
         >
           <header
-            class="sticky top-0 z-40 border-b border-[var(--peach-cloud-ink)]/15 bg-[var(--peach-cloud-canvas)]/95 px-3 py-2 backdrop-blur-md"
+            class="sticky top-0 z-40 border-b border-[var(--peach-cloud-ink)]/15 bg-[var(--peach-cloud-canvas)]/95 px-3 pb-2 pt-[calc(2.5rem+env(safe-area-inset-top))] backdrop-blur-md"
             :data-testid="
               peachCloudPageKey === 'home' ? 'food-delivery-peach-cloud-home-header' : undefined
             "

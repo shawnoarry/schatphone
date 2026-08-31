@@ -74,7 +74,12 @@ test('App Store mini apps hand off to Food Delivery and Shopping without deletin
   await expect(page).toHaveURL(/#\/shopping\/schat_mall\?/)
   await expect(page).toHaveURL(/createShop=1/)
   await expect(page).toHaveURL(/bindingTarget=shopping/)
-  await expect(page.getByTestId('shopping-app-store-create-banner')).toContainText('App Store only keeps')
+  await expect(page.getByTestId('shopping-app-store-create-banner')).toContainText(
+    'Set up this store catalog',
+  )
+  await expect(page.getByTestId('shopping-app-store-create-banner')).toContainText(
+    'Return to App Store',
+  )
   await expectNoHorizontalOverflow(page)
 
   await navigateInsideUnlockedApp(page, '/app-store?section=shops&homePage=2')

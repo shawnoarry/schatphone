@@ -222,7 +222,7 @@ describe('workflow governance', () => {
     )
   })
 
-  test('keeps focused visual testing local while CI runs the full E2E gate once', () => {
+  test('keeps focused visual testing local while CI shards the full E2E gate once', () => {
     const packageJson = JSON.parse(readProjectFile('package.json'))
     const ciWorkflow = readProjectFile('.github/workflows/ci.yml')
     const fullE2EStep = getNamedWorkflowStep(ciWorkflow, 'Full product E2E')
@@ -232,15 +232,16 @@ describe('workflow governance', () => {
     )
     expect(ciWorkflow).not.toContain('        run: npm run test:visual')
     expect(ciWorkflow.match(/npm run test:e2e/g)).toHaveLength(1)
+    expect(ciWorkflow).toContain('        shard: [1, 2, 3, 4]')
     expect(fullE2EStep).toContain('        id: full-e2e')
     expect(fullE2EStep).toContain(
       '          PLAYWRIGHT_BASE_URL: http://127.0.0.1:5181',
     )
     expect(fullE2EStep).toContain(
-      '          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/playwright-results.json',
+      '          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/shard-${{ matrix.shard }}-of-4/playwright-results.json',
     )
     expect(fullE2EStep).toContain(
-      '        run: npm run test:e2e -- --fail-on-flaky-tests --reporter=line,html,json',
+      '        run: npm run test:e2e -- --shard=${{ matrix.shard }}/4 --workers=1 --retries=0 --fail-on-flaky-tests --reporter=line,html,json',
     )
   })
 
@@ -269,15 +270,18 @@ describe('workflow governance', () => {
       )
       expect(workflow.match(/npm run test:e2e/g)).toHaveLength(1)
       expect(workflow).not.toContain('        run: npm run test:visual')
+      expect(workflow).toContain('      fail-fast: false')
+      expect(workflow).toContain('        shard: [1, 2, 3, 4]')
       expect(fullE2EStep).toContain(`          PLAYWRIGHT_BASE_URL: ${baseURL}`)
       expect(fullE2EStep).toContain(
-        '          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/playwright-results.json',
+        '          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/shard-${{ matrix.shard }}-of-4/playwright-results.json',
       )
       expect(fullE2EStep).toContain('        id: full-e2e')
       expect(fullE2EStep).toContain(
-        '        run: npm run test:e2e -- --fail-on-flaky-tests --reporter=line,html,json',
+        '        run: npm run test:e2e -- --shard=${{ matrix.shard }}/4 --workers=1 --retries=0 --fail-on-flaky-tests --reporter=line,html,json',
       )
       expect(summaryStep).toContain('        id: playwright-summary')
+      expect(summaryStep).toContain('        if: ${{ always() }}')
       expect(summaryStep.join('\n')).toContain('skipped > 4')
       expect(summaryStep.join('\n')).toContain('unexpected !== 0')
       expect(summaryStep.join('\n')).toContain('flaky !== 0')
@@ -285,9 +289,16 @@ describe('workflow governance', () => {
         "        if: ${{ failure() && (steps.full-e2e.outcome == 'failure' || steps.playwright-summary.outcome == 'failure') }}",
       )
       expect(uploadStep).toContain('        uses: actions/upload-artifact@v6')
-      expect(uploadStep).toContain('            playwright-report/')
+      expect(uploadStep).toContain(
+        '          name: playwright-report-shard-${{ matrix.shard }}-of-4-${{ github.run_attempt }}',
+      )
+      expect(uploadStep).toContain(
+        '            playwright-report/shard-${{ matrix.shard }}-of-4/',
+      )
       expect(uploadStep).toContain('            test-results/')
-      expect(uploadStep).toContain('            test-results/playwright-results.json')
+      expect(uploadStep).toContain(
+        '            test-results/shard-${{ matrix.shard }}-of-4/playwright-results.json',
+      )
       expect(uploadStep).toContain('          if-no-files-found: ignore')
       expect(uploadStep).toContain('          retention-days: 7')
     })
@@ -301,9 +312,10 @@ describe('workflow governance', () => {
     const deployLines = deployWorkflow.split(/\r?\n/)
     const deployJobIndex = deployLines.indexOf('  deploy:')
     expect(deployJobIndex).toBeGreaterThan(-1)
-    expect(deployLines[deployJobIndex + 1]).toBe('    needs: build')
-    expect(deployWorkflow.indexOf('      - name: Configure Pages')).toBeGreaterThan(
-      deployWorkflow.indexOf('      - name: Verify Playwright summary'),
+    expect(deployLines[deployJobIndex + 1]).toBe('    needs: [build, e2e]')
+    expect(deployWorkflow).toContain('          SCHATPHONE_RELEASE_COMMIT: ${{ github.sha }}')
+    expect(deployWorkflow.indexOf('      - name: Upload artifact')).toBeGreaterThan(
+      deployWorkflow.indexOf('        run: npm run build:github'),
     )
   })
 

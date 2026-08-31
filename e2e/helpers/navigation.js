@@ -29,7 +29,7 @@ const routeReadySelectors = {
   '/music': '[data-testid="music-app"]',
   '/phone': '[data-testid="phone-call-list"], [data-testid="phone-empty-state"]',
   '/settings': '[data-settings-menu-title="World Book"]',
-  '/shopping': '.shopping-storefront-header',
+  '/shopping': '.shopping-view-shell',
   '/widgets': '.widgets-shell',
   '/weather': '[data-testid="weather-view"]',
   '/worldbook': '[data-testid="worldbook-overview"]',

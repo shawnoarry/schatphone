@@ -187,7 +187,7 @@ test('Chat Appearance carries an iMessage layout into the active conversation', 
   })
   expect(shellBackground).toBe('rgb(232, 241, 255)')
   await expect(page.getByTestId('chat-thread-header-contact-avatar')).toBeVisible()
-  await expect(page.getByTestId('chat-thread-header-note')).toHaveCount(0)
+  await expect(page.getByTestId('chat-thread-header-note')).toContainText(/主角色|Main Role/)
 
   await page.getByTestId('chat-message-input').fill('Appearance setting check.')
   await page.getByTestId('chat-message-input').press('Enter')

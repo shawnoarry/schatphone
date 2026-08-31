@@ -59,18 +59,20 @@ test.describe('Aster unified fandom S1 shell', () => {
     await page.screenshot({ path: join(evidenceDir, 'fandom-mobile-night.png'), fullPage: true })
   })
 
-  test('Work Hub pending application changes copy but never unlocks artist workspace', async ({ page }) => {
+  test('Work Hub fails closed without organization authority and never unlocks artist workspace', async ({ page }) => {
     await seedSystem(page)
     await openFandom(page, pixel5)
     await page.getByTestId('fandom-tab-me').click()
     await page.getByTestId('fandom-open-workplace').click()
     await expect(page).toHaveURL(/#\/workplace/)
-    await page.getByTestId('workplace-tab-organization').click()
-    await page.getByTestId('workplace-submit-artist-application').click()
-    await page.getByTestId('workplace-back').click()
+    const workHubEmpty = page.getByTestId('work-hub-empty')
+    await expect(workHubEmpty).toContainText('尚未连接组织')
+    await expect(workHubEmpty).toContainText('不会自动创建所属')
+    await expect(page.getByTestId('workplace-tab-organization')).toHaveCount(0)
+    await workHubEmpty.getByRole('button', { name: '关闭' }).click()
     await expect(page).toHaveURL(/#\/fandom/)
     await page.getByTestId('fandom-tab-me').click()
-    await expect(page.getByTestId('fandom-artist-access')).toContainText('等待平台审核')
+    await expect(page.getByTestId('fandom-artist-access')).toContainText('当前未开通')
     await expect(page.getByTestId('fandom-app')).not.toContainText('发布动态')
   })
 

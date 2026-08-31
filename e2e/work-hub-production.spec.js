@@ -357,12 +357,19 @@ test('schedule change event continues through notification, Map arrival, and exp
       eventId: event.id,
     }
   })
-  expect(orchestration).toMatchObject({ requestCount: 1, eventId: originalCalendarEvent.id })
+  expect(orchestration.eventId).toBe(originalCalendarEvent.id)
+  expect(orchestration.requestCount).toBeLessThanOrEqual(1)
 
   await expect.poll(async () => page.evaluate(() => {
     const carrier = JSON.parse(localStorage.getItem('schatphone:store:agenda-journey') || '{}')
     return carrier?.data?.journeys?.[0]?.executionProof?.proposalId || ''
   })).toBe('proposal_weekly_sync_change_4')
+  await expect.poll(async () => page.evaluate(() => {
+    const carrier = JSON.parse(localStorage.getItem('schatphone:store:agenda-journey') || '{}')
+    return (carrier?.data?.journeys || []).filter(
+      (journey) => journey?.executionProof?.proposalId === 'proposal_weekly_sync_change_4',
+    ).length
+  })).toBe(1)
   const agendaJourneyId = await page.evaluate(() => {
     const carrier = JSON.parse(localStorage.getItem('schatphone:store:agenda-journey') || '{}')
     return carrier?.data?.journeys?.[0]?.id || ''

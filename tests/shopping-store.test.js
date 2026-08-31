@@ -327,6 +327,17 @@ describe('shopping store', () => {
         accountId: paymentCard.accountId,
         cardId: paymentCard.id,
       },
+      quoteSnapshot: {
+        sourceMoney: { amountMinor: 1800, currency: 'CNY' },
+        quotedMoney: { amountMinor: 1800, currency: 'CNY' },
+        targetCurrency: 'CNY',
+      },
+    })
+    expect(first.payment.transaction).toMatchObject({
+      title: 'Shopping order',
+      sourceModule: 'shopping_wallet_expense',
+      sourceId: first.order.id,
+      quoteSnapshot: first.order.quoteSnapshot,
     })
     expect(replay).toMatchObject({
       ok: true,

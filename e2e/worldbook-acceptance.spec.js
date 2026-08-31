@@ -100,7 +100,8 @@ test('Settings entry separates the WorldBook overview from optional capability P
   await expect(page).toHaveURL(/#\/worldbook/)
 
   await expect(page.getByTestId('worldbook-overview')).toBeVisible()
-  await expect(page.getByTestId('worldbook-overview-world')).toContainText('当前世界设定')
+  await expect(page.getByTestId('worldbook-overview')).toContainText('当前世界设定')
+  await expect(page.getByTestId('worldbook-overview-world')).toHaveText('My world')
   await expect(page.getByTestId('worldbook-overview-context-total')).toBeVisible()
   await expect(page.getByTestId('worldbook-overview-token-estimate')).toContainText('每次对话附带')
   await expect(page.getByTestId('worldbook-overview-token-estimate')).toContainText('约')
@@ -122,7 +123,7 @@ test('Settings entry separates the WorldBook overview from optional capability P
   await expect(page.getByTestId('worldbook-current-pack-review')).toContainText('世界应用')
   await expect(page.getByTestId('worldbook-current-pack-review')).toContainText('服务号模板')
   await page.getByTestId('worldbook-current-pack-activate').click()
-  await expect(page.getByTestId('worldbook-overview-world')).toContainText('当前世界设定')
+  await expect(page.getByTestId('worldbook-overview-world')).toHaveText('My world')
   await expect(page.getByTestId('worldbook-current-pack-app-bindings')).toContainText('补给站')
   await expect(page.getByTestId('worldbook-current-pack')).toContainText('App Store')
   await navigateInsideUnlockedApp(page, '/app-store?section=world&from=worldbook')
@@ -133,7 +134,9 @@ test('Settings entry separates the WorldBook overview from optional capability P
   await expect(page).toHaveURL(/worldPack=survival_city/)
   await expect(page).toHaveURL(/worldApp=survival_supply_board/)
   await expect(page.getByTestId('shopping-world-app-context')).toContainText('补给站')
-  await expect(page.getByTestId('shopping-world-app-boundary')).toContainText('Shopping 仍拥有商品')
+  await expect(page.getByTestId('shopping-world-app-boundary')).toContainText(
+    '库存、配送与结算条件仍以商品页和订单页为准',
+  )
   await page.getByTestId('shopping-world-app-apply-filter').click()
   await expect(page).toHaveURL(/worldPack=survival_city/)
   await expect(page).toHaveURL(/worldApp=survival_supply_board/)
@@ -161,7 +164,7 @@ test('Settings entry separates the WorldBook overview from optional capability P
   await page.getByTestId('worldbook-panel-tab-pack').click()
   await page.getByTestId('worldbook-disable-pack-survival_city').click()
   await expect(page.getByTestId('worldbook-current-pack-state')).toContainText('未启用额外能力包')
-  await expect(page.getByTestId('worldbook-overview-world')).toContainText('当前世界设定')
+  await expect(page.getByTestId('worldbook-overview-world')).toHaveText('My world')
   await page.getByTestId('worldbook-panel-tab-knowledge').click()
   await expect(page.getByTestId('knowledge-point-card')).toHaveCount(2)
   await navigateInsideUnlockedApp(page, '/app-store?section=world&from=worldbook')
