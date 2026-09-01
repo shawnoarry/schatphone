@@ -18,10 +18,12 @@ import {
   observeWorldSettingSource,
 } from '../src/lib/world-setting-state.js'
 
-const NOW = new Date('2026-08-30T09:00:00+08:00').getTime()
-const FUTURE = new Date('2030-01-01T00:00:00+08:00').getTime()
-const STARTS_AT = new Date('2026-09-01T15:00:00+08:00').getTime()
-const ENDS_AT = new Date('2026-09-01T16:00:00+08:00').getTime()
+const MINUTE_MS = 60 * 1000
+const DAY_MS = 24 * 60 * MINUTE_MS
+const NOW = Math.floor(Date.now() / MINUTE_MS) * MINUTE_MS
+const STARTS_AT = NOW + 7 * DAY_MS
+const ENDS_AT = STARTS_AT + 60 * MINUTE_MS
+const FUTURE = NOW + 365 * DAY_MS
 const evidenceDir = fileURLToPath(
   new URL('../output/e2e/work-schedule-execution/', import.meta.url),
 )
