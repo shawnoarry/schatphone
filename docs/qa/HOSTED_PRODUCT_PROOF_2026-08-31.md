@@ -6,7 +6,7 @@ This record covers the credential-free automated portion of roadmap 4.9 Hosted P
 
 Primary implementation commit: `38dc329`.
 
-Release-gate hardening follow-up: local commits `4112875` and `7938e3a`; neither is pushed, so exact successful remote run IDs do not yet exist.
+Final remotely proven release-gate revision: `8d38dfa8c62a60687407d2e61659d9078cc023bc`, including the runner-independent Work Hub fixture at `987ef85` and the hosted-proof environment/base-path repair at `8d38dfa`.
 
 ## Remote Blocker Repair
 
@@ -23,11 +23,11 @@ Commit `38dc329` adds:
 5. a complete Settings backup exported from persisted owner identity and credential state, checked for manifest/section digests, restored into blank browser storage, and reopened with the restored data plus a completed recovery journal.
 6. four independent full-product Playwright shards for both PR CI and Pages release, with zero retries, one worker per shard, fail-closed JSON summary checks, shard-specific diagnostics, and Pages deployment blocked on both the exact-commit build and every shard.
 
-Chrome reports `in-incognito` inside Playwright's isolated browser context. The test requires zero other manifest/installability errors and retains that result as an explicit environment boundary rather than claiming OS installation.
+Depending on the runner's Chromium revision, Playwright's isolated browser context reports either no installability error or one environment-only `in-incognito` error. The test allows only that optional environment result, requires zero product manifest/installability errors, and does not relabel browser automation as OS installation.
 
 ## Local Validation
 
-- focused hosted static-preview Playwright: 4/4 across desktop Chromium and simulated Pixel 5, rerun against exact local commit `7938e3a98f5667eda55a15c5937054f26739a473` on 2026-09-01;
+- focused hosted Playwright: 4/4 across desktop Chromium and simulated Pixel 5 against the deployed exact release `987ef85cc7d3d15381822b5a98af3a709ee8663c` after the proof repair, then remotely repeated against final exact release `8d38dfa8c62a60687407d2e61659d9078cc023bc` on 2026-09-01;
 - full-product Playwright: 422 passed / 4 accepted skips / 0 failed across four local shards (`107`, `107`, `102 + 4 skipped`, `106`) with one worker and zero retries per shard;
 - changed-flow Playwright: 50/50 across desktop Chromium and simulated Pixel 5;
 - focused backup and Weather follow-up: 18/18 across desktop Chromium and simulated Pixel 5;
@@ -50,32 +50,24 @@ Chrome reports `in-incognito` inside Playwright's isolated browser context. The 
 - every remaining Food Delivery, Map, and Weather failure resolves to the shared project image-bed read path. Required asset requests returned HTTP 500 with Cloudflare body `error code: 1101`; the static image-bed root remained HTTP 200. The working-tree route repair now throws after exhausted retryable responses instead of fulfilling an HTTP 500 body as an image, reuses only explicitly prewarmed successful bytes, and lets non-prewarmed browser requests proceed once instead of multiplying every incidental image into five API reads. Focused Vitest passes 3/3;
 - the image-bed failure is confirmed as Workers KV daily read exhaustion. An authenticated project-token request to `/api/manage/list` returned HTTP 500 with `KV get() limit exceeded for the day` before token validation could complete. Cloudflare's published Workers KV Free allowance is 100,000 key reads per day and resets at `00:00 UTC`. Wrangler still has no Cloudflare account login for runtime-log inspection, and the image-bed repository has no deployment secret or variable configured, but a missing binding or R2 failure is no longer the active explanation for this incident;
 - the simultaneous CI and Pages collections coincided with the exhausted quota and repeated the same complete 426-test browser suite against one KV-backed asset service. The exact contribution of those runs versus earlier daily traffic is not available, so no per-run request count is claimed. The working-tree route repair removes the fivefold retry amplification for incidental images while retaining fail-closed prewarming for named release assets;
-- a single recovery probe at `2026-09-01 03:50 +08:00` requested one named Daylight Cafe asset and still received HTTP 500. No Pages or CI collection was restarted from that result; the next probe remains bounded to one named asset after the `00:00 UTC` reset;
-- a new exact-commit Pages run is still required after the repair lands and the image-bed `/file/...` path returns HTTP 200 following the daily reset. CI must then be dispatched only after Pages completes to avoid another overlapping full-product collection. Post-deployment Hosted Product Proof must report that same exact commit before this automated hosted slice is marked remotely complete.
+- a single recovery probe at `2026-09-01 18:56 +08:00` requested the recorded Daylight Cafe asset and returned HTTP 200, `image/png`, and 1,292,453 bytes. The focused Weather desktop/mobile flow then passed 12/12, the exact-SHA GitHub-mode build transformed 733 modules, and local Hosted Product Proof passed 4/4 before any remote collection restarted;
+- Pages run `33499931669` evaluated `5a8a10b88b6763e7b3023c08cf8046e22991128c`. Its audits, asset inventory, lint, full Vitest, build, and E2E shards 1 and 3 passed; shards 2 and 4 failed because a fixed `2026-09-01 17:00 +08:00` Work Hub journey had legitimately become missed by runner execution time, so the Map action was absent. Deployment was correctly skipped and Hosted Product Proof did not run. Commit `987ef85` keeps exact timestamp assertions while deriving the execution fixture seven days after runtime;
+- Pages run `33502221742` for `987ef85cc7d3d15381822b5a98af3a709ee8663c` passed the exact-commit build, all four full-product E2E shards, and deployment. The deployed `/schatphone/release.json` reported that complete SHA. Automatic Hosted Product Proof run `33503610482` then exposed a proof-only assumption: current Chromium returned zero installability errors while the test required exactly one `in-incognito` environment error, so backup proof did not run;
+- commit `8d38dfa` retains a strict zero-product-error assertion while allowing zero or one environment-only `in-incognito` result, and resolves every lock-screen navigation from the deployed `/schatphone/` base instead of the GitHub user root. Direct hosted acceptance against the deployed `987ef85` release passed 4/4 across desktop Chromium and simulated Pixel 5 before the repair was pushed;
+- final Pages run `33504446970` evaluated `8d38dfa8c62a60687407d2e61659d9078cc023bc` from `2026-09-01T11:49:28Z` through `2026-09-01T12:04:59Z`. Audits, the 1,220-asset publication inventory, lint, full Vitest, the 733-module build, all four fail-closed full-product E2E shards, and deployment passed. The deployed `/schatphone/release.json` reported the same complete SHA;
+- automatic Hosted Product Proof run `33505769229` checked out that exact deployed revision and passed in 1 minute 25 seconds. Desktop Chromium and simulated Pixel 5 both proved the `/schatphone/` base, manifest ID/start URL/scope/icons, zero product installability errors, Service Worker control/cache, online-to-offline reload, a second offline page, complete backup export, blank-storage restore, and reopen with restored owner/credential/identity data plus the completed recovery journal;
+- only after Pages and Hosted Product Proof completed, manually dispatched CI run `33505937702` evaluated the same exact SHA. Its audits, asset inventory, lint, full Vitest, 733-module build, and all four full-product E2E shards passed from `2026-09-01T12:06:57Z` through `2026-09-01T12:21:54Z`. No CI/Pages browser collection overlapped in the final evidence sequence.
 
-## Paused Handoff - 2026-09-01
+## Final Automated Hosted Evidence - 2026-09-01
 
-The user requested an immediate stage stop at `2026-09-01 04:02 +08:00`. The one-time Codex heartbeat was deleted, no terminal process is running, no push occurred, and no GitHub workflow was started after the failed recovery probe.
+The credential-free automated roadmap 4.9 hosted-browser slice is remotely complete at exact revision `8d38dfa8c62a60687407d2e61659d9078cc023bc`:
 
-Authoritative pause state:
+1. Pages run `33504446970` passed build plus all four full-product E2E shards and deployed that revision;
+2. the live `/schatphone/release.json` reported the same complete SHA;
+3. automatic Hosted Product Proof run `33505769229` passed the deployed PWA/offline and complete backup restore/reopen contract in desktop Chromium and simulated Pixel 5;
+4. manually dispatched CI run `33505937702` then passed build plus all four full-product E2E shards for the same revision, without overlapping the final Pages collection.
 
-- remote `origin/main` remains `d26de0d984ae7457781dc3d24123c7fd20db7a9c`;
-- local `main` contains unpushed implementation commit `4112875` and evidence commit `7938e3a`; this documentation-only handoff commit follows them;
-- unrelated `output/e2e/**` screenshots, Cloud Pastel assets, `.workbuddy/`, `.zcode/`, and `__pycache__/` remain outside the staged scope and must not be reverted or included accidentally;
-- the current code/evidence commit passes exact-SHA GitHub-mode build and local Hosted Product Proof 4/4. The remote Pages, automatic Hosted Product Proof, and manually dispatched CI evidence remain incomplete;
-- the active external blocker is the image-bed Workers KV daily read limit. The last bounded named-asset probe returned HTTP 500, so rerunning a full local or remote collection before a successful recovery probe would add cost without release evidence.
-
-Next execution must continue in this order:
-
-1. read `docs/process/AI_WORK_MODE.md`, the roadmap 4.9 entry, the owning Visual/IA handoff, and this QA record; confirm `git status`, `git log`, `origin/main`, and the unrelated dirty paths before staging or pushing;
-2. issue exactly one GET for the recorded Daylight Cafe asset. If it is not HTTP 200 with an image content type and non-zero bytes, stop without launching Playwright, Pages, or CI;
-3. after recovery, run `e2e/weather-widget-flow.spec.js` in desktop Chromium and simulated Pixel 5, then rebuild GitHub mode with the exact current `HEAD` and rerun `npm.cmd run test:e2e:hosted` with the same expected commit;
-4. push local `main` once. Wait for the resulting Pages run and all four E2E shards to finish; do not dispatch CI concurrently;
-5. after Pages succeeds, verify the deployed `/schatphone/release.json` exact SHA and wait for the automatic Hosted Product Proof to prove base path, manifest/installability metadata, Service Worker control/cache, online-to-offline reload/reopen, and complete backup restore/reopen;
-6. only then manually dispatch CI for that same exact commit and wait for build plus all four E2E shards;
-7. replace this paused handoff with final run IDs, exact SHA, deployed evidence, and honest remaining external/true-device gates; synchronize the roadmap plus Visual/IA and Module Architecture handoffs, run the required governance/lint/full-test/build/relevant E2E checks, commit, and push the documentation result.
-
-Do not treat failed runs `33426128121` or `33426083359` as release proof. Do not claim OS-installed PWA behavior, physical devices, external required-check/environment protection, personal R2, W3/multi-world, or new Event/AI capability from this slice.
+This closes the exact-commit automated browser proof, not the whole public-release gate. It does not claim OS-installed PWA behavior, physical devices, external required-check/environment protection, personal R2, W3/multi-world, or new Event/AI capability. Unrelated `output/e2e/**` screenshots, Cloud Pastel assets, `.workbuddy/`, `.zcode/`, and `__pycache__/` remain outside this documentation scope.
 
 ## Remaining Gates
 
