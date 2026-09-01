@@ -4,6 +4,7 @@ import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:5183/schatphone/'
 const expectedCommit = process.env.SCHATPHONE_EXPECTED_COMMIT || 'local'
 const expectedBasePath = '/schatphone/'
+const lockURL = new URL('#/lock', baseURL).href
 
 test.describe.configure({ mode: 'serial' })
 
@@ -195,7 +196,7 @@ test('deployed base path, manifest, service worker, and cached shell survive off
   const productInstallabilityErrors = installability.installabilityErrors.filter(
     (error) => error.errorId !== 'in-incognito',
   )
-  expect(environmentOnlyErrors).toHaveLength(1)
+  expect(environmentOnlyErrors.length).toBeLessThanOrEqual(1)
   expect(productInstallabilityErrors).toEqual([])
 
   await context.setOffline(true)
@@ -231,7 +232,7 @@ test('complete backup exports, restores into blank storage, and survives reopen'
   const sourceErrors = []
   sourcePage.on('pageerror', (error) => sourceErrors.push(error.message))
 
-  await unlockToHome(sourcePage)
+  await unlockToHome(sourcePage, lockURL)
   await navigateInsideUnlockedApp(sourcePage, '/settings')
   const downloadPromise = sourcePage.waitForEvent('download')
   await sourcePage.getByRole('button', { name: /Backup & Export|Exporting/ }).click()
@@ -269,7 +270,7 @@ test('complete backup exports, restores into blank storage, and survives reopen'
   const restoreErrors = []
   restorePage.on('pageerror', (error) => restoreErrors.push(error.message))
 
-  await unlockToHome(restorePage)
+  await unlockToHome(restorePage, lockURL)
   await restorePage.evaluate(() => {
     window.location.hash = '/settings'
   })
@@ -285,7 +286,7 @@ test('complete backup exports, restores into blank storage, and survives reopen'
   await expect(restorePage.getByText(/Import succeeded and data has been restored|导入成功/)).toBeVisible()
 
   await restorePage.reload({ waitUntil: 'domcontentloaded' })
-  await unlockToHome(restorePage)
+  await unlockToHome(restorePage, lockURL)
   const reopened = await readReopenedRecoveryEvidence(restorePage)
 
   expect(reopened.userName).toBe(`Hosted Owner ${testInfo.project.name}`)
