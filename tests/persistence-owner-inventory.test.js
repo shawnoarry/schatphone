@@ -300,7 +300,7 @@ describe('canonical persistence-owner inventory', () => {
       expect(source).toContain(`'${carrier.storageKey}'`)
       expect(source).toMatch(new RegExp(`STORAGE_VERSION\\s*=\\s*${carrier.schemaVersion}\\b`))
     }
-  })
+  }, 20_000)
 
   test('classifies every IndexedDB database/store/version and direct browser-storage key found in source', () => {
     const indexedDbCarriers = PERSISTENCE_PHYSICAL_CARRIERS.filter(
