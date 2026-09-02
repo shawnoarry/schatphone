@@ -157,6 +157,7 @@ test('deployed base path, manifest, service worker, and cached shell survive off
   expect(resolvedStartUrl.hash).toBe('#/lock')
   expect(resolvedScope.pathname).toBe(expectedBasePath)
   expect(manifest.display).toBe('standalone')
+  expect(manifest.orientation).toBe('portrait')
   expect(manifest.icons).toEqual(
     expect.arrayContaining([
       expect.objectContaining({ sizes: '192x192', type: 'image/png', purpose: 'any' }),
@@ -185,6 +186,17 @@ test('deployed base path, manifest, service worker, and cached shell survive off
   expect(serviceWorkerEvidence.cacheNames.some((name) => name.startsWith('schatphone-pwa-'))).toBe(
     true,
   )
+
+  const serviceWorkerResponse = await page.request.get(
+    new URL('service-worker.js', baseURL).href,
+  )
+  expect(serviceWorkerResponse.ok()).toBe(true)
+  const serviceWorkerSource = await serviceWorkerResponse.text()
+  if (expectedCommit !== 'local') {
+    expect(serviceWorkerSource).toContain(`schatphone-pwa-${expectedCommit}`)
+  } else {
+    expect(serviceWorkerSource).toMatch(/const SERVICE_WORKER_VERSION = 'schatphone-pwa-[^']+'/)
+  }
 
   const cdp = await context.newCDPSession(page)
   const appManifest = await cdp.send('Page.getAppManifest')

@@ -10,6 +10,7 @@ import {
   initializeCurrentSaveWriter,
 } from './lib/current-save-write-runtime'
 import { recoverPendingBackupRestores } from './lib/backup-restore-runtime'
+import { startDesktopLayoutGuard } from './lib/desktop-layout-guard'
 import './style.css'
 
 let currentSaveWriteAccess = null
@@ -116,6 +117,8 @@ if (typeof window !== 'undefined') {
       { passive: true },
     )
   }
+
+  startDesktopLayoutGuard()
 }
 
 const app = createApp(App)

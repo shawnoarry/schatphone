@@ -156,6 +156,13 @@ export const PERSISTENCE_PHYSICAL_CARRIERS = freezeEntries([
     durability: 'bounded-device-transient',
   },
   {
+    id: 'local:desktop-layout-hint-dismissed',
+    carrierType: 'localStorage',
+    fullKey: 'schatphone:desktop-layout-hint-dismissed',
+    sourceFile: 'src/lib/desktop-layout-guard.js',
+    durability: 'durable-hint',
+  },
+  {
     id: 'local:image-generation-legacy-config',
     carrierType: 'localStorage',
     fullKey: 'schatphone:image-generation:config',

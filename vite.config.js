@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, readFileSync, realpathSync } from 'node:fs'
+import { copyFileSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { defineConfig, searchForWorkspaceRoot } from 'vite'
 import vue from '@vitejs/plugin-vue'
@@ -89,6 +89,43 @@ const hostedReleaseProof = {
   },
 }
 
+// Stamps the built service worker with the release commit so every deploy
+// rotates the cache prefix and forces already-installed PWAs to refresh.
+const serviceWorkerVersionStamp = () => {
+  let resolvedConfig
+  return {
+    name: 'service-worker-version-stamp',
+    apply: 'build',
+    configResolved(config) {
+      resolvedConfig = config
+    },
+    closeBundle() {
+      const commit = (
+        process.env.SCHATPHONE_RELEASE_COMMIT ||
+        process.env.VERCEL_GIT_COMMIT_SHA ||
+        process.env.CF_PAGES_COMMIT_SHA ||
+        process.env.GITHUB_SHA ||
+        ''
+      ).trim()
+      if (!commit || commit === 'local') return
+      const workerPath = resolve(
+        resolvedConfig.root,
+        resolvedConfig.build.outDir,
+        'service-worker.js',
+      )
+      const source = readFileSync(workerPath, 'utf8')
+      const stamped = source.replace(
+        /const SERVICE_WORKER_VERSION = '[^']+'/,
+        `const SERVICE_WORKER_VERSION = 'schatphone-pwa-${commit}'`,
+      )
+      if (stamped === source) {
+        throw new Error('service-worker.js is missing the SERVICE_WORKER_VERSION constant')
+      }
+      writeFileSync(workerPath, stamped)
+    },
+  }
+}
+
 const resolveAppBase = () => {
   const configured = process.env.SCHATPHONE_BASE_PATH?.trim()
   if (configured) {
@@ -105,6 +142,7 @@ export default defineConfig(({ mode }) => ({
     maplibreWorkerRuntimeAssets,
     deploymentBrandAssets(resolveDeploymentBrand(mode)),
     hostedReleaseProof,
+    serviceWorkerVersionStamp(),
   ],
   base: resolveAppBase(),
   optimizeDeps: {
