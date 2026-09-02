@@ -56,13 +56,15 @@ test.describe('remaining S1 shell portfolio', () => {
   test('POSTA desktop prepares only a local sending draft', async ({ page }) => {
     await seedSystem(page); await openApp(page, '/parcel', 'parcel-app', desktop)
     await page.getByTestId('parcel-tab-send').click(); await expect(page.getByTestId('parcel-send')).toContainText('不创建运单、不计费、不预约取件')
-    await expectHealthy(page, 'parcel-app'); await page.screenshot({ path: join(evidenceDir, 'posta-desktop-day.png'), fullPage: true })
+    await expectHealthy(page, 'parcel-app'); await page.screenshot({ path: join(evidenceDir, 'posta-desktop-zh.png'), fullPage: true })
   })
 
-  test('POSTA simulated Pixel 5 English night shows stale tracking safely', async ({ page }) => {
+  test('POSTA keeps its fixed postal identity under system zen theme', async ({ page }) => {
     await seedSystem(page, { language: 'en-US', theme: 'zen' }); await openApp(page, '/parcel', 'parcel-app', pixel5)
+    const appBackground = await page.getByTestId('parcel-app').evaluate((el) => getComputedStyle(el).backgroundColor)
+    expect(appBackground).toBe('rgb(243, 238, 226)')
     await page.getByTestId('parcel-shipment-posta-shipment-stale-0820').click(); await expect(page.getByTestId('parcel-detail')).toContainText('Authored tracking records are preview-only'); expect(await page.getByTestId('parcel-app').innerText()).not.toMatch(/[\u4e00-\u9fff]/)
-    await expectHealthy(page, 'parcel-app'); await page.screenshot({ path: join(evidenceDir, 'posta-mobile-night-en.png'), fullPage: true })
+    await expectHealthy(page, 'parcel-app'); await page.screenshot({ path: join(evidenceDir, 'posta-mobile-zen-en.png'), fullPage: true })
   })
 
   test('NEXT desktop creates a local open-listing draft only', async ({ page }) => {

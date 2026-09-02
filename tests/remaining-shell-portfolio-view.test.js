@@ -57,13 +57,21 @@ describe('remaining S1 shell portfolio views', () => {
     wrapper.unmount()
   })
 
-  test('all four shells localize English night mode without Chinese UI copy', async () => {
-    for (const [path, component, testId] of [['/intercity', IntercityView, 'intercity-app'], ['/creator-rights', CreatorRightsView, 'creator-rights-app'], ['/parcel', ParcelView, 'parcel-app'], ['/career', CareerView, 'career-app']]) {
+  test('theme-coupled shells localize English night mode without Chinese UI copy', async () => {
+    for (const [path, component, testId] of [['/intercity', IntercityView, 'intercity-app'], ['/creator-rights', CreatorRightsView, 'creator-rights-app'], ['/career', CareerView, 'career-app']]) {
       const { wrapper, systemStore } = await mountAt(path, component)
       systemStore.settings.system.language = 'en-US'; systemStore.settings.appearance.colorMode = 'night'; await flushPromises()
       expect(wrapper.get(`[data-testid="${testId}"]`).classes()).toEqual(expect.arrayContaining([expect.stringMatching(/night/)]))
       expect(wrapper.text()).not.toMatch(/[\u4e00-\u9fff]/)
       wrapper.unmount()
     }
+  })
+
+  test('parcel keeps its fixed postal identity under system night mode', async () => {
+    const { wrapper, systemStore } = await mountAt('/parcel', ParcelView)
+    systemStore.settings.system.language = 'en-US'; systemStore.settings.appearance.colorMode = 'night'; await flushPromises()
+    expect(wrapper.get('[data-testid="parcel-app"]').classes()).not.toContain('night')
+    expect(wrapper.text()).not.toMatch(/[\u4e00-\u9fff]/)
+    wrapper.unmount()
   })
 })
