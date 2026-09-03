@@ -54,13 +54,13 @@ describe('GATE Tickets S1 shell', () => {
     wrapper.unmount()
   })
 
-  test('localizes English night mode without Chinese UI copy', async () => {
+  test('keeps its fixed poster-wall identity under system night mode', async () => {
     const { wrapper } = await mountTickets()
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
     systemStore.settings.appearance.colorMode = 'night'
     await flushPromises()
-    expect(wrapper.get('[data-testid="tickets-app"]').classes()).toContain('is-night')
+    expect(wrapper.get('[data-testid="tickets-app"]').classes()).not.toContain('is-night')
     expect(wrapper.text()).toContain('Upcoming rooms')
     expect(wrapper.text()).not.toMatch(/[\u4e00-\u9fff]/)
     wrapper.unmount()

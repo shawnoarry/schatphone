@@ -2,7 +2,7 @@
 
 Updated: 2026-09-03
 
-Status: `POSTA DONE 2026-09-03 / VIA DONE 2026-09-03 / CREDO DONE 2026-09-03 / NEXT DONE 2026-09-03 / GATE NEXT`
+Status: `POSTA DONE 2026-09-03 / VIA DONE 2026-09-03 / CREDO DONE 2026-09-03 / NEXT DONE 2026-09-03 / GATE DONE 2026-09-03 / ROAM NEXT`
 
 本文件是跨 PC 接续文档：另一台机器接手时，读本文件 + `docs/design/PARCEL_POSTA_BRAND_DIRECTION.md` 即可继续，无需重读会话。
 
@@ -69,6 +69,14 @@ Status: `POSTA DONE 2026-09-03 / VIA DONE 2026-09-03 / CREDO DONE 2026-09-03 / N
 - axe 修过一轮：蓝压深到 `#1f53d6`（原 `#2f6bff` 对比 4.15/4.49 不达 4.5）。
 - **新系统级机制**：`src/App.vue` 增加 `FIXED_IDENTITY_STATUS_TONES` 路由映射——独立 App 解耦后，状态栏文字跟随 App 面貌而非系统主题（否则浅色身份壳在 zen 下状态栏浅对浅不可读）。当前覆盖 parcel/creator-rights/career（深字）与 intercity（浅字）；后续 GATE/ROAM 完成时补入。e2e 已对四壳加状态栏颜色断言。
 
+### GATE 票务（2026-09-03）
+
+- 固定暗底「海报墙」身份：近黑 `#0f0f10` + 票橙红 `#ef3d25` + Arial Narrow 粗体大字；事件卡由大色块海报（`--event-accent`）主导。
+- 票根化：票夹卡片加打孔缺口（分隔线上下圆孔）+ 虚线分隔 + 橙红 LOCAL DRAFT 竖条。
+- 已解除系统主题耦合；zen 下保持近黑（e2e computed 背景断言 `rgb(15, 15, 16)` 锁定）。状态栏沿用 GATE 自带的 `:global` 覆盖（`status-fg` 跟 `--ink`），未纳入 App.vue 映射——若后续收敛机制可合并。
+- 注意：`isNight`/`settings`/`storeToRefs` 已一并清理（lint）。
+- 证据：`output/e2e/tickets-app-shell/tickets-desktop-zh.png`、`tickets-mobile-zen.png`（旧名已删除）。
+
 ## 4. Remaining / 待办矩阵
 
 执行顺序即优先级。每壳一个固定身份、一次到位：
@@ -78,8 +86,8 @@ Status: `POSTA DONE 2026-09-03 / VIA DONE 2026-09-03 / CREDO DONE 2026-09-03 / N
 | ~~1~~ ~~VIA~~ `DONE 2026-09-03` | VIA 联程（`/intercity` / `src/views/IntercityView.vue`） | **暗底交通枢纽信息牌**：近黑 + 琥珀/信号绿，等宽 mono 为主字体 | 时刻表行 + 时长条 + 站点代码大字 | 机场出发大屏 |
 | ~~2~~ ~~CREDO~~ `DONE 2026-09-03` | CREDO 谱权（`/creator-rights` / `src/views/CreatorRightsView.vue`） | **象牙纸文书**：纸白 + 藏青 + 金，衬线仅限文书标题 | 账簿表格 + 印章/编号美学 | 版税结算单、公证文书 |
 | ~~3~~ ~~NEXT~~ `DONE 2026-09-03` | NEXT 机会（`/career` / `src/views/CareerView.vue`） | **亮白招聘平台**：白 + 珊瑚/品牌蓝，友好圆体 sans | 信息流卡片墙 + 组织 logo 块 | Wanted、LinkedIn |
-| 4（下一个） | GATE 票务（`/tickets` / `src/views/TicketsView.vue`） | 暗底保留但转向**海报墙**，粗黑无衬线大字 | 海报优先网格 + 票根式卡片（打孔/锯齿边缘） | Interpark、票根 |
-| 5 | ROAM 旅行（`/travel` / `src/views/TravelView.vue`） | **亮底目的地**：暖白 + 陶土，人文 sans | 目的地大图卡 + 地图锚点 | Airbnb、携程 |
+| ~~4~~ ~~GATE~~ `DONE 2026-09-03` | GATE 票务（`/tickets` / `src/views/TicketsView.vue`） | 暗底保留但转向**海报墙**，粗黑无衬线大字 | 海报优先网格 + 票根式卡片（打孔/锯齿边缘） | Interpark、票根 |
+| 5（下一个） | ROAM 旅行（`/travel` / `src/views/TravelView.vue`） | **亮底目的地**：暖白 + 陶土，人文 sans | 目的地大图卡 + 地图锚点 | Airbnb、携程 |
 
 不动：Work Hub（暖纸）、Aster（海军蓝+青柠）已有独立身份；Shopping/FoodDelivery 各店铺已是正确范式。
 

@@ -44,19 +44,21 @@ test.describe('GATE Tickets S1 shell', () => {
     expect(stored.draftEventIds).toEqual(['gate-event-hanul-dome-20260912'])
     expect(JSON.stringify(stored)).not.toMatch(/seat|order|wallet|payment|calendar|route|agenda|eventInstance/i)
     await expectNoHorizontalOverflow(page)
-    await page.screenshot({ path: join(evidenceDir, 'tickets-desktop-day.png'), fullPage: true })
+    await page.screenshot({ path: join(evidenceDir, 'tickets-desktop-zh.png'), fullPage: true })
   })
 
-  test('simulated Pixel 5 night mode is accessible and keeps sold-out fail-closed', async ({ page }) => {
+  test('simulated Pixel 5 under system zen keeps the fixed poster wall, accessible and fail-closed', async ({ page }) => {
     await seedSystem(page, { theme: 'zen' })
     await openTickets(page, pixel5)
-    await expect(page.getByTestId('tickets-app')).toHaveClass(/is-night/)
+    await expect(page.getByTestId('tickets-app')).not.toHaveClass(/night/)
+    const posterBg = await page.evaluate(() => getComputedStyle(document.querySelector('[data-testid="tickets-app"]')).backgroundColor)
+    expect(posterBg).toBe('rgb(15, 15, 16)')
     await page.getByTestId('tickets-event-gate-event-iseo-listening-20260920').click()
     await expect(page.getByTestId('tickets-save-draft')).toBeDisabled()
     const results = await new AxeBuilder({ page }).include('[data-testid="tickets-app"]').withTags(['wcag2a', 'wcag2aa']).analyze()
     expect(results.violations).toEqual([])
     await expectNoHorizontalOverflow(page)
-    await page.screenshot({ path: join(evidenceDir, 'tickets-mobile-night.png'), fullPage: true })
+    await page.screenshot({ path: join(evidenceDir, 'tickets-mobile-zen.png'), fullPage: true })
   })
 
   test('simulated Pixel 5 English search and long content do not overflow', async ({ page }) => {
