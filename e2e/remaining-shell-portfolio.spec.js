@@ -24,20 +24,27 @@ const expectHealthy = async (page, testId) => {
 test.describe('remaining S1 shell portfolio', () => {
   test.beforeAll(async () => { await mkdir(evidenceDir, { recursive: true }) })
 
-  test('VIA desktop creates a local travel intent and stale schedules fail closed', async ({ page }) => {
+  test('VIA desktop keeps its fixed departure-board identity and creates a local travel intent', async ({ page }) => {
     await seedSystem(page); await openApp(page, '/intercity', 'intercity-app', desktop)
     await page.getByTestId('intercity-service-via-rail-seoul-busan-0828').click(); await page.getByTestId('intercity-save-draft').click(); await page.getByTestId('intercity-tab-trips').click()
     await expect(page.getByTestId('intercity-trips')).toContainText('不是订单、占座、付款、登机牌或日历行程')
     const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('schatphone:intercity-shell:preview-state') || '{}'))
     expect(stored.tripDrafts).toHaveLength(1); expect(JSON.stringify(stored)).not.toMatch(/ticketId|seatHold|wallet|payment|calendar|mapRoute|eventInstance/i)
-    await expectHealthy(page, 'intercity-app'); await page.screenshot({ path: join(evidenceDir, 'via-desktop-day.png'), fullPage: true })
+    // fixed identity: near-black departure board regardless of system theme
+    const boardColor = await page.evaluate(() => getComputedStyle(document.querySelector('[data-testid="intercity-app"]')).backgroundColor)
+    expect(boardColor).toBe('rgb(13, 16, 19)')
+    await expectHealthy(page, 'intercity-app'); await page.screenshot({ path: join(evidenceDir, 'via-desktop-zh.png'), fullPage: true })
   })
 
-  test('VIA simulated Pixel 5 English night closes stale data', async ({ page }) => {
+  test('VIA simulated Pixel 5 English under system zen keeps the fixed board and closes stale data', async ({ page }) => {
     await seedSystem(page, { language: 'en-US', theme: 'zen' }); await openApp(page, '/intercity', 'intercity-app', pixel5)
     await page.getByTestId('intercity-service-via-flight-incheon-tokyo-0902').click(); await expect(page.getByTestId('intercity-source-closed')).toContainText('Old schedules and fares cannot create an intent')
     await expect(page.getByTestId('intercity-save-draft')).toHaveCount(0); expect(await page.getByTestId('intercity-app').innerText()).not.toMatch(/[\u4e00-\u9fff]/)
-    await expectHealthy(page, 'intercity-app'); await page.screenshot({ path: join(evidenceDir, 'via-mobile-night-en.png'), fullPage: true })
+    // system zen must not flip the shell: the board stays near-black amber
+    await expect(page.getByTestId('intercity-app')).not.toHaveClass(/night/)
+    const boardColorZen = await page.evaluate(() => getComputedStyle(document.querySelector('[data-testid="intercity-app"]')).backgroundColor)
+    expect(boardColorZen).toBe('rgb(13, 16, 19)')
+    await expectHealthy(page, 'intercity-app'); await page.screenshot({ path: join(evidenceDir, 'via-mobile-zen-en.png'), fullPage: true })
   })
 
   test('CREDO desktop keeps rights and declaration non-authoritative', async ({ page }) => {

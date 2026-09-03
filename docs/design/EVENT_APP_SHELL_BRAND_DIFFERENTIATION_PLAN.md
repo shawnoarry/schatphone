@@ -2,7 +2,7 @@
 
 Updated: 2026-09-03
 
-Status: `POSTA DONE 2026-09-03 / VIA NEXT`
+Status: `POSTA DONE 2026-09-03 / VIA DONE 2026-09-03 / CREDO NEXT`
 
 本文件是跨 PC 接续文档：另一台机器接手时，读本文件 + `docs/design/PARCEL_POSTA_BRAND_DIRECTION.md` 即可继续，无需重读会话。
 
@@ -27,14 +27,23 @@ Status: `POSTA DONE 2026-09-03 / VIA NEXT`
 - 顺带修复真实 bug：详情抽屉置顶按钮曾命中 `aside>button` 通用选择器，继承关闭按钮的绝对定位与圆形圆角，渲染成横跨全屏的椭圆。关闭按钮已收敛为 `aside>.close`。
 - 证据：`output/e2e/remaining-shell-portfolio/posta-desktop-zh.png`、`posta-mobile-zen-en.png`（zen 系统主题下仍保持亮底邮政身份）。
 
+### VIA 联程（2026-09-03）
+
+- 固定暗底「交通枢纽信息牌」身份：近黑 `#0d1013` 底 + 琥珀 `#f0a63a` / 信号绿 `#3ecf7c`；Georgia 衬线全部换成等宽 mono（JetBrains Mono 栈，CJK 回落 Noto Sans Mono CJK），覆盖站点码 / 时刻 / 数字 / 大标题。
+- 状态徽章按信号灯语义重定色：available=信号绿、limited=琥珀、closed=暖红、stale=灰蓝。
+- 已解除系统主题耦合（删除 `isNight` computed、`:class` 绑定与 `.is-night` 样式块及末尾覆盖行）；zen 系统主题下仍保持同一块近黑板（e2e computed 背景断言 `rgb(13, 16, 19)` 锁定）。
+- 动效：班次卡 hover 上浮、按压 120-180ms、详情抽屉 220ms 入场，全部遵守 `prefers-reduced-motion`。
+- 测试迁移：`remaining-shell-portfolio-view.test.js` 中 VIA 移出 night 耦合组，新增固定身份断言（系统 night 下无 night 类 + 英文无中文）。
+- 证据：`output/e2e/remaining-shell-portfolio/via-desktop-zh.png`、`via-mobile-zen-en.png`（旧名 `via-desktop-day.png` / `via-mobile-night-en.png` 已删除）。
+
 ## 4. Remaining / 待办矩阵
 
 执行顺序即优先级。每壳一个固定身份、一次到位：
 
 | 顺序 | App（路由 / 文件） | 固定身份方向 | 骨架 | 参照 |
 | --- | --- | --- | --- | --- |
-| 1（下一个） | VIA 联程（`/intercity` / `src/views/IntercityView.vue`） | **暗底交通枢纽信息牌**：近黑 + 琥珀/信号绿，等宽 mono 为主字体 | 时刻表行 + 时长条 + 站点代码大字 | 机场出发大屏 |
-| 2 | CREDO 谱权（`/creator-rights` / `src/views/CreatorRightsView.vue`） | **象牙纸文书**：纸白 + 藏青 + 金，衬线仅限文书标题 | 账簿表格 + 印章/编号美学 | 版税结算单、公证文书 |
+| ~~1~~ ~~VIA~~ `DONE 2026-09-03` | VIA 联程（`/intercity` / `src/views/IntercityView.vue`） | **暗底交通枢纽信息牌**：近黑 + 琥珀/信号绿，等宽 mono 为主字体 | 时刻表行 + 时长条 + 站点代码大字 | 机场出发大屏 |
+| 2（下一个） | CREDO 谱权（`/creator-rights` / `src/views/CreatorRightsView.vue`） | **象牙纸文书**：纸白 + 藏青 + 金，衬线仅限文书标题 | 账簿表格 + 印章/编号美学 | 版税结算单、公证文书 |
 | 3 | NEXT 机会（`/career` / `src/views/CareerView.vue`） | **亮白招聘平台**：白 + 珊瑚/品牌蓝，友好圆体 sans | 信息流卡片墙 + 组织 logo 块 | Wanted、LinkedIn |
 | 4 | GATE 票务（`/tickets` / `src/views/TicketsView.vue`） | 暗底保留但转向**海报墙**，粗黑无衬线大字 | 海报优先网格 + 票根式卡片（打孔/锯齿边缘） | Interpark、票根 |
 | 5 | ROAM 旅行（`/travel` / `src/views/TravelView.vue`） | **亮底目的地**：暖白 + 陶土，人文 sans | 目的地大图卡 + 地图锚点 | Airbnb、携程 |
