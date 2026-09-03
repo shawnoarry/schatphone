@@ -300,11 +300,11 @@ describe('Mail S1 shell view', () => {
     wrapper.unmount()
   })
 
-  test('zen theme drives the portal night surface', async () => {
+  test('keeps its fixed postal-green identity under system zen', async () => {
     const systemStore = useSystemStore()
     systemStore.settings.appearance.currentTheme = 'zen'
     const { wrapper } = await mountMail()
-    expect(wrapper.get('[data-testid="daon-mail-app"]').classes()).toContain('is-night')
+    expect(wrapper.get('[data-testid="daon-mail-app"]').classes()).not.toContain('is-night')
     wrapper.unmount()
   })
 

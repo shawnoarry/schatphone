@@ -595,15 +595,11 @@ describe('WalletView', () => {
     wrapper.unmount()
   })
 
-  test('uses the real zen system theme for the Wallet night palette', async () => {
+  test('keeps its fixed mint-ledger identity under the zen system theme', async () => {
     const systemStore = useSystemStore()
     systemStore.setTheme('zen')
     const { wrapper } = await mountWalletView()
 
-    expect(wrapper.get('[data-app="wallet"]').classes()).toContain('is-night')
-
-    systemStore.setTheme('default')
-    await flushUi()
     expect(wrapper.get('[data-app="wallet"]').classes()).not.toContain('is-night')
 
     wrapper.unmount()

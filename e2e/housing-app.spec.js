@@ -144,7 +144,9 @@ test('Chinese zen mode keeps long prices, source failures, and controls readable
   await seedHousingSystem(page, { language: 'zh-CN', theme: 'zen' })
   await openHousingFromHome(page)
 
-  await expect(page.getByTestId('housing-app')).toHaveClass(/is-night/)
+  await expect(page.getByTestId('housing-app')).not.toHaveClass(/night/)
+  const ground = await page.getByTestId('housing-app').evaluate((el) => getComputedStyle(el).backgroundColor)
+  expect(ground).toBe('rgb(241, 238, 230)')
   await expect(page.getByTestId('housing-app')).toContainText('寻找住处')
   await page.getByTestId('housing-mode-buy').click()
   await page.getByTestId('housing-listing-housing_listing_jari_006').locator('.jari-listing__body').click()

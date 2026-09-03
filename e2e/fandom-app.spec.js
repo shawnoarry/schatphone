@@ -31,7 +31,7 @@ const expectNoHorizontalOverflow = async (page) => {
 test.describe('Aster unified fandom S1 shell', () => {
   test.beforeAll(async () => { await mkdir(evidenceDir, { recursive: true }) })
 
-  test('desktop day mode completes the ordinary consumer loop', async ({ page }) => {
+  test('desktop keeps the fixed night-sky identity through the ordinary consumer loop', async ({ page }) => {
     await seedSystem(page)
     await openFandom(page)
     await expect(page.getByTestId('fandom-public-schedule')).toContainText('官方公开日程')
@@ -43,20 +43,22 @@ test.describe('Aster unified fandom S1 shell', () => {
     await expect(page.getByTestId('fandom-messages')).toContainText('不是 Chat 私聊')
     await page.getByTestId('fandom-read-subscription-yun-iseo-preview').click()
     await expectNoHorizontalOverflow(page)
-    await page.screenshot({ path: join(evidenceDir, 'fandom-desktop-day.png'), fullPage: true })
+    await page.screenshot({ path: join(evidenceDir, 'fandom-desktop-zh.png'), fullPage: true })
   })
 
-  test('simulated Pixel 5 night mode keeps artist publishing locked and is accessible', async ({ page }) => {
+  test('simulated Pixel 5 keeps the fixed night-sky identity under system zen, locked and accessible', async ({ page }) => {
     await seedSystem(page, { theme: 'zen' })
     await openFandom(page, pixel5)
-    await expect(page.getByTestId('fandom-app')).toHaveClass(/is-night/)
+    await expect(page.getByTestId('fandom-app')).not.toHaveClass(/night/)
+    const paper = await page.getByTestId('fandom-app').evaluate((el) => getComputedStyle(el).backgroundColor)
+    expect(paper).toBe('rgb(13, 16, 32)')
     await page.getByTestId('fandom-tab-me').click()
     await expect(page.getByTestId('fandom-artist-access')).toContainText('当前未开通')
     await expect(page.getByTestId('fandom-app')).not.toContainText('发布动态')
     const results = await new AxeBuilder({ page }).include('[data-testid="fandom-app"]').withTags(['wcag2a', 'wcag2aa']).analyze()
     expect(results.violations).toEqual([])
     await expectNoHorizontalOverflow(page)
-    await page.screenshot({ path: join(evidenceDir, 'fandom-mobile-night.png'), fullPage: true })
+    await page.screenshot({ path: join(evidenceDir, 'fandom-mobile-zen.png'), fullPage: true })
   })
 
   test('Work Hub fails closed without organization authority and never unlocks artist workspace', async ({ page }) => {

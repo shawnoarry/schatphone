@@ -487,7 +487,7 @@ test('Wallet home presents card customization and source-app activity as a mobil
   expect(consoleErrors).toEqual([])
 })
 
-test('Wallet uses the actual zen system theme for its night palette', async ({ page }, testInfo) => {
+test('Wallet keeps its fixed mint-ledger identity under the zen system theme', async ({ page }, testInfo) => {
   const pageErrors = []
   const consoleErrors = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
@@ -500,7 +500,9 @@ test('Wallet uses the actual zen system theme for its night palette', async ({ p
   await navigateInsideUnlockedApp(page, '/wallet?homePage=0&from=home')
 
   await expect(page.locator('.app-shell')).toHaveAttribute('data-theme', 'zen')
-  await expect(page.locator('.wallet-app')).toHaveClass(/is-night/)
+  await expect(page.locator('.wallet-app')).not.toHaveClass(/night/)
+  const canvas = await page.locator('.wallet-app').evaluate((el) => getComputedStyle(el).getPropertyValue('--wallet-canvas').trim())
+  expect(canvas).toBe('#eef4f2')
   await expect(page.getByTestId('wallet-card-deck')).toBeVisible()
   await expect(page.getByTestId('wallet-card-account-summary-wallet_card_icbc_cny-home')).toBeVisible()
   await expectNoPageOverflow(page)

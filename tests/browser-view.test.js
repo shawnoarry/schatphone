@@ -148,14 +148,14 @@ describe('Browser / Search / Help S1 shell', () => {
     wrapper.unmount()
   })
 
-  test('English and zen mode localize the whole shell and retain readable theme class', async () => {
+  test('English mode under system zen keeps the fixed mint-paper identity and localizes the shell', async () => {
     const { wrapper } = await mountBrowser()
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
     systemStore.settings.appearance.currentTheme = 'zen'
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="prism-browser-app"]').classes()).toContain('is-night')
+    expect(wrapper.get('[data-testid="prism-browser-app"]').classes()).not.toContain('is-night')
     expect(wrapper.text()).toContain('What are you looking for?')
     expect(wrapper.text()).toContain('External search is not connected')
     expect(wrapper.text()).not.toMatch(/[\u4e00-\u9fff]/)

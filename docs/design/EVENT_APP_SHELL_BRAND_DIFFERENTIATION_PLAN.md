@@ -2,7 +2,7 @@
 
 Updated: 2026-09-03
 
-Status: `ALL SIX DONE 2026-09-03 (POSTA / VIA / CREDO / NEXT / GATE / ROAM)`
+Status: `ALL SIX DONE 2026-09-03 (POSTA / VIA / CREDO / NEXT / GATE / ROAM) + FIRST-WAVE 8 SHELLS DECOUPLED 2026-09-03`
 
 本文件是跨 PC 接续文档：另一台机器接手时，读本文件 + `docs/design/PARCEL_POSTA_BRAND_DIRECTION.md` 即可继续，无需重读会话。
 
@@ -49,7 +49,7 @@ Status: `ALL SIX DONE 2026-09-03 (POSTA / VIA / CREDO / NEXT / GATE / ROAM)`
 7. 两壳装饰性 Font Awesome 图标补齐 `aria-hidden="true"`。
 8. 验证：lint 通过；全量 vitest 2764/2771（7 个失败均为 `world-semantic-access-map-store` 存量基线，5 个失败套件为本机 `.codex` 缓存噪音，无新增失败）；生产构建通过；`remaining-shell-portfolio` VIA/POSTA e2e 8/8（desktop + mobile-chrome，axe 零违规，固定底色断言保持）。证据截图同名重出。
 
-已识别但未做（超出"只改视觉"严格边界，留待用户确认）：VIA fixture 的 `platformZh/platformEn` 站台信息未渲染、POSTA 详情时间线可由现有字段升级为三节点、POSTA 头部置顶计数在 0 时仍显示、两壳详情抽屉可加 `role="dialog"` 与 Esc 关闭。
+~~已识别但未做（超出"只改视觉"严格边界，留待用户确认）~~ —— 四项已于 2026-09-03 经用户确认并完成（同日第二轮）：VIA 详情页新增 mono「站台信息」行（渲染既有 `platformZh/platformEn` 字段，虚线分隔 + signpost 图标）；POSTA 详情由两点装饰线升级为「寄出 → 当前 → 预计」三节点时间线（复用 sender/status/eta 字段，当前节点带光晕）；POSTA 头部置顶计数在 0 时隐藏；两壳详情抽屉加 `role="dialog"` + `aria-label` + Esc 关闭（可逆的 window keydown 监听，卸载即摘）。验证：lint 通过；portfolio 单测 8/8；VIA/POSTA e2e 8/8；生产构建通过；证据截图重出。
 
 ### CREDO 谱权（2026-09-03）
 
@@ -84,6 +84,26 @@ Status: `ALL SIX DONE 2026-09-03 (POSTA / VIA / CREDO / NEXT / GATE / ROAM)`
 - 已解除系统主题耦合；zen 下保持暖白（e2e computed 背景断言 `rgb(250, 246, 239)` 锁定）。axe 修过一轮：辅助灰加深到 `#6b6157`。
 - 状态栏：沿用 ROAM 自带的 `:global` 覆盖（与 GATE 同机制）。**状态栏机制现状：App.vue 的 `FIXED_IDENTITY_STATUS_TONES` 覆盖 VIA/CREDO/NEXT/POSTA；GATE/ROAM 走各自的 `:global` 规则——两套并存都有 e2e/断言锁定，将来想收敛时以 App.vue 映射为准。**
 
+### 第一批壳解耦（2026-09-03，用户当日确认面貌表后实施）
+
+事件壳六只完成后，同一原则回收到第一批已验收壳。每壳删除主题 computed + 根 class 绑定 + 全部 night 样式块（固定暗的壳把夜版 token 提升为根值、删除昼版残留），fixture / 文案 / data-testid / 存储 / 路由一律未动：
+
+| App | 文件 | 固定面貌 | 状态栏 `status-fg` |
+| --- | --- | --- | --- |
+| Aster 星集 | `FandomView.vue` | 固定暗：海军蓝 `#0d1020` + 青柠（夜版提升为根值） | `:global` 钉死浅字 `#f6f3e9`（原 `var(--ink)` 解析到系统变量，昼系统下深对深不可读——本轮修复） |
+| Ripple 社区 | `CommunityView.vue` | 固定暗：近黑 `#111416` + 珊瑚（夜版提升为根值） | 同上，钉死 `#f5f2ec` |
+| Work Hub | `WorkplaceView.vue` + `components/workplace/WorkHubProductionWorkspace.vue`（isNight prop 一并拆除） | 固定暖纸 `#f2eee5` | 新增 `:global` 钉深字 `#17233a`（含 empty / production 两个变体根） |
+| Daon Mail | `MailView.vue` | 固定邮政绿亮面 | 沿用原有 `#f2f8f4`（深绿头恒久成立） |
+| Ondam Care | `HealthcareView.vue`（注意：该文件 `<style>` 非 scoped，全局选择器直接写、不用 `:global`） | 固定暖米 `#e8eef5` + 粉蓝 | 新增钉深字 `#33465c` |
+| Prism 折光 | `BrowserView.vue` | 固定薄荷绿纸 `#eef3ef` | 新增钉深字 `#102a2e` |
+| Jari 找房 | `HousingView.vue` | 固定米纸森绿 `#f1eee6` | 沿用原有 `#17251f` |
+| Wallet | `WalletView.vue`（另有 `data-theme='zen'` 的 status-fg 变体一并删除） | 固定薄荷账本 `#eef4f2` + 珊瑚 | 沿用原有 `#182320` |
+
+- 顺带修复两个昼面存量对比度问题（此前 axe 只在夜面上跑，从未覆盖过昼面）：Daon Mail `--daon-ink-faint` `#8d9a8a` → `#5d6a5f`（2.84 → 达标，覆盖面板/白底/选中行绿底），色调 chip 加深 `--daon-tone-rose` `#a03854` / `--daon-tone-amber` `#8a5c0a` / `--daon-tone-teal` `#0f6b75`；Ondam `--care-muted` `#6d7d92` → `#566678`。
+- 测试迁移：8 个壳的「zen 下有 is-night」断言全部翻转为固定身份断言（无 night 类 + 语言断言保留），e2e 加 computed 背景/token 锁定（Jari `rgb(241,238,230)`、Ripple `rgb(17,20,22)`、Aster `rgb(13,16,32)`、Work Hub `rgb(242,238,229)`、Daon `rgb(243,245,241)`、Ondam `--care-bg #e8eef5`、Prism `--prism-bg #eef3ef`、Wallet `--wallet-canvas #eef4f2`）；证据截图随用例改名重出（`fandom-desktop-zh.png`、`fandom-mobile-zen.png`、`workplace-desktop-zh.png`、`workplace-mobile-zh.png`、`workplace-mobile-zen.png`、`mail zen-detail-*.png`），旧 day/night 命名图已删除。
+- 验证：lint 通过；8 壳 + portfolio 单测 104/104；全量 vitest 2764/2771（同存量基线，无新增失败）；生产构建通过；五壳专场 e2e 42/42 + VIA/POSTA 8/8 + mail/healthcare 复跑全绿（一次 15 失败为并行会话占用 dev server 所致的环境抖动，重跑即绿）。Aster 固定暗的状态栏可读性有 `fandom-desktop-zh.png` 顶条截图佐证。
+- 遗留对齐机会（未做，非本轮范围）：第一批壳的状态栏走各视图 `:global` 规则，新事件壳走 `App.vue` 的 `FIXED_IDENTITY_STATUS_TONES` 路由映射；两套机制并存且各自锁定，将来收敛时以 App.vue 映射为准（把 8 条 `:global` 规则搬进映射表即可）。
+
 ## 4. Remaining / 待办矩阵
 
 执行顺序即优先级。每壳一个固定身份、一次到位：
@@ -98,9 +118,9 @@ Status: `ALL SIX DONE 2026-09-03 (POSTA / VIA / CREDO / NEXT / GATE / ROAM)`
 
 不动：Work Hub（暖纸）、Aster（海军蓝+青柠）已有独立身份；Shopping/FoodDelivery 各店铺已是正确范式。
 
-### 后续独立切片（非本次范围）
+### 后续独立切片
 
-第一批已验收壳（Aster、Work Hub、Daon Mail、Ondam Care、Jari、Ripple、Prism、Wallet）目前也订阅系统主题（各 1 处 `systemStore.settings.appearance` / `currentTheme` 引用）。按原则 2 它们最终也应解耦并各选一个常驻面貌（建议：Aster 固定暗、Work Hub 固定暖纸），但这是独立切片，动手前先与用户确认。
+~~第一批已验收壳（Aster、Work Hub、Daon Mail、Ondam Care、Jari、Ripple、Prism、Wallet）目前也订阅系统主题~~ —— `DONE 2026-09-03`，见上方「第一批壳解耦」一节。
 
 ## 5. Execution Recipe / 每壳执行配方（POSTA 已验证）
 

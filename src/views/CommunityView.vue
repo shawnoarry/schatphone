@@ -1,7 +1,7 @@
 <template>
   <main
     class="ripple-app"
-    :class="[{ 'is-night': isNightTheme, 'is-detail-open': Boolean(selectedPost) }]"
+    :class="{ 'is-detail-open': Boolean(selectedPost) }"
     data-app="community"
     data-testid="community-app"
   >
@@ -125,7 +125,6 @@
 <script setup>
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useSystemStore } from '../stores/system'
 import { useI18n } from '../composables/useI18n'
 import { pushReturnTarget } from '../lib/navigation-return'
 import CommunityPostCard from '../components/community/CommunityPostCard.vue'
@@ -153,7 +152,8 @@ import {
 
 const route = useRoute()
 const router = useRouter()
-const systemStore = useSystemStore()
+// Ripple is an independent app with a fixed dark coral identity: it never
+// follows the system day/night switch (independent-app rule).
 const { t, isZh } = useI18n()
 const brand = COMMUNITY_SHELL_BRAND
 const initialState = loadCommunityShellState()
@@ -167,7 +167,6 @@ const selectedAccountId = ref('')
 const refreshNotice = ref(false)
 let refreshTimer = null
 
-const isNightTheme = computed(() => systemStore.settings.appearance.currentTheme === 'zen')
 const fixtureContractValid = computed(() => validateCommunityFixtureContract())
 const selectedPost = computed(() => getCommunityPost(selectedPostId.value))
 
@@ -277,22 +276,15 @@ onBeforeUnmount(() => { if (refreshTimer) clearTimeout(refreshTimer) })
 
 <style scoped>
 .ripple-app {
-  --ripple-paper: #f3f0ea; --ripple-panel: #fffdf9; --ripple-soft: #f1ede6; --ripple-line: #ded8ce; --ripple-line-strong: #bfb5a8;
-  --ripple-ink: #201f1d; --ripple-copy: #494641; --ripple-muted: #777169; --ripple-accent: #f04f5f; --ripple-action: #d93649;
-  --ripple-accent-ink: #b52739; --ripple-accent-soft: #ffe4e6; --ripple-focus: #116eb4;
-  --ripple-truth-bg: #e5f2ec; --ripple-truth-ink: #185d45; --ripple-warning-bg: #fff0ca; --ripple-warning-ink: #785400;
-  --ripple-corrected-bg: #e7edff; --ripple-corrected-ink: #334f9c; --ripple-neutral-bg: #ece9e4; --ripple-neutral-ink: #514c46;
-  width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; color: var(--ripple-ink); background: var(--ripple-paper);
-  font-family: 'Aptos', 'Segoe UI', 'Noto Sans CJK SC', sans-serif;
-}
-.ripple-app.is-night {
   --ripple-paper: #111416; --ripple-panel: #191d20; --ripple-soft: #23282c; --ripple-line: #343a3f; --ripple-line-strong: #596167;
   --ripple-ink: #f5f2ec; --ripple-copy: #d5d0c7; --ripple-muted: #a9a39b; --ripple-accent: #ff7a86; --ripple-action: #d94859;
   --ripple-accent-ink: #ff9aa3; --ripple-accent-soft: #42272d; --ripple-focus: #7cc8ff;
   --ripple-truth-bg: #19382e; --ripple-truth-ink: #9de0c4; --ripple-warning-bg: #3d3218; --ripple-warning-ink: #f8d578;
   --ripple-corrected-bg: #252f50; --ripple-corrected-ink: #b9c7ff; --ripple-neutral-bg: #303438; --ripple-neutral-ink: #d3cec7;
+  width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; color: var(--ripple-ink); background: var(--ripple-paper);
+  font-family: 'Aptos', 'Segoe UI', 'Noto Sans CJK SC', sans-serif;
 }
-:global(.app-shell:has(.ripple-app) .status-fg) { color: var(--ripple-ink); }
+:global(.app-shell:has(.ripple-app) .status-fg) { color: #f5f2ec; }
 .ripple-header { min-height: 94px; padding: calc(34px + env(safe-area-inset-top)) 18px 10px; box-sizing: border-box; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--ripple-line); background: color-mix(in srgb, var(--ripple-panel) 94%, transparent); flex: none; }
 :global(.app-shell[data-statusbar='off']) .ripple-header { min-height: 70px; padding-top: calc(10px + env(safe-area-inset-top)); }
 .ripple-header__back, .ripple-header__refresh { min-width: 44px; min-height: 44px; border: 0; border-radius: 14px; color: var(--ripple-ink); background: transparent; cursor: pointer; }

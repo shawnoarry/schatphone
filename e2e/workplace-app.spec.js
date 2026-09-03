@@ -57,7 +57,7 @@ test.describe('Work Hub Organization Workplace S1 shell', () => {
     await mkdir(evidenceDir, { recursive: true })
   })
 
-  test('day mode completes the ordinary artist work loop', async ({ page }, testInfo) => {
+  test('fixed warm-paper identity completes the ordinary artist work loop', async ({ page }, testInfo) => {
     await seedSystem(page, { once: true })
     const isMobileProject = testInfo.project.name === 'mobile-chrome'
     await openWorkplace(page, isMobileProject ? pixel5 : desktop)
@@ -80,7 +80,7 @@ test.describe('Work Hub Organization Workplace S1 shell', () => {
     await page.screenshot({
       path: join(
         evidenceDir,
-        isMobileProject ? 'workplace-mobile-day.png' : 'workplace-desktop-day.png',
+        isMobileProject ? 'workplace-mobile-zh.png' : 'workplace-desktop-zh.png',
       ),
       fullPage: true,
     })
@@ -169,10 +169,12 @@ test.describe('Work Hub Organization Workplace S1 shell', () => {
     expect(preview).toBeNull()
   })
 
-  test('simulated Pixel 5 night mode is accessible and keeps artist access pending', async ({ page }) => {
+  test('simulated Pixel 5 keeps the fixed warm-paper identity under system zen, accessible, artist access pending', async ({ page }) => {
     await seedSystem(page, { theme: 'zen' })
     await openWorkplace(page, pixel5)
-    await expect(page.getByTestId('workplace-app')).toHaveClass(/is-night/)
+    await expect(page.getByTestId('workplace-app')).not.toHaveClass(/night/)
+    const paper = await page.getByTestId('workplace-app').evaluate((el) => getComputedStyle(el).backgroundColor)
+    expect(paper).toBe('rgb(242, 238, 229)')
     await page.getByTestId('workplace-tab-organization').click()
     await page.getByTestId('workplace-submit-artist-application').click()
     await expect(page.getByTestId('workplace-artist-application-pending')).toContainText('当前没有艺人发布权限')
@@ -182,7 +184,7 @@ test.describe('Work Hub Organization Workplace S1 shell', () => {
       .withTags(['wcag2a', 'wcag2aa'])
       .analyze()
     expect(results.violations).toEqual([])
-    await page.screenshot({ path: join(evidenceDir, 'workplace-mobile-night.png'), fullPage: true })
+    await page.screenshot({ path: join(evidenceDir, 'workplace-mobile-zen.png'), fullPage: true })
   })
 
   test('renames the workspace in-app and keeps the canonical affiliation credential unchanged', async ({ page }) => {

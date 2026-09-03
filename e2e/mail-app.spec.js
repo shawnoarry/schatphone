@@ -375,7 +375,7 @@ test('receive generates one AI letter through the configured provider', async ({
   expect(pageErrors).toEqual([])
 })
 
-test('Chinese night mode remains localized and readable', async ({ page }, testInfo) => {
+test('Chinese UI keeps the fixed postal-green identity under system zen', async ({ page }, testInfo) => {
   const pageErrors = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
   await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -383,7 +383,9 @@ test('Chinese night mode remains localized and readable', async ({ page }, testI
   await openMailFromHome(page)
 
   const app = page.getByTestId('daon-mail-app')
-  await expect(app).toHaveClass(/is-night/)
+  await expect(app).not.toHaveClass(/night/)
+  const paper = await app.evaluate((el) => getComputedStyle(el).backgroundColor)
+  expect(paper).toBe('rgb(243, 245, 241)')
   await expect(app).toContainText('收件箱')
   await expect(app).toContainText('Hanul 娱乐')
   await expect(app).not.toContainText(/[가-힣]/)
@@ -400,5 +402,5 @@ test('Chinese night mode remains localized and readable', async ({ page }, testI
   expect(pageErrors).toEqual([])
 
   await mkdir(evidenceDir, { recursive: true })
-  await page.screenshot({ path: join(evidenceDir, `night-detail-${testInfo.project.name}.png`) })
+  await page.screenshot({ path: join(evidenceDir, `zen-detail-${testInfo.project.name}.png`) })
 })

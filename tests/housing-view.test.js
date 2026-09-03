@@ -154,7 +154,7 @@ describe('Housing S1 shell view', () => {
     systemStore.settings.system.language = 'en-US'
     systemStore.settings.appearance.currentTheme = 'zen'
     await flushPromises()
-    expect(wrapper.get('[data-testid="housing-app"]').classes()).toContain('is-night')
+    expect(wrapper.get('[data-testid="housing-app"]').classes()).not.toContain('is-night')
     expect(wrapper.get('[data-testid="housing-app"]').text()).toContain('Find a place')
     expect(wrapper.text()).not.toMatch(/[가-힣]/)
     wrapper.unmount()

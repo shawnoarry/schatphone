@@ -20,7 +20,6 @@ import {
 } from '../lib/relationship-fact-adapters'
 import { useChatStore } from '../stores/chat'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
-import { useSystemStore } from '../stores/system'
 import {
   WALLET_TRANSACTION_SOURCE_FILTERS,
   formatWalletExchangeRate,
@@ -32,7 +31,8 @@ const route = useRoute()
 const { systemLanguage, t } = useI18n()
 const chatStore = useChatStore()
 const relationshipRuntimeStore = useRelationshipRuntimeStore()
-const systemStore = useSystemStore()
+// Wallet is an independent app with a fixed mint-ledger identity: it never
+// follows the system day/night switch (independent-app rule).
 const walletStore = useWalletStore()
 const {
   transactionCount,
@@ -47,7 +47,6 @@ const {
   activePaymentCard,
   knownPayeeAccountSummaries,
 } = storeToRefs(walletStore)
-const isNightTheme = computed(() => systemStore.settings.appearance.currentTheme === 'zen')
 
 const WALLET_WORKFLOW_QUERY_KEYS = new Set([
   'intent',
@@ -1378,7 +1377,7 @@ watch(
 </script>
 
 <template>
-  <div class="wallet-app" :class="{ 'is-night': isNightTheme }" data-app="wallet">
+  <div class="wallet-app" data-app="wallet">
     <header class="wallet-header">
       <button
         type="button"
@@ -3280,10 +3279,6 @@ watch(
 
 :global(.app-shell:has(.wallet-app) .status-fg) {
   color: #182320;
-}
-
-:global(.app-shell[data-theme='zen']:has(.wallet-app) .status-fg) {
-  color: #f1f5f4;
 }
 
 .wallet-header {
@@ -6007,171 +6002,6 @@ button.wallet-appearance-slot__visual:disabled {
 
 .wallet-bottom-nav button.is-active {
   color: #202429;
-}
-
-.wallet-app.is-night {
-  --wallet-ink: #f1f5f4;
-  --wallet-muted: #9aa9a5;
-  --wallet-line: rgba(221, 241, 235, 0.11);
-  --wallet-line-strong: rgba(221, 241, 235, 0.17);
-  --wallet-surface: rgba(24, 36, 35, 0.72);
-  --wallet-surface-solid: #16211f;
-  --wallet-canvas: #09110f;
-  --wallet-stage: #10231f;
-  --wallet-stage-deep: #091714;
-  --wallet-positive: #76d1b6;
-  --wallet-gold: #d1b06d;
-  --wallet-highlight: rgba(255, 255, 255, 0.08);
-  --wallet-header: rgba(9, 17, 15, 0.88);
-  --wallet-nav: rgba(13, 22, 20, 0.94);
-  --wallet-atelier-canvas: #080d0a;
-  --wallet-atelier-canvas-deep: #0b120e;
-  --wallet-atelier-surface: rgba(15, 23, 18, 0.94);
-  --wallet-atelier-plaque: rgba(10, 16, 12, 0.98);
-  --wallet-atelier-card-bed: #070b08;
-  --wallet-atelier-filter: rgba(7, 12, 9, 0.76);
-  --wallet-atelier-filter-active: rgba(17, 52, 34, 0.84);
-  --wallet-atelier-line: rgba(195, 160, 108, 0.27);
-  --wallet-atelier-highlight: rgba(255, 255, 255, 0.045);
-  --wallet-atelier-glow: rgba(198, 151, 79, 0.12);
-  --wallet-atelier-gold: #c7a36d;
-  --wallet-atelier-muted: #8d938e;
-  --wallet-atelier-positive: #64d397;
-  --wallet-atelier-action-ink: #07140d;
-  color-scheme: dark;
-  background: linear-gradient(180deg, #0b1513 0, var(--wallet-canvas) 23rem, #07100e 100%);
-}
-
-.wallet-app.is-night .wallet-header {
-  background: var(--wallet-header);
-}
-
-.wallet-app.is-night .wallet-card-stage {
-  background:
-    linear-gradient(
-      118deg,
-      transparent 0 65%,
-      rgba(139, 219, 196, 0.055) 65.2% 66%,
-      transparent 66.2%
-    ),
-    linear-gradient(155deg, #132824 0%, var(--wallet-stage) 48%, var(--wallet-stage-deep) 100%);
-  box-shadow:
-    inset 0 1px rgba(193, 238, 224, 0.08),
-    inset 0 -1px rgba(0, 0, 0, 0.26);
-}
-
-.wallet-app.is-night .wallet-card-stage::before {
-  background-image: repeating-linear-gradient(
-    0deg,
-    rgba(174, 228, 211, 0.022) 0 1px,
-    transparent 1px 6px
-  );
-}
-
-.wallet-app.is-night .wallet-card-stage__actions button {
-  border-color: rgba(218, 239, 233, 0.14);
-  background: rgba(24, 38, 35, 0.7);
-  box-shadow: inset 0 1px rgba(255, 255, 255, 0.06);
-}
-
-.wallet-app.is-night .wallet-card-stage__actions button:last-child {
-  border-color: #9bdcc9;
-  color: #10221d;
-  background: #9bdcc9;
-}
-
-.wallet-app.is-night .wallet-quick-actions button > span {
-  border-color: rgba(255, 255, 255, 0.07);
-  color: #eaf1ef;
-  background: #273632;
-  box-shadow:
-    0 7px 16px rgba(0, 0, 0, 0.2),
-    inset 0 1px rgba(255, 255, 255, 0.08);
-}
-
-.wallet-app.is-night .wallet-quick-actions button:nth-child(2) > span {
-  color: #d7f1e9;
-  background: #21443a;
-}
-
-.wallet-app.is-night .wallet-quick-actions button:nth-child(3) > span {
-  color: #f1e6c6;
-  background: #494126;
-}
-
-.wallet-app.is-night .wallet-quick-actions button:nth-child(4) > span {
-  color: #e0e9f5;
-  background: #28384d;
-}
-
-.wallet-app.is-night .wallet-payee-entry__icon,
-.wallet-app.is-night .wallet-statement-entry__icon,
-.wallet-app.is-night .wallet-currency-tags span,
-.wallet-app.is-night .wallet-payee-entry__meta strong {
-  color: #d9e3e0;
-  background: #23312e;
-}
-
-.wallet-app.is-night .wallet-section,
-.wallet-app.is-night .wallet-statement-entry,
-.wallet-app.is-night .wallet-statement-controls,
-.wallet-app.is-night .wallet-statement-summary,
-.wallet-app.is-night .wallet-detail-list,
-.wallet-app.is-night .wallet-receive-details,
-.wallet-app.is-night .wallet-settings-band,
-.wallet-app.is-night .wallet-form {
-  background: var(--wallet-surface);
-}
-
-.wallet-app.is-night .wallet-section--recent,
-.wallet-app.is-night .wallet-payee-entry {
-  background: transparent;
-}
-
-.wallet-app.is-night .wallet-appearance-card-picker button.is-active {
-  border-color: color-mix(in srgb, var(--wallet-atelier-positive) 52%, transparent);
-  color: var(--wallet-atelier-positive);
-  background: color-mix(in srgb, var(--wallet-atelier-positive) 8%, var(--wallet-atelier-surface));
-}
-
-.wallet-app.is-night .wallet-activity-search,
-.wallet-app.is-night .wallet-statement-controls select,
-.wallet-app.is-night .wallet-form input,
-.wallet-app.is-night .wallet-form select,
-.wallet-app.is-night .wallet-account-picker select,
-.wallet-app.is-night .wallet-setting-control select,
-.wallet-app.is-night .wallet-rate-reference input,
-.wallet-app.is-night .wallet-rate-row input {
-  color: var(--wallet-ink);
-  background: #17211f;
-}
-
-.wallet-app.is-night .wallet-segmented {
-  background: #1d2926;
-}
-
-.wallet-app.is-night .wallet-segmented button.is-active,
-.wallet-app.is-night .wallet-detail-actions button.is-secondary {
-  color: #14201e;
-  background: #eef4f2;
-}
-
-.wallet-app.is-night .wallet-transaction-row__amount,
-.wallet-app.is-night .wallet-transaction-row__actions > strong {
-  color: #83ceb5;
-}
-
-.wallet-app.is-night .wallet-transaction-row__amount.is-expense,
-.wallet-app.is-night .wallet-transaction-row__actions > strong.is-expense {
-  color: #f09b94;
-}
-
-.wallet-app.is-night .wallet-bottom-nav {
-  background: var(--wallet-nav);
-}
-
-.wallet-app.is-night .wallet-bottom-nav button.is-active {
-  color: #f2f4f5;
 }
 
 @media (min-width: 680px) {

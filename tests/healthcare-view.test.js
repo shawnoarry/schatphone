@@ -132,7 +132,7 @@ describe('Ondam Care Healthcare S1 shell', () => {
     systemStore.settings.system.language = 'en-US'
     systemStore.settings.appearance.currentTheme = 'zen'
     await flushPromises()
-    expect(wrapper.get('[data-testid="ondam-care-app"]').classes()).toContain('is-night')
+    expect(wrapper.get('[data-testid="ondam-care-app"]').classes()).not.toContain('is-night')
     expect(wrapper.text()).toContain('What care would you like to arrange?')
     expect(wrapper.text()).toContain('Source unavailable')
     expect(wrapper.text()).not.toMatch(/[\u4e00-\u9fff]/)

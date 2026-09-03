@@ -115,7 +115,7 @@ test('Browser keeps Web failure isolated and persists history and bookmarks', as
   expect(pageErrors).toEqual([])
 })
 
-test('Chinese zen mode keeps long content readable and stale pages fail closed', async ({ page }, testInfo) => {
+test('Chinese zen mode keeps the fixed mint-paper identity, long content readable, stale pages fail closed', async ({ page }, testInfo) => {
   const pageErrors = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
   await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -123,7 +123,9 @@ test('Chinese zen mode keeps long content readable and stale pages fail closed',
   await openBrowser(page)
 
   const app = page.getByTestId('prism-browser-app')
-  await expect(app).toHaveClass(/is-night/)
+  await expect(app).not.toHaveClass(/night/)
+  const prismBg = await app.evaluate((el) => getComputedStyle(el).getPropertyValue('--prism-bg').trim())
+  expect(prismBg).toBe('#eef3ef')
   await page.getByTestId('browser-search-input').fill('旧练习楼')
   await page.getByTestId('browser-search-submit').click()
   const staleResult = page.getByTestId('browser-result-world_retired_training_annex')
@@ -141,7 +143,7 @@ test('Chinese zen mode keeps long content readable and stale pages fail closed',
   await expectNoBrowserOverflow(page)
   expect(pageErrors).toEqual([])
 
-  await testInfo.attach(`browser-night-stale-${testInfo.project.name}`, {
+  await testInfo.attach(`browser-zen-stale-${testInfo.project.name}`, {
     body: await page.screenshot(),
     contentType: 'image/png',
   })

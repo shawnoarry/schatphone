@@ -137,7 +137,7 @@ describe('Community Core S1 fixture shell', () => {
     systemStore.settings.system.language = 'en-US'
     systemStore.settings.appearance.currentTheme = 'zen'
     const { wrapper } = await mountCommunity()
-    expect(wrapper.get('[data-testid="community-app"]').classes()).toContain('is-night')
+    expect(wrapper.get('[data-testid="community-app"]').classes()).not.toContain('is-night')
     expect(wrapper.get('[data-testid="community-channel-following"]').text()).toContain('Following')
     expect(wrapper.text()).toContain('Confirmed')
     wrapper.unmount()

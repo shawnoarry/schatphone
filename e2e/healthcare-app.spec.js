@@ -72,12 +72,14 @@ test.describe('Ondam Care Healthcare S1 shell', () => {
     await page.screenshot({ path: join(evidenceDir, 'report-chromium.png'), fullPage: true })
   })
 
-  test('simulated Pixel 5 night theme remains readable, accessible, and overflow-free', async ({ page }) => {
+  test('simulated Pixel 5 keeps the fixed warm-ivory identity under system zen, readable and accessible', async ({ page }) => {
     await seedSystem(page, { language: 'zh-CN', theme: 'zen' })
     await openHealthcare(page, pixel5)
     await page.getByTestId('healthcare-tab-reports').click()
     await page.getByTestId('healthcare-report-report-routine-screening-2026').click()
-    await expect(page.getByTestId('ondam-care-app')).toHaveClass(/is-night/)
+    await expect(page.getByTestId('ondam-care-app')).not.toHaveClass(/night/)
+    const careBg = await page.getByTestId('ondam-care-app').evaluate((el) => getComputedStyle(el).getPropertyValue('--care-bg').trim())
+    expect(careBg).toBe('#e8eef5')
     await expectNoHorizontalOverflow(page)
     const results = await new AxeBuilder({ page }).include('[data-testid="ondam-care-app"]').withTags(['wcag2a', 'wcag2aa']).analyze()
     expect(results.violations).toEqual([])

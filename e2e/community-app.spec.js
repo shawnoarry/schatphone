@@ -111,7 +111,9 @@ test('zen theme keeps account and long-detail surfaces accessible', async ({ pag
   await seedCommunitySystem(page, { language: 'en-US', theme: 'zen' })
   await openCommunity(page)
 
-  await expect(page.getByTestId('community-app')).toHaveClass(/is-night/)
+  await expect(page.getByTestId('community-app')).not.toHaveClass(/night/)
+  const paper = await page.getByTestId('community-app').evaluate((el) => getComputedStyle(el).backgroundColor)
+  expect(paper).toBe('rgb(17, 20, 22)')
   await page.getByTestId('community-channel-news').click()
   await page.getByTestId('community-post-post_long_form_city_night').locator('.ripple-post__open').click()
   await expect(page.getByTestId('community-post-detail')).toContainText('Checkable public sources')

@@ -19,7 +19,6 @@ import {
 
 defineProps({
   appName: { type: String, default: 'Work Hub' },
-  isNight: { type: Boolean, default: false },
 })
 
 const router = useRouter()
@@ -206,7 +205,7 @@ const closeApp = () => pushReturnTarget(router, route, '/home')
 </script>
 
 <template>
-  <main class="work-hub-production" :class="{ 'is-night': isNight }" data-testid="work-hub-production">
+  <main class="work-hub-production" data-testid="work-hub-production">
     <header class="work-hub-bar">
       <button type="button" class="icon-button" :aria-label="t('关闭', 'Close')" @click="closeApp"><i class="fas fa-xmark" aria-hidden="true"></i></button>
       <div><strong>{{ appName }}</strong><span>{{ text(organization) }}</span></div>
@@ -271,18 +270,17 @@ const closeApp = () => pushReturnTarget(router, route, '/home')
 
 <style scoped>
 .work-hub-production { min-height: 100%; color: #17233a; background: #f4f1e9; padding-bottom: 72px; }
-.work-hub-production.is-night { color: #f5f0e6; background: #171c25; }
+:global(.app-shell:has(.work-hub-production) .status-fg) { color: #17233a; }
 .work-hub-bar { position: sticky; z-index: 10; top: 0; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 68px; padding: 10px 18px; border-bottom: 1px solid rgba(23,35,58,.14); background: color-mix(in srgb, #fffdf8 90%, transparent); backdrop-filter: blur(16px); }
-.is-night .work-hub-bar { border-color: rgba(255,255,255,.12); background: rgba(23,28,37,.9); }
 .icon-button { width: 42px; height: 42px; border: 0; border-radius: 50%; color: inherit; background: rgba(23,35,58,.07); }
 .work-hub-bar > div { display: flex; flex-direction: column; min-width: 0; }.work-hub-bar strong { font-size: 14px; }.work-hub-bar div span { overflow: hidden; color: #687285; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .authority-state { display: inline-flex; align-items: center; gap: 6px; color: #4f765b; font-size: 10px; font-weight: 800; }
 .work-hub-intro, .work-hub-section { width: min(1040px, calc(100% - 32px)); margin-inline: auto; }
 .work-hub-intro { padding: 48px 0 34px; }.work-hub-intro p, .work-hub-section header p { margin: 0; color: #70798a; font-size: 10px; font-weight: 800; text-transform: uppercase; }.work-hub-intro h1 { margin: 7px 0 14px; font-size: 34px; }.work-hub-role-line { display: flex; flex-wrap: wrap; gap: 8px; }.work-hub-role-line span { padding: 7px 10px; border: 1px solid rgba(23,35,58,.15); border-radius: 8px; font-size: 11px; }
 .work-hub-section { padding: 28px 0; border-top: 1px solid rgba(23,35,58,.13); }.work-hub-section > header { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }.work-hub-section h2 { margin: 5px 0 0; font-size: 20px; }.work-hub-section > header > span { font-size: 22px; font-weight: 800; }
-.work-hub-record-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }.work-hub-record { min-width: 0; padding: 17px; border: 1px solid rgba(23,35,58,.13); border-radius: 8px; background: #fffdf8; }.is-night .work-hub-record { border-color: rgba(255,255,255,.12); background: #202733; }
+.work-hub-record-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }.work-hub-record { min-width: 0; padding: 17px; border: 1px solid rgba(23,35,58,.13); border-radius: 8px; background: #fffdf8; }
 .record-heading { display: grid; grid-template-columns: 36px 1fr; gap: 11px; }.record-heading > span { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 8px; color: #fff; background: #d76553; }.record-heading h3, .record-heading p { margin: 0; }.record-heading h3 { font-size: 14px; }.record-heading p { margin-top: 5px; color: #687285; font-size: 11px; line-height: 1.5; }
-.schedule-change-record { border-color: rgba(176, 91, 55, .32); }.schedule-change-record .record-heading > span { background: #a8563e; }.record-heading .record-kicker { margin: 0 0 4px; color: #a8563e; font-size: 9px; font-weight: 900; text-transform: uppercase; }.schedule-change-time { display: flex; flex-direction: column; gap: 3px; }.schedule-change-time strong { color: #17233a; font-size: 11px; }.is-night .schedule-change-time strong { color: #f5f0e6; }.schedule-change-reason { padding-top: 5px; border-top: 1px solid rgba(23,35,58,.1); }.record-event-state { display: flex; align-items: center; gap: 7px; margin: 13px 0 0; color: #96523f; font-size: 11px; font-weight: 800; }
+.schedule-change-record { border-color: rgba(176, 91, 55, .32); }.schedule-change-record .record-heading > span { background: #a8563e; }.record-heading .record-kicker { margin: 0 0 4px; color: #a8563e; font-size: 9px; font-weight: 900; text-transform: uppercase; }.schedule-change-time { display: flex; flex-direction: column; gap: 3px; }.schedule-change-time strong { color: #17233a; font-size: 11px; }.schedule-change-reason { padding-top: 5px; border-top: 1px solid rgba(23,35,58,.1); }.record-event-state { display: flex; align-items: center; gap: 7px; margin: 13px 0 0; color: #96523f; font-size: 11px; font-weight: 800; }
 .work-hub-record textarea, .work-hub-record input { width: 100%; margin-top: 15px; padding: 11px 12px; border: 1px solid rgba(23,35,58,.16); border-radius: 8px; color: inherit; background: transparent; outline: none; }.work-hub-record textarea { min-height: 72px; resize: vertical; }
 .record-actions, .status-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; margin-top: 11px; }.record-actions button, .status-actions button, .calendar-link { min-height: 40px; padding: 0 12px; border: 1px solid rgba(23,35,58,.18); border-radius: 8px; color: inherit; background: transparent; font-size: 11px; font-weight: 800; }.record-actions .primary { color: #fff; border-color: #d76553; background: #d76553; }
 .record-receipt { display: flex; align-items: center; gap: 7px; margin: 15px 0 0; color: #4f765b; font-size: 11px; font-weight: 800; }.schedule-result { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }.schedule-result .record-receipt { margin: 0; }.calendar-link { flex: none; display: inline-flex; align-items: center; gap: 7px; }.work-hub-empty-copy { color: #687285; font-size: 12px; }.work-hub-feedback { position: fixed; z-index: 30; right: 20px; bottom: 20px; margin: 0; padding: 12px 15px; border-radius: 8px; color: #fff; background: #253247; font-size: 12px; }.work-hub-feedback.failed { background: #9d4035; }

@@ -47,9 +47,8 @@ const appNameDraft = ref('')
 const organizationNameDraft = ref('')
 
 const isZh = computed(() => languageBase.value === 'zh')
-const isNight = computed(
-  () => settings.value.appearance?.colorMode === 'night' || settings.value.appearance?.currentTheme === 'zen',
-)
+// Work Hub is an independent app with a fixed warm-paper identity: it never
+// follows the system day/night switch (independent-app rule).
 const activeChannel = computed(
   () => WORKPLACE_CHANNELS.find((channel) => channel.id === activeChannelId.value) || WORKPLACE_CHANNELS[0],
 )
@@ -242,9 +241,8 @@ const closeApp = () => pushReturnTarget(router, route, '/home')
   <WorkHubProductionWorkspace
     v-if="workHubStore.hasActiveAuthority && !isPreviewMode"
     :app-name="workplaceDisplayName"
-    :is-night="isNight"
   />
-  <main v-else-if="!isPreviewMode" class="workplace-empty" :class="{ 'is-night': isNight }" data-testid="work-hub-empty">
+  <main v-else-if="!isPreviewMode" class="workplace-empty" data-testid="work-hub-empty">
     <header class="workplace-empty__bar">
       <button type="button" :aria-label="t('关闭', 'Close')" @click="closeApp"><i class="fas fa-xmark" aria-hidden="true"></i></button>
       <strong>{{ workplaceDisplayName }}</strong>
@@ -260,7 +258,6 @@ const closeApp = () => pushReturnTarget(router, route, '/home')
   <main
     v-else
     class="workplace-app"
-    :class="{ 'is-night': isNight }"
     data-app="workplace"
     data-testid="workplace-app"
     data-preview="true"
@@ -524,7 +521,8 @@ const closeApp = () => pushReturnTarget(router, route, '/home')
 
 <style scoped>
 .workplace-empty { min-height: 100%; color: #17233a; background: #f4f1e9; }
-.workplace-empty.is-night { color: #f5f0e6; background: #171c25; }
+:global(.app-shell:has(.workplace-app) .status-fg),
+:global(.app-shell:has(.workplace-empty) .status-fg) { color: #17233a; }
 .workplace-empty__bar { display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 10px 16px; border-bottom: 1px solid rgba(23,35,58,.14); }
 .workplace-empty__bar button { display: grid; place-items: center; width: 42px; height: 42px; border: 0; border-radius: 50%; color: inherit; background: rgba(23,35,58,.07); }
 .workplace-empty > section { width: min(620px, calc(100% - 32px)); margin: 0 auto; padding: 96px 0; text-align: center; }
@@ -553,19 +551,6 @@ const closeApp = () => pushReturnTarget(router, route, '/home')
     radial-gradient(circle at 82% 5%, rgba(230, 107, 87, 0.12), transparent 28%),
     var(--wp-paper);
   font-family: "Aptos", "Noto Sans SC", sans-serif;
-}
-
-.workplace-app.is-night {
-  --wp-ink: #edf1f5;
-  --wp-ink-soft: #aeb8c7;
-  --wp-paper: #151b26;
-  --wp-paper-strong: #202938;
-  --wp-line: rgba(237, 241, 245, 0.14);
-  --wp-coral-soft: rgba(230, 107, 87, 0.18);
-  background:
-    linear-gradient(90deg, transparent 0 23px, rgba(255,255,255,.025) 24px, transparent 25px),
-    radial-gradient(circle at 82% 5%, rgba(230, 107, 87, 0.15), transparent 28%),
-    var(--wp-paper);
 }
 
 button, textarea { font: inherit; }

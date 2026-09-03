@@ -1,7 +1,7 @@
 <template>
   <div
     class="daon-mail-app"
-    :class="{ 'is-night': isNightTheme, 'show-read-pane': mobilePane !== 'list' }"
+    :class="{ 'show-read-pane': mobilePane !== 'list' }"
     data-app="mail"
     data-testid="daon-mail-app"
   >
@@ -294,7 +294,8 @@ const chatStore = useChatStore()
 const calendarStore = useCalendarStore()
 const { t, isZh, languageBase } = useI18n()
 
-const isNightTheme = computed(() => systemStore.settings.appearance.currentTheme === 'zen')
+// Daon Mail is an independent app with a fixed postal-green light identity:
+// it never follows the system day/night switch (independent-app rule).
 const brand = MAIL_SHELL_BRAND
 
 const {
@@ -986,18 +987,18 @@ const openInvite = (invite) => {
   --daon-line-strong: #c7d0c4;
   --daon-ink: #182219;
   --daon-ink-soft: #55624f;
-  --daon-ink-faint: #8d9a8a;
+  --daon-ink-faint: #5d6a5f;
   --daon-tone-green: #0e7a4e;
   --daon-tone-green-soft: #e0efe6;
   --daon-tone-blue: #2f6bb0;
   --daon-tone-blue-soft: #e2ecf7;
-  --daon-tone-rose: #b3475b;
+  --daon-tone-rose: #a03854;
   --daon-tone-rose-soft: #f7e4e8;
-  --daon-tone-amber: #a9740f;
+  --daon-tone-amber: #8a5c0a;
   --daon-tone-amber-soft: #f6ecd8;
   --daon-tone-violet: #6d5bb0;
   --daon-tone-violet-soft: #eae6f6;
-  --daon-tone-teal: #12808c;
+  --daon-tone-teal: #0f6b75;
   --daon-tone-teal-soft: #dfeef0;
   --daon-tone-slate: #5c6a5e;
   --daon-tone-slate-soft: #e8ebe6;
@@ -1019,46 +1020,6 @@ const openInvite = (invite) => {
   font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', -apple-system,
     'Segoe UI', sans-serif;
   color: var(--daon-ink);
-}
-
-.daon-mail-app.is-night {
-  --daon-green: #49c78d;
-  --daon-green-deep: #12583b;
-  --daon-green-ink: #092619;
-  --daon-action-bg: #176b48;
-  --daon-action-hover: #10563a;
-  --daon-accent-text: #83e2b7;
-  --daon-focus: #83e2b7;
-  --daon-header-start: #07130d;
-  --daon-header-mid: #0a3020;
-  --daon-header-end: #0d5b3a;
-  --daon-header-action-ink: #073c27;
-  --daon-green-soft: rgba(73, 199, 141, 0.18);
-  --daon-paper: #090f0c;
-  --daon-panel: #111a15;
-  --daon-panel-soft: #17221b;
-  --daon-line: #2d3d33;
-  --daon-line-strong: #4a6252;
-  --daon-ink: #f1f6f2;
-  --daon-ink-soft: #c2cec5;
-  --daon-ink-faint: #91a095;
-  --daon-tone-green: #72e0aa;
-  --daon-tone-green-soft: rgba(76, 197, 141, 0.16);
-  --daon-tone-blue: #74aade;
-  --daon-tone-blue-soft: rgba(116, 170, 222, 0.16);
-  --daon-tone-rose: #dd8a9b;
-  --daon-tone-rose-soft: rgba(221, 138, 155, 0.15);
-  --daon-tone-amber: #d3ac59;
-  --daon-tone-amber-soft: rgba(211, 172, 89, 0.16);
-  --daon-tone-violet: #a99ce0;
-  --daon-tone-violet-soft: rgba(169, 156, 224, 0.16);
-  --daon-tone-teal: #5cbcc7;
-  --daon-tone-teal-soft: rgba(92, 188, 199, 0.15);
-  --daon-tone-slate: #c4d0c1;
-  --daon-tone-slate-soft: rgba(154, 168, 148, 0.16);
-  --daon-star: #e3b04b;
-  --daon-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
-  color-scheme: dark;
 }
 
 :global(.app-shell:has(.daon-mail-app) .status-fg) {

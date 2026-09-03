@@ -1,11 +1,9 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import { useFandomShellState } from '../composables/useFandomShellState'
 import { useWorkplaceShellState } from '../composables/useWorkplaceShellState'
-import { useSystemStore } from '../stores/system'
 import { pushReturnTarget } from '../lib/navigation-return'
 import {
   FANDOM_ARTISTS,
@@ -20,8 +18,8 @@ import {
 
 const router = useRouter()
 const route = useRoute()
-const systemStore = useSystemStore()
-const { settings } = storeToRefs(systemStore)
+// Aster is an independent app with a fixed night-sky identity (navy + lime):
+// it never follows the system day/night switch (independent-app rule).
 const { languageBase, t } = useI18n()
 const fandomState = useFandomShellState()
 const workplaceState = useWorkplaceShellState()
@@ -30,7 +28,6 @@ const selectedArtistId = ref(FANDOM_FEATURED_ARTIST_ID)
 const selectedPostId = ref('')
 const feedback = ref('')
 const isZh = computed(() => languageBase.value === 'zh')
-const isNight = computed(() => settings.value.appearance?.colorMode === 'night' || settings.value.appearance?.currentTheme === 'zen')
 const fixtureValid = computed(() => validateFandomFixtureContract())
 const activeTab = computed(() => fandomState.activeTab.value)
 const featuredArtist = computed(() => getFandomArtist(FANDOM_FEATURED_ARTIST_ID))
@@ -68,7 +65,7 @@ const closeApp = () => pushReturnTarget(router, route, '/home')
 </script>
 
 <template>
-  <main class="aster-app" :class="{ 'is-night': isNight }" data-app="fandom" data-testid="fandom-app">
+  <main class="aster-app" data-app="fandom" data-testid="fandom-app">
     <header class="aster-header">
       <button type="button" class="icon-button" :aria-label="t('返回', 'Back')" data-testid="fandom-back" @click="closeApp"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
       <div class="aster-wordmark"><span class="aster-mark" aria-hidden="true">✦</span><span><strong>{{ isZh ? FANDOM_BRAND.nameZh : FANDOM_BRAND.nameEn }}</strong><small>{{ isZh ? FANDOM_BRAND.taglineZh : FANDOM_BRAND.taglineEn }}</small></span></div>
@@ -121,7 +118,7 @@ const closeApp = () => pushReturnTarget(router, route, '/home')
 </template>
 
 <style scoped>
-.aster-app{--paper:#f7f5ed;--panel:#fffef9;--ink:#10172f;--muted:#6b6f78;--line:#d9d6ca;--blue:#1746d1;--blue-text:#1746d1;--blue2:#092a89;--lime:#d9f45a;--coral:#ff745f;--focus:#0f70d6;width:100%;height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden;color:var(--ink);background:var(--paper);font-family:"Aptos","Segoe UI","Noto Sans CJK SC",sans-serif}.aster-app.is-night{--paper:#0d1020;--panel:#161a2d;--ink:#f6f3e9;--muted:#aeb3c4;--line:#30364f;--blue:#405cc4;--blue-text:#9cb0ff;--blue2:#20367f;--lime:#d8ef70;--coral:#ff8b78;--focus:#89c8ff}:global(.app-shell:has(.aster-app) .status-fg){color:var(--ink)}
+.aster-app{--paper:#0d1020;--panel:#161a2d;--ink:#f6f3e9;--muted:#aeb3c4;--line:#30364f;--blue:#405cc4;--blue-text:#9cb0ff;--blue2:#20367f;--lime:#d8ef70;--coral:#ff8b78;--focus:#89c8ff;width:100%;height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden;color:var(--ink);background:var(--paper);font-family:"Aptos","Segoe UI","Noto Sans CJK SC",sans-serif}:global(.app-shell:has(.aster-app) .status-fg){color:#f6f3e9}
 .aster-header{min-height:94px;padding:calc(34px + env(safe-area-inset-top)) 18px 10px;display:flex;align-items:center;gap:13px;box-sizing:border-box;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--panel) 94%,transparent);flex:none}.icon-button{width:44px;height:44px;border:0;border-radius:50%;color:inherit;background:transparent;cursor:pointer}.icon-button:hover{background:color-mix(in srgb,var(--blue) 9%,transparent)}.aster-wordmark{min-width:0;display:flex;align-items:center;gap:11px}.aster-mark{width:42px;height:42px;display:grid;place-items:center;border-radius:50% 50% 12px 50%;color:var(--ink);background:var(--lime);font-size:22px;transform:rotate(-8deg)}.aster-wordmark>span:last-child{min-width:0}.aster-wordmark strong,.aster-wordmark small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.aster-wordmark strong{font:900 21px/1 Georgia,"Noto Serif SC",serif}.aster-wordmark small{margin-top:2px;color:var(--muted);font-size:10px}.consumer-badge{margin-left:auto;min-height:34px;padding:0 12px;display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;font-size:11px;font-weight:850}.aster-content{flex:1;min-height:0;overflow-y:auto;padding-bottom:78px}.aster-page{width:min(1080px,100%);margin:auto;padding:24px;box-sizing:border-box}.aster-toast{position:absolute;z-index:12;top:98px;left:50%;transform:translateX(-50%);padding:10px 16px;border-radius:999px;color:#fff;background:#111936;box-shadow:0 12px 30px #0003;font-size:12px;font-weight:800}.aster-error{margin:auto;text-align:center}.aster-error i{font-size:38px;color:var(--coral)}
 .aster-hero{min-height:330px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(260px,.85fr);overflow:hidden;border-radius:32px;color:#fff;background:linear-gradient(135deg,var(--blue2),#174fdc 62%,#557cff);box-shadow:0 24px 54px #142a7730}.aster-hero__copy{padding:42px}.aster-hero__copy>span,.aster-section header span,.page-heading>span,.message-channel header span,.membership-card>span,.artist-access span{font-size:9px;font-weight:950;letter-spacing:.16em}.aster-hero h1{margin:35px 0 12px;font:900 clamp(43px,7vw,74px)/.9 Georgia,"Noto Serif SC",serif;letter-spacing:-.06em}.aster-hero p{max-width:480px;margin:0;color:#e4eaff;line-height:1.65}.aster-hero button,.artist-profile button,.message-preview button,.artist-access button{min-height:44px;margin-top:26px;padding:0 18px;border:0;border-radius:999px;color:#10172f;background:var(--lime);font-weight:900;cursor:pointer}.aster-hero__portrait{position:relative;display:grid;place-items:center;isolation:isolate}.aster-hero__portrait:before,.aster-hero__portrait:after{content:"";position:absolute;border:1px solid #ffffff35;border-radius:50%}.aster-hero__portrait:before{width:240px;height:240px;box-shadow:0 0 0 46px #ffffff0b}.aster-hero__portrait:after{width:120px;height:120px;background:#ffffff12}.aster-hero__portrait b{z-index:1;font:900 100px/1 Georgia,serif}.aster-hero__portrait span{position:absolute;z-index:1;bottom:30px;font-size:10px;font-weight:900;letter-spacing:.2em}.aster-home-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;margin-top:16px}.schedule-ticket,.message-preview,.membership-card,.preference-card{padding:22px;border:1px solid var(--line);border-radius:24px;background:var(--panel)}.schedule-ticket{display:flex;justify-content:space-between;gap:20px;border-left:8px solid var(--coral)}.schedule-ticket span,.message-preview header span{color:var(--blue-text);font-size:9px;font-weight:950;letter-spacing:.12em}.schedule-ticket h2{margin:14px 0 6px;font:850 22px/1.1 Georgia,"Noto Serif SC",serif}.schedule-ticket p,.schedule-ticket small{color:var(--muted);font-size:11px}.message-preview header{display:flex;justify-content:space-between}.message-preview header strong{width:25px;height:25px;display:grid;place-items:center;border-radius:50%;color:#10172f;background:var(--lime);font-size:10px}.message-preview p{margin:20px 0 0;font:700 17px/1.55 Georgia,"Noto Serif SC",serif}.message-preview button{margin-top:15px;color:#fff;background:var(--blue)}
 .aster-section{margin-top:30px}.aster-section>header{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:14px}.aster-section h2,.page-heading h1{margin:5px 0 0;font:900 32px/1 Georgia,"Noto Serif SC",serif}.aster-section header small{color:var(--muted)}.post-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}.post-card{position:relative;min-width:0;border:1px solid var(--line);border-radius:20px;background:var(--panel);overflow:hidden}.post-card__open{width:100%;min-height:220px;padding:20px 20px 48px;border:0;color:inherit;background:transparent;text-align:left;cursor:pointer}.post-card__account{color:var(--blue-text);font-size:11px;font-weight:850}.post-card h3{margin:23px 0 10px;font:850 21px/1.18 Georgia,"Noto Serif SC",serif}.post-card p{display:-webkit-box;overflow:hidden;color:var(--muted);font-size:12px;line-height:1.55;-webkit-box-orient:vertical;-webkit-line-clamp:3}.save-button{position:absolute;right:12px;bottom:10px;width:40px;height:40px;border:0;border-radius:50%;color:var(--blue-text);background:transparent;cursor:pointer}

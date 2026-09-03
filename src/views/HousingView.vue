@@ -1,7 +1,7 @@
 <template>
   <main
     class="jari-app"
-    :class="[{ 'is-night': isNightTheme, 'is-detail-open': Boolean(selectedListing) }]"
+    :class="{ 'is-detail-open': Boolean(selectedListing) }"
     data-app="housing"
     data-testid="housing-app"
   >
@@ -108,7 +108,6 @@
 <script setup>
 import { computed, onBeforeUnmount, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useSystemStore } from '../stores/system'
 import { useI18n } from '../composables/useI18n'
 import { pushReturnTarget } from '../lib/navigation-return'
 import HousingFilterSheet from '../components/housing/HousingFilterSheet.vue'
@@ -130,7 +129,8 @@ import { useHousingShellState } from '../composables/useHousingShellState'
 
 const route = useRoute()
 const router = useRouter()
-const systemStore = useSystemStore()
+// Jari is an independent app with a fixed warm-paper identity: it never
+// follows the system day/night switch (independent-app rule).
 const { t, isZh } = useI18n()
 const brand = HOUSING_SHELL_BRAND
 const housingState = useHousingShellState()
@@ -151,7 +151,6 @@ const favoriteIds = computed(() => housingState.favoriteIds.value)
 const viewingDrafts = computed(() => housingState.viewingDrafts.value)
 const selectedListing = computed(() => findHousingListing(selectedListingId.value))
 const fixtureContractValid = computed(() => validateHousingFixtureContract())
-const isNightTheme = computed(() => systemStore.settings.appearance.currentTheme === 'zen')
 const rentCount = computed(() => HOUSING_LISTINGS.filter((item) => item.mode === 'rent').length)
 const buyCount = computed(() => HOUSING_LISTINGS.filter((item) => item.mode === 'buy').length)
 const featuredAreas = computed(() => HOUSING_AREA_REFS.filter((area) => ['seoul-sanggye-jugong-district', 'seoul-mokdong-apartment-district', 'seoul-acro-river-park'].includes(area.placeId)))
@@ -301,13 +300,7 @@ onBeforeUnmount(() => { if (loadingTimer) clearTimeout(loadingTimer); if (notice
   --jari-warning-bg: #f8eac6; --jari-warning-ink: #705216; --jari-notice-bg: #dfede6; --jari-notice-ink: #225b48; --jari-danger: #a83a3a; --jari-focus: #1269a8; --jari-shadow: #20372e;
   width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; color: var(--jari-ink); background: var(--jari-ground); font-family: 'Aptos', 'Segoe UI', 'Noto Sans CJK SC', sans-serif;
 }
-.jari-app.is-night {
-  --jari-ground: #111713; --jari-panel: #19211c; --jari-soft: #243029; --jari-line: #344139; --jari-line-strong: #65736b;
-  --jari-ink: #f3f0e7; --jari-copy: #d2d6cf; --jari-muted: #a9b2ab; --jari-accent: #79b89c; --jari-action: #397b62; --jari-accent-ink: #9dd6ba; --jari-accent-soft: #203b30;
-  --jari-warning-bg: #3b321d; --jari-warning-ink: #f0d889; --jari-notice-bg: #203b30; --jari-notice-ink: #a8dec4; --jari-danger: #ff9292; --jari-focus: #76c7ff; --jari-shadow: #020806;
-}
 :global(.app-shell:has(.jari-app) .status-fg) { color: #17251f; }
-:global(.app-shell:has(.jari-app.is-night) .status-fg) { color: #f3f0e7; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
 .jari-header { min-height: 94px; padding: calc(34px + env(safe-area-inset-top)) 18px 10px; box-sizing: border-box; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--jari-line); background: color-mix(in srgb, var(--jari-panel) 94%, transparent); flex: none; }
 :global(.app-shell[data-statusbar='off']) .jari-header { min-height: 70px; padding-top: calc(10px + env(safe-area-inset-top)); }

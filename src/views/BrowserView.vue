@@ -1,7 +1,6 @@
 <template>
   <div
     class="prism-browser"
-    :class="{ 'is-night': isNightTheme }"
     data-app="browser"
     data-route-scope="browser"
     data-testid="prism-browser-app"
@@ -328,7 +327,6 @@
 <script setup>
 import { computed, onBeforeUnmount, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useSystemStore } from '../stores/system'
 import { useI18n } from '../composables/useI18n'
 import { pushReturnTarget } from '../lib/navigation-return'
 import {
@@ -345,11 +343,11 @@ import BrowserEmptyState from '../components/browser/BrowserEmptyState.vue'
 
 const route = useRoute()
 const router = useRouter()
-const systemStore = useSystemStore()
+// Prism is an independent app with a fixed mint-paper identity: it never
+// follows the system day/night switch (independent-app rule).
 const { t, isZh } = useI18n()
 
 const sourceMeta = BROWSER_SOURCE_META
-const isNightTheme = computed(() => systemStore.settings.appearance.currentTheme === 'zen')
 const shellState = reactive(loadBrowserShellState())
 const queryDraft = ref(typeof route.query.q === 'string' ? route.query.q : '')
 const submittedQuery = ref(queryDraft.value.trim())
@@ -605,41 +603,7 @@ onBeforeUnmount(() => {
   overflow-x: hidden;
 }
 
-.prism-browser.is-night {
-  --prism-bg: #0c1719;
-  --prism-bg-deep: #122326;
-  --prism-panel: rgba(21, 37, 40, 0.96);
-  --prism-article: #16282b;
-  --prism-toolbar: rgba(18, 33, 36, 0.9);
-  --prism-search-bg: #172b2e;
-  --prism-text: #edf8f5;
-  --prism-text-soft: #b9ceca;
-  --prism-article-text: #d5e5e1;
-  --prism-muted: #8da7a4;
-  --prism-border: rgba(184, 221, 214, 0.14);
-  --prism-border-strong: rgba(184, 221, 214, 0.3);
-  --prism-rule: rgba(184, 221, 214, 0.13);
-  --prism-accent: #70d3c2;
-  --prism-accent-strong: #91e0d2;
-  --prism-action: #a5e7dc;
-  --prism-action-hover: #c3f2ea;
-  --prism-action-text: #0b292b;
-  --prism-help: #e6b85d;
-  --prism-help-text: #f0c977;
-  --prism-world: #66cbbd;
-  --prism-world-text: #80ded0;
-  --prism-web: #9caad1;
-  --prism-focus: rgba(112, 211, 194, 0.28);
-  --prism-hover: rgba(112, 211, 194, 0.11);
-  --prism-warning-bg: #3b2d17;
-  --prism-warning-text: #f4cc84;
-  --prism-help-hero: linear-gradient(145deg, #302b1e 0%, #27291f 100%);
-  --prism-world-hero: linear-gradient(145deg, #163936 0%, #17302f 100%);
-  --prism-hero-ring: rgba(112, 211, 194, 0.1);
-  --prism-search-shadow: 0 18px 50px rgba(0, 0, 0, 0.26);
-  --prism-panel-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  --prism-panel-shadow-hover: 0 16px 38px rgba(0, 0, 0, 0.3);
-}
+:global(.app-shell:has(.prism-browser) .status-fg) { color: #102a2e; }
 
 .prism-browser__topbar {
   position: sticky;

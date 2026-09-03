@@ -1,7 +1,7 @@
 <template>
   <div
     class="ondam-care-app"
-    :class="{ 'is-night': isNightTheme, 'has-focused-page': focusedPage !== 'root' }"
+    :class="{ 'has-focused-page': focusedPage !== 'root' }"
     data-app="healthcare"
     data-testid="ondam-care-app"
   >
@@ -420,7 +420,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useSystemStore } from '../stores/system'
 import { useI18n } from '../composables/useI18n'
 import { pushReturnTarget } from '../lib/navigation-return'
 import { projectUiAssetUrl } from '../lib/project-assets'
@@ -444,7 +443,8 @@ import HealthcareReportDetail from '../components/healthcare/HealthcareReportDet
 
 const route = useRoute()
 const router = useRouter()
-const systemStore = useSystemStore()
+// Ondam Care is an independent app with a fixed warm-ivory identity: it never
+// follows the system day/night switch (independent-app rule).
 const { t, isZh } = useI18n()
 const brand = HEALTHCARE_BRAND
 const healthcareArt = Object.freeze({
@@ -460,7 +460,6 @@ onMounted(() => {
     image.src = src
   })
 })
-const isNightTheme = computed(() => systemStore.settings.appearance.currentTheme === 'zen')
 
 const {
   appointments,
@@ -663,7 +662,7 @@ const acknowledgeActiveReport = () => {
   --care-panel: #fdf9ef;
   --care-panel-soft: #e2eaf3;
   --care-ink: #33465c;
-  --care-muted: #6d7d92;
+  --care-muted: #566678;
   --care-line: rgba(61, 84, 112, 0.16);
   --care-accent: #5b7396;
   --care-accent-strong: #3f5878;
@@ -685,24 +684,8 @@ const acknowledgeActiveReport = () => {
   font-family: "Aptos", "Segoe UI Variable", "Noto Sans SC", "Microsoft YaHei", sans-serif;
 }
 
-.ondam-care-app.is-night {
-  --care-bg: #141c28;
-  --care-panel: #1c2533;
-  --care-panel-soft: #26334a;
-  --care-ink: #eef3fa;
-  --care-muted: #9aa9bd;
-  --care-line: rgba(226, 236, 248, 0.14);
-  --care-accent: #a8bedd;
-  --care-accent-strong: #e2ecf8;
-  --care-action-text: #1a2433;
-  --care-apricot: #efad7f;
-  --care-blue: #a8bedd;
-  --care-lilac: #c0a8d0;
-  --care-danger: #ef9c94;
-  --care-shadow: 0 20px 55px rgba(0, 0, 0, 0.34);
-  background:
-    radial-gradient(circle at 12% 0%, rgba(168, 190, 221, 0.12), transparent 32%),
-    linear-gradient(145deg, #182130 0%, #101725 63%, #1c2434 100%);
+.app-shell:has(.ondam-care-app) .status-fg {
+  color: #33465c;
 }
 
 .ondam-care-app *,
@@ -767,11 +750,6 @@ const acknowledgeActiveReport = () => {
   color: #fff;
   background: transparent;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22), var(--care-shadow);
-}
-
-.is-night .care-brand__mark {
-  color: #1a2433;
-  background: transparent;
 }
 
 .care-brand__words {
@@ -862,10 +840,6 @@ const acknowledgeActiveReport = () => {
 
 .care-hero h1 { font-size: clamp(30px, 5vw, 54px); }
 .care-hero p { max-width: 560px; margin: 18px 0 0; color: color-mix(in srgb, var(--care-ink) 74%, transparent); line-height: 1.65; }
-.is-night .care-hero { color:#f6f8fb; background:#28394f; }
-.is-night .care-hero__art { filter:brightness(.62) saturate(.8); }
-.is-night .care-hero::before { background:linear-gradient(90deg, rgba(28,38,52,.96) 0%, rgba(28,38,52,.82) 42%, rgba(28,38,52,.16) 72%, transparent 100%); }
-.is-night .care-hero p { color:rgba(246,248,251,.76); }
 
 .care-search {
   width: min(680px, calc(100% - 32px));
@@ -942,7 +916,6 @@ const acknowledgeActiveReport = () => {
 .care-overview__icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius:50%; }
 .care-overview__icon.is-appointment { color: var(--care-accent-strong); background: var(--care-panel-soft); }
 .care-overview__icon.is-report { color: #7b3d19; background: #f6dfcf; }
-.is-night .care-overview__icon.is-report { color: #ffd3b4; background: #4b3023; }
 .care-overview__copy { min-width: 0; display: grid; gap: 4px; }
 .care-overview__copy small { color: var(--care-accent); font-size: 9px; font-weight: 850; letter-spacing: .12em; }
 .care-overview__copy strong, .care-overview__copy span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -967,11 +940,8 @@ const acknowledgeActiveReport = () => {
 .care-institution-card__index { display:none; }
 .care-institution-card__icon { width:52px; height:52px; display:grid; place-items:center; border-radius:50%; color:var(--care-accent-strong); background:var(--care-panel-soft); }
 .care-institution-card.is-apricot .care-institution-card__icon { color: #7b3d19; background: #f6dfcf; }
-.is-night .care-institution-card.is-apricot .care-institution-card__icon { color: #ffd3b4; background: #4b3023; }
 .care-institution-card.is-blue .care-institution-card__icon { color: #275565; background: #dbeaf0; }
-.is-night .care-institution-card.is-blue .care-institution-card__icon { color: #b8ddea; background: #203b45; }
 .care-institution-card.is-lilac .care-institution-card__icon { color: #654876; background: #ede4f2; }
-.is-night .care-institution-card.is-lilac .care-institution-card__icon { color: #ddc8e9; background: #3d3045; }
 .care-institution-card__content { min-width:0; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:5px 28px; align-items:center; }
 .care-institution-card__place { color: var(--care-accent); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .care-institution-card__content strong { grid-column:1; font-family:Georgia,"Songti SC",serif; font-size:22px; line-height:1.25; overflow-wrap:anywhere; }
@@ -1008,9 +978,6 @@ const acknowledgeActiveReport = () => {
 .care-page-lead--reports { background:#f4e9df; }
 .care-page-lead--reports::after { background:linear-gradient(90deg,#f4e9df 0%,rgba(244,233,223,.94) 46%,rgba(244,233,223,.18) 72%,transparent 100%); }
 .care-page-lead--reports .care-page-lead__art { object-position:center 73%; }
-.is-night .care-page-lead--reports { background:#302a2a; }
-.is-night .care-page-lead--reports::after { background:linear-gradient(90deg,#302a2a 0%,rgba(48,42,42,.94) 46%,rgba(48,42,42,.22) 72%,transparent 100%); }
-.is-night .care-page-lead__art { filter:brightness(.72) saturate(.82); }
 
 .care-appointment-stack,
 .care-report-stack { max-width:900px; display:grid; gap:0; }
@@ -1048,7 +1015,6 @@ const acknowledgeActiveReport = () => {
 .care-report-row__chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 3px; }
 .care-report-row__chips > span { padding: 3px 7px; border-radius: 99px; color: var(--care-muted); background: var(--care-panel-soft); font-size: 10px; font-weight: 700; }
 .care-report-row__chips .is-corrected { color: #79401e; background: #f4ddce; }
-.is-night .care-report-row__chips .is-corrected { color: #ffd7ba; background: #4d3122; }
 .care-report-row__chips .is-unavailable { color: var(--care-danger); }
 
 .care-detail-back { min-height: 42px; margin-bottom: 20px; padding: 0 12px 0 4px; display: inline-flex; align-items: center; gap: 9px; border: 0; color: var(--care-accent-strong); background: transparent; cursor: pointer; }
@@ -1112,7 +1078,6 @@ const acknowledgeActiveReport = () => {
 .care-report-summary span { color:var(--care-muted); font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
 .care-report-summary p { margin:0; line-height:1.7; }
 .care-correction { padding:20px clamp(22px,5vw,48px); display:flex; gap:14px; color:#653719; background:#f5dfcf; border-inline:1px solid #e8c3a7; }
-.is-night .care-correction { color:#ffddc5; background:#4a3022; border-color:#6a4630; }
 .care-correction > i { margin-top:4px; }
 .care-correction p { margin:5px 0 0; line-height:1.6; }
 .care-results { padding:clamp(22px,4vw,40px); border:1px solid var(--care-line); border-top:0; background:var(--care-panel); }
@@ -1179,7 +1144,6 @@ const acknowledgeActiveReport = () => {
   .care-discover,.care-list-page,.care-focus-page,.care-report-detail { padding:18px 12px 96px; }
   .care-hero { min-height:236px; padding:25px 22px 48px; border-radius:8px 30px 8px 30px; }
   .care-hero::before { background:linear-gradient(90deg, rgba(224,238,249,.93) 0%, rgba(224,238,249,.78) 52%, rgba(224,238,249,.04) 78%, transparent 100%); }
-  .is-night .care-hero::before { background:linear-gradient(90deg, rgba(28,38,52,.96) 0%, rgba(28,38,52,.82) 58%, rgba(28,38,52,.16) 100%); }
   .care-hero__art { object-position:62% center; }
   .care-hero__copy { max-width:82%; padding-right:0; }
   .care-hero h1 { font-size:31px; }
@@ -1202,7 +1166,6 @@ const acknowledgeActiveReport = () => {
   .care-page-lead { min-height:224px; margin-bottom:26px; border-radius:8px 30px 8px 30px; }
   .care-page-lead::after { background:linear-gradient(90deg,var(--care-panel-soft) 0%,color-mix(in srgb,var(--care-panel-soft) 92%,transparent) 56%,color-mix(in srgb,var(--care-panel-soft) 8%,transparent) 86%,transparent 100%); }
   .care-page-lead--reports::after { background:linear-gradient(90deg,#f4e9df 0%,rgba(244,233,223,.92) 56%,rgba(244,233,223,.08) 86%,transparent 100%); }
-  .is-night .care-page-lead--reports::after { background:linear-gradient(90deg,#302a2a 0%,rgba(48,42,42,.92) 56%,rgba(48,42,42,.08) 86%,transparent 100%); }
   .care-page-lead__art { width:54%; height:100%; object-position:center 70%; }
   .care-page-title { width:68%; padding:24px 18px; }
   .care-page-title h1 { font-size:34px; }

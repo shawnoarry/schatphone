@@ -71,13 +71,13 @@ describe('Aster unified fandom S1 shell', () => {
     wrapper.unmount()
   })
 
-  test('localizes English night mode without Chinese UI copy', async () => {
+  test('keeps its fixed night-sky identity and drops Chinese copy under English night mode', async () => {
     const { wrapper } = await mountFandom()
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
     systemStore.settings.appearance.colorMode = 'night'
     await flushPromises()
-    expect(wrapper.get('[data-testid="fandom-app"]').classes()).toContain('is-night')
+    expect(wrapper.get('[data-testid="fandom-app"]').classes()).not.toContain('is-night')
     expect(wrapper.text()).toContain('Community edit')
     expect(wrapper.text()).not.toMatch(/[\u4e00-\u9fff]/)
     wrapper.unmount()

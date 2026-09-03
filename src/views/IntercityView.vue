@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { pushReturnTarget } from '../lib/navigation-return'
@@ -54,12 +54,15 @@ const quickSearch = () => {
   shell.setActiveTab('search')
 }
 const goBack = () => pushReturnTarget(router, route, '/home')
+const onDetailKeydown = (event) => { if (event.key === 'Escape' && selectedId.value) selectedId.value = '' }
+onMounted(() => window.addEventListener('keydown', onDetailKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', onDetailKeydown))
 </script>
 
 <template>
   <main class="via-app" data-testid="intercity-app" data-app="intercity">
     <header class="via-header">
-      <button class="icon-button" type="button" :aria-label="tx('返回', 'Back')" data-testid="intercity-back" @click="goBack"><i class="fas fa-chevron-left" /></button>
+      <button class="icon-button" type="button" :aria-label="tx('返回', 'Back')" data-testid="intercity-back" @click="goBack"><i class="fas fa-chevron-left" aria-hidden="true" /></button>
       <div class="via-brand"><span>VIA</span><div><b>{{ tx(INTERCITY_BRAND.nameZh, INTERCITY_BRAND.nameEn) }}</b><small>{{ tx(INTERCITY_BRAND.taglineZh, INTERCITY_BRAND.taglineEn) }}</small></div></div>
       <div class="trip-count"><b>{{ shell.tripDrafts.value.length }}</b><span>{{ tx('行程夹', 'Trip file') }}</span></div>
     </header>
@@ -67,39 +70,39 @@ const goBack = () => pushReturnTarget(router, route, '/home')
     <section v-if="activeTab === 'discover'" class="via-page" data-testid="intercity-discover">
       <div class="board-hero">
         <div class="hero-copy"><span>{{ tx('下一段 · 静态班次', 'NEXT LEG · AUTHORED SCHEDULES') }}</span><h1>{{ tx('从首尔出发，\n把路接上。', 'Leave Seoul.\nJoin the route.') }}</h1><p>{{ tx('铁路、航班、长途巴士与渡轮共用一个清楚的比较入口。', 'Compare rail, flights, coaches, and ferries in one clear place.') }}</p></div>
-        <button type="button" data-testid="intercity-quick-search" @click="quickSearch"><small>{{ tx('示例路线', 'SAMPLE ROUTE') }}</small><b>SEL <i class="fas fa-arrow-right-long" /> BSN</b><span>2026.08.28</span></button>
+        <button type="button" data-testid="intercity-quick-search" @click="quickSearch"><small>{{ tx('示例路线', 'SAMPLE ROUTE') }}</small><b>SEL <i class="fas fa-arrow-right-long" aria-hidden="true" /> BSN</b><span>2026.08.28</span></button>
       </div>
       <div class="mode-strip" :aria-label="tx('交通方式', 'Transport modes')">
-        <button v-for="mode in INTERCITY_MODES" :key="mode.id" type="button" :class="{ 'is-active': shell.modeId.value === mode.id }" :data-testid="`intercity-mode-${mode.id}`" @click="shell.setMode(mode.id)"><i :class="mode.icon" /><span>{{ localize(mode, 'label') }}</span></button>
+        <button v-for="mode in INTERCITY_MODES" :key="mode.id" type="button" :class="{ 'is-active': shell.modeId.value === mode.id }" :data-testid="`intercity-mode-${mode.id}`" @click="shell.setMode(mode.id)"><i :class="mode.icon" aria-hidden="true" /><span>{{ localize(mode, 'label') }}</span></button>
       </div>
       <div class="section-title"><div><small>{{ tx('班次板', 'DEPARTURE BOARD') }}</small><h2>{{ tx('可比较的下一程', 'The next leg, side by side') }}</h2></div><span>{{ visibleServices.length.toString().padStart(2, '0') }}</span></div>
       <div class="service-grid">
         <article v-for="service in visibleServices" :key="service.id" class="service-card" :style="{ '--service': service.color }">
           <button class="service-open" type="button" :data-testid="`intercity-service-${service.id}`" @click="openService(service)">
-            <div class="service-top"><span><i :class="modeMeta(service.mode).icon" /> {{ localize(modeMeta(service.mode), 'label') }}</span><em :class="`tone-${statusMeta(service.availability).tone}`">{{ localize(statusMeta(service.availability), 'label') }}</em></div>
-            <div class="route-line"><div><b>{{ service.originCode }}</b><small>{{ localize(service, 'origin') }}</small></div><span><i /><small>{{ localize(service, 'duration') }}</small><i /></span><div><b>{{ service.destinationCode }}</b><small>{{ localize(service, 'destination') }}</small></div></div>
+            <div class="service-top"><span><i :class="modeMeta(service.mode).icon" aria-hidden="true" /> {{ localize(modeMeta(service.mode), 'label') }}</span><em :class="`tone-${statusMeta(service.availability).tone}`">{{ localize(statusMeta(service.availability), 'label') }}</em></div>
+            <div class="route-line"><div><b>{{ service.originCode }}</b><small>{{ localize(service, 'origin') }}</small></div><span><i aria-hidden="true" /><small>{{ localize(service, 'duration') }}</small><i aria-hidden="true" /></span><div><b>{{ service.destinationCode }}</b><small>{{ localize(service, 'destination') }}</small></div></div>
             <div class="time-line"><b>{{ service.departureTime }}</b><span>{{ service.serviceNo }} · {{ localize(service, 'carrier') }}</span><b>{{ service.arrivalTime }}</b></div>
             <div class="service-bottom"><span>{{ service.date }}</span><b v-if="service.fares[0]">₩ {{ money(service.fares[0].price) }} {{ tx('起', 'from') }}</b><b v-else>—</b></div>
           </button>
-          <button class="favorite" type="button" :aria-label="tx('收藏班次', 'Favorite service')" :aria-pressed="shell.favoriteServiceIds.value.includes(service.id)" @click="shell.toggleFavorite(service.id)"><i :class="shell.favoriteServiceIds.value.includes(service.id) ? 'fas fa-bookmark' : 'far fa-bookmark'" /></button>
+          <button class="favorite" type="button" :aria-label="tx('收藏班次', 'Favorite service')" :aria-pressed="shell.favoriteServiceIds.value.includes(service.id)" @click="shell.toggleFavorite(service.id)"><i :class="shell.favoriteServiceIds.value.includes(service.id) ? 'fas fa-bookmark' : 'far fa-bookmark'" aria-hidden="true" /></button>
         </article>
       </div>
     </section>
 
     <section v-else-if="activeTab === 'search'" class="via-page" data-testid="intercity-search">
       <div class="search-heading"><small>{{ tx('查班次', 'FIND A SERVICE') }}</small><h1>{{ tx('去哪一站？', 'Where to next?') }}</h1></div>
-      <label class="search-box"><i class="fas fa-magnifying-glass" /><span class="sr-only">{{ tx('搜索城市、代码或班次', 'Search city, code, or service') }}</span><input v-model="searchQuery" data-testid="intercity-search-input" :placeholder="tx('城市、车站、机场或班次号', 'City, station, airport, or service number')" /></label>
+      <label class="search-box"><i class="fas fa-magnifying-glass" aria-hidden="true" /><span class="sr-only">{{ tx('搜索城市、代码或班次', 'Search city, code, or service') }}</span><input v-model="searchQuery" data-testid="intercity-search-input" :placeholder="tx('城市、车站、机场或班次号', 'City, station, airport, or service number')" /></label>
       <div class="search-list">
-        <button v-for="service in searchResults" :key="service.id" type="button" @click="openService(service)"><i :class="modeMeta(service.mode).icon" /><span><b>{{ localize(service, 'origin') }} → {{ localize(service, 'destination') }}</b><small>{{ service.date }} · {{ service.departureTime }} · {{ service.serviceNo }}</small></span><em>{{ localize(statusMeta(service.availability), 'label') }}</em></button>
+        <button v-for="service in searchResults" :key="service.id" type="button" @click="openService(service)"><i :class="modeMeta(service.mode).icon" aria-hidden="true" /><span><b>{{ localize(service, 'origin') }} → {{ localize(service, 'destination') }}</b><small>{{ service.date }} · {{ service.departureTime }} · {{ service.serviceNo }}</small></span><em :class="`tone-${statusMeta(service.availability).tone}`">{{ localize(statusMeta(service.availability), 'label') }}</em></button>
       </div>
     </section>
 
     <section v-else-if="activeTab === 'trips'" class="via-page" data-testid="intercity-trips">
       <div class="search-heading"><small>{{ tx('本机行程夹', 'LOCAL TRIP FILE') }}</small><h1>{{ tx('还没出票的计划', 'Plans, not tickets') }}</h1><p>{{ tx('这里保存的是比较后的出行意向，不是订单、占座、付款、登机牌或日历行程。', 'These are travel intents, not orders, seat holds, payments, boarding passes, or Calendar trips.') }}</p></div>
       <div v-if="draftRows.length" class="draft-list">
-        <article v-for="row in draftRows" :key="row.serviceId"><div class="draft-mode"><i :class="modeMeta(row.service.mode).icon" /><small>LOCAL</small></div><div><span>{{ row.service.date }} · {{ row.service.departureTime }}</span><h2>{{ row.service.originCode }} → {{ row.service.destinationCode }}</h2><p>{{ localize(row.fare, 'name') }} · {{ row.passengers }} {{ tx('人', 'passenger(s)') }}</p></div><button type="button" :aria-label="tx('移除意向', 'Remove intent')" @click="shell.removeTripDraft(row.serviceId)"><i class="fas fa-xmark" /></button></article>
+        <article v-for="row in draftRows" :key="row.serviceId"><div class="draft-mode"><i :class="modeMeta(row.service.mode).icon" aria-hidden="true" /><small>LOCAL</small></div><div><span>{{ row.service.date }} · {{ row.service.departureTime }}</span><h2>{{ row.service.originCode }} → {{ row.service.destinationCode }}</h2><p>{{ localize(row.fare, 'name') }} · {{ row.passengers }} {{ tx('人', 'passenger(s)') }}</p></div><button type="button" :aria-label="tx('移除意向', 'Remove intent')" @click="shell.removeTripDraft(row.serviceId)"><i class="fas fa-xmark" aria-hidden="true" /></button></article>
       </div>
-      <div v-else class="empty-state"><i class="fas fa-route" /><h2>{{ tx('行程夹还是空的', 'Your trip file is empty') }}</h2><p>{{ tx('打开可用班次，选择舱等后保存一份本机意向。', 'Open an available service, choose a fare, and save a local intent.') }}</p><button type="button" @click="shell.setActiveTab('discover')">{{ tx('查看班次', 'Browse services') }}</button></div>
+      <div v-else class="empty-state"><i class="fas fa-route" aria-hidden="true" /><h2>{{ tx('行程夹还是空的', 'Your trip file is empty') }}</h2><p>{{ tx('打开可用班次，选择舱等后保存一份本机意向。', 'Open an available service, choose a fare, and save a local intent.') }}</p><button type="button" @click="shell.setActiveTab('discover')">{{ tx('查看班次', 'Browse services') }}</button></div>
     </section>
 
     <section v-else class="via-page" data-testid="intercity-me">
@@ -109,21 +112,21 @@ const goBack = () => pushReturnTarget(router, route, '/home')
     </section>
 
     <nav class="via-nav" :aria-label="tx('联程导航', 'VIA navigation')">
-      <button v-for="tab in [{ id: 'discover', zh: '班次', en: 'Board', icon: 'fas fa-table-list' }, { id: 'search', zh: '搜索', en: 'Search', icon: 'fas fa-magnifying-glass' }, { id: 'trips', zh: '行程夹', en: 'Trips', icon: 'fas fa-folder-open' }, { id: 'me', zh: '我的', en: 'Me', icon: 'fas fa-user' }]" :key="tab.id" type="button" :class="{ 'is-active': activeTab === tab.id }" :data-testid="`intercity-tab-${tab.id}`" @click="shell.setActiveTab(tab.id)"><i :class="tab.icon" /><span>{{ tx(tab.zh, tab.en) }}</span><b v-if="tab.id === 'trips' && shell.tripDrafts.value.length">{{ shell.tripDrafts.value.length }}</b></button>
+      <button v-for="tab in [{ id: 'discover', zh: '班次', en: 'Board', icon: 'fas fa-table-list' }, { id: 'search', zh: '搜索', en: 'Search', icon: 'fas fa-magnifying-glass' }, { id: 'trips', zh: '行程夹', en: 'Trips', icon: 'fas fa-folder-open' }, { id: 'me', zh: '我的', en: 'Me', icon: 'fas fa-user' }]" :key="tab.id" type="button" :class="{ 'is-active': activeTab === tab.id }" :data-testid="`intercity-tab-${tab.id}`" @click="shell.setActiveTab(tab.id)"><i :class="tab.icon" aria-hidden="true" /><span>{{ tx(tab.zh, tab.en) }}</span><b v-if="tab.id === 'trips' && shell.tripDrafts.value.length">{{ shell.tripDrafts.value.length }}</b></button>
     </nav>
 
-    <aside v-if="selected" class="service-detail" data-testid="intercity-service-detail">
-      <button class="icon-button detail-close" type="button" :aria-label="tx('关闭详情', 'Close details')" @click="selectedId = ''"><i class="fas fa-xmark" /></button>
-      <div class="detail-strip" :style="{ '--service': selected.color }"><span>{{ selected.serviceNo }}</span><i :class="modeMeta(selected.mode).icon" /><b>{{ selected.originCode }}<small>TO</small>{{ selected.destinationCode }}</b><em>{{ selected.date }}</em></div>
-      <div class="detail-body"><small>{{ localize(selected, 'carrier') }} · {{ localize(modeMeta(selected.mode), 'label') }}</small><h1>{{ localize(selected, 'origin') }} → {{ localize(selected, 'destination') }}</h1><div class="detail-time"><b>{{ selected.departureTime }}</b><span><i /><small>{{ localize(selected, 'duration') }}</small></span><b>{{ selected.arrivalTime }}</b></div><p>{{ localize(selected, 'note') }}</p>
-        <div v-if="selected.originMapPlaceId" class="map-reference"><i class="fas fa-location-dot" /><div><b>{{ tx('出发地引用现有 Map', 'Departure references Map') }}</b><small>{{ selected.originMapPlaceId }}</small></div><span>{{ tx('只读', 'READ ONLY') }}</span></div>
+    <aside v-if="selected" class="service-detail" role="dialog" :aria-label="tx('班次详情', 'Service details')" data-testid="intercity-service-detail">
+      <button class="icon-button detail-close" type="button" :aria-label="tx('关闭详情', 'Close details')" @click="selectedId = ''"><i class="fas fa-xmark" aria-hidden="true" /></button>
+      <div class="detail-strip" :style="{ '--service': selected.color }"><span>{{ selected.serviceNo }}</span><i :class="modeMeta(selected.mode).icon" aria-hidden="true" /><b>{{ selected.originCode }}<small>TO</small>{{ selected.destinationCode }}</b><em>{{ selected.date }}</em></div>
+      <div class="detail-body"><small>{{ localize(selected, 'carrier') }} · {{ localize(modeMeta(selected.mode), 'label') }}</small><h1>{{ localize(selected, 'origin') }} → {{ localize(selected, 'destination') }}</h1><div class="detail-time"><b>{{ selected.departureTime }}</b><span><i aria-hidden="true" /><small>{{ localize(selected, 'duration') }}</small></span><b>{{ selected.arrivalTime }}</b></div><div class="detail-platform"><i class="fas fa-signs-post" aria-hidden="true" /><span>{{ tx('站台信息', 'PLATFORM') }}</span><b>{{ localize(selected, 'platform') }}</b></div><p>{{ localize(selected, 'note') }}</p>
+        <div v-if="selected.originMapPlaceId" class="map-reference"><i class="fas fa-location-dot" aria-hidden="true" /><div><b>{{ tx('出发地引用现有 Map', 'Departure references Map') }}</b><small>{{ selected.originMapPlaceId }}</small></div><span>{{ tx('只读', 'READ ONLY') }}</span></div>
         <template v-if="['available', 'limited'].includes(selected.availability)">
           <fieldset><legend>{{ tx('选择票价', 'CHOOSE FARE') }}</legend><label v-for="fare in selected.fares" :key="fare.id" :class="{ 'is-selected': selectedFareId === fare.id }"><input v-model="selectedFareId" type="radio" :value="fare.id" /><span><b>{{ localize(fare, 'name') }}</b><small>{{ localize(fare, 'flexibility') }}</small></span><strong>₩ {{ money(fare.price) }}</strong></label></fieldset>
           <label class="passenger-field"><span>{{ tx('乘客人数', 'Passengers') }}</span><select v-model="passengers"><option v-for="count in 6" :key="count" :value="count">{{ count }}</option></select></label>
-          <div class="detail-boundary"><i class="fas fa-circle-info" /><span>{{ tx('保存后只进入本机行程夹；不出票、不占座、不扣款，也不写入日历或地图行程。', 'Saving adds only a local trip intent; it issues no ticket, holds no seat, charges nothing, and writes no Calendar or Map trip.') }}</span></div>
+          <div class="detail-boundary"><i class="fas fa-circle-info" aria-hidden="true" /><span>{{ tx('保存后只进入本机行程夹；不出票、不占座、不扣款，也不写入日历或地图行程。', 'Saving adds only a local trip intent; it issues no ticket, holds no seat, charges nothing, and writes no Calendar or Map trip.') }}</span></div>
           <button class="save-draft" type="button" data-testid="intercity-save-draft" :disabled="!selectedFare" @click="saveDraft">{{ tx('保存出行意向', 'Save travel intent') }}</button>
         </template>
-        <div v-else class="closed-source" data-testid="intercity-source-closed"><i :class="selected.availability === 'source_stale' ? 'fas fa-clock-rotate-left' : 'fas fa-ban'" /><h2>{{ localize(statusMeta(selected.availability), 'label') }}</h2><p>{{ selected.availability === 'source_stale' ? tx('旧班次、旧票价不能建立意向。', 'Old schedules and fares cannot create an intent.') : tx('不会生成候补、假余票或占座结果。', 'No waitlist, invented inventory, or seat hold is created.') }}</p></div>
+        <div v-else class="closed-source" data-testid="intercity-source-closed"><i :class="selected.availability === 'source_stale' ? 'fas fa-clock-rotate-left' : 'fas fa-ban'" aria-hidden="true" /><h2>{{ localize(statusMeta(selected.availability), 'label') }}</h2><p>{{ selected.availability === 'source_stale' ? tx('旧班次、旧票价不能建立意向。', 'Old schedules and fares cannot create an intent.') : tx('不会生成候补、假余票或占座结果。', 'No waitlist, invented inventory, or seat hold is created.') }}</p></div>
       </div>
     </aside>
   </main>
@@ -141,6 +144,7 @@ const goBack = () => pushReturnTarget(router, route, '/home')
   --amber-strong: #ffb545;
   --ok: #3ecf7c;
   --service-board: #10151a;
+  --content-max: 1080px;
   position: relative;
   height: 100%;
   min-height: 100%;
@@ -204,7 +208,7 @@ const goBack = () => pushReturnTarget(router, route, '/home')
 .via-brand small {
   margin-top: 2px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .trip-count {
@@ -223,7 +227,7 @@ const goBack = () => pushReturnTarget(router, route, '/home')
 
 .trip-count span {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 850;
 }
 
@@ -232,6 +236,13 @@ const goBack = () => pushReturnTarget(router, route, '/home')
   padding: 26px 28px 112px;
   box-sizing: border-box;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.via-app .via-page > * {
+  width: min(var(--content-max), 100%);
+  margin-inline: auto;
 }
 
 .board-hero {
@@ -412,7 +423,7 @@ const goBack = () => pushReturnTarget(router, route, '/home')
 .search-list em {
   padding: 5px 8px;
   border-radius: 3px;
-  font-size: 8px;
+  font-size: 10px;
   font-style: normal;
   font-weight: 950;
   letter-spacing: .05em;
@@ -456,7 +467,7 @@ const goBack = () => pushReturnTarget(router, route, '/home')
   max-width: 110px;
   margin-top: 6px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .route-line > div:last-child {
@@ -470,7 +481,7 @@ const goBack = () => pushReturnTarget(router, route, '/home')
   gap: 5px;
   min-width: 115px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
   text-align: center;
 }
 
@@ -491,16 +502,17 @@ const goBack = () => pushReturnTarget(router, route, '/home')
 
 .time-line span {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .service-bottom {
-  padding-top: 13px;
+  padding: 13px 42px 0 0;
 }
 
 .service-bottom span {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
+  font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
 }
 
 .service-bottom b {
@@ -511,10 +523,12 @@ const goBack = () => pushReturnTarget(router, route, '/home')
 
 .favorite {
   position: absolute;
-  right: 10px;
-  bottom: 8px;
-  width: 34px;
-  height: 34px;
+  right: 4px;
+  bottom: 2px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
   border: 0;
   color: var(--amber);
   background: transparent;
@@ -522,7 +536,6 @@ const goBack = () => pushReturnTarget(router, route, '/home')
 }
 
 .search-heading {
-  max-width: 700px;
   margin: 18px 0 28px;
 }
 
@@ -641,6 +654,10 @@ const goBack = () => pushReturnTarget(router, route, '/home')
 .draft-list p,
 .draft-list span {
   color: var(--muted);
+}
+
+.draft-list span {
+  font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
 }
 
 .draft-list article > button {
@@ -789,7 +806,7 @@ const goBack = () => pushReturnTarget(router, route, '/home')
 
 .via-nav span {
   margin-top: 4px;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 850;
 }
 
@@ -799,11 +816,13 @@ const goBack = () => pushReturnTarget(router, route, '/home')
   right: calc(50% - 24px);
   width: 17px;
   height: 17px;
+  box-sizing: border-box;
   display: grid;
   place-items: center;
+  border: 1px solid var(--amber);
   border-radius: 50%;
-  color: #1a1206;
-  background: var(--amber);
+  color: var(--amber-strong);
+  background: var(--paper);
   font-size: 9px;
 }
 
@@ -863,13 +882,14 @@ const goBack = () => pushReturnTarget(router, route, '/home')
 }
 
 .detail-strip > b small {
-  font: 800 9px/1 sans-serif;
+  font: 800 10px/1 sans-serif;
   letter-spacing: .2em;
   color: var(--muted);
 }
 
 .detail-strip em {
   font-style: normal;
+  font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
 }
 
 .detail-body {
@@ -898,12 +918,37 @@ const goBack = () => pushReturnTarget(router, route, '/home')
   align-items: center;
   gap: 6px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .detail-time i {
   height: 1px;
   background: var(--line);
+}
+
+.detail-platform {
+  margin-top: 16px;
+  padding: 10px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-top: 1px dashed var(--line);
+  border-bottom: 1px dashed var(--line);
+}
+
+.detail-platform > i {
+  color: var(--amber);
+}
+
+.detail-platform > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: .12em;
+}
+
+.detail-platform > b {
+  font: 800 13px/1.4 "JetBrains Mono", "SF Mono", Consolas, "Noto Sans Mono CJK SC", monospace;
 }
 
 .detail-body > p {
@@ -941,7 +986,7 @@ const goBack = () => pushReturnTarget(router, route, '/home')
 }
 
 .map-reference > span {
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 950;
   color: var(--muted);
 }
@@ -987,7 +1032,7 @@ const goBack = () => pushReturnTarget(router, route, '/home')
 .detail-body fieldset small {
   margin-top: 4px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .detail-body fieldset strong {

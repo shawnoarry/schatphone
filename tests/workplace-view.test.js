@@ -185,13 +185,13 @@ describe('Work Hub Organization Workplace S1 shell', () => {
     wrapper.unmount()
   })
 
-  test('English night mode localizes the visible shell', async () => {
+  test('keeps its fixed warm-paper identity and localizes English under system night', async () => {
     const { wrapper } = await mountWorkplace()
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
     systemStore.settings.appearance.currentTheme = 'zen'
     await flushPromises()
-    expect(wrapper.get('[data-testid="workplace-app"]').classes()).toContain('is-night')
+    expect(wrapper.get('[data-testid="workplace-app"]').classes()).not.toContain('is-night')
     expect(wrapper.text()).toContain('Good evening, V')
     expect(wrapper.text()).toContain('Tell the team where you stand')
     expect(wrapper.text()).not.toMatch(/[\u4e00-\u9fff]/)
