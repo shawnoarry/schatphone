@@ -58,13 +58,21 @@ describe('remaining S1 shell portfolio views', () => {
   })
 
   test('theme-coupled shells localize English night mode without Chinese UI copy', async () => {
-    for (const [path, component, testId] of [['/creator-rights', CreatorRightsView, 'creator-rights-app'], ['/career', CareerView, 'career-app']]) {
+    for (const [path, component, testId] of [['/career', CareerView, 'career-app']]) {
       const { wrapper, systemStore } = await mountAt(path, component)
       systemStore.settings.system.language = 'en-US'; systemStore.settings.appearance.colorMode = 'night'; await flushPromises()
       expect(wrapper.get(`[data-testid="${testId}"]`).classes()).toEqual(expect.arrayContaining([expect.stringMatching(/night/)]))
       expect(wrapper.text()).not.toMatch(/[\u4e00-\u9fff]/)
       wrapper.unmount()
     }
+  })
+
+  test('creator rights keeps its fixed ivory-document identity under system night mode', async () => {
+    const { wrapper, systemStore } = await mountAt('/creator-rights', CreatorRightsView)
+    systemStore.settings.system.language = 'en-US'; systemStore.settings.appearance.colorMode = 'night'; await flushPromises()
+    expect(wrapper.get('[data-testid="creator-rights-app"]').classes()).not.toContain('night')
+    expect(wrapper.text()).not.toMatch(/[一-鿿]/)
+    wrapper.unmount()
   })
 
   test('intercity keeps its fixed departure-board identity under system night mode', async () => {

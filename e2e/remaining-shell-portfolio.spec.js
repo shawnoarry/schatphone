@@ -47,17 +47,22 @@ test.describe('remaining S1 shell portfolio', () => {
     await expectHealthy(page, 'intercity-app'); await page.screenshot({ path: join(evidenceDir, 'via-mobile-zen-en.png'), fullPage: true })
   })
 
-  test('CREDO desktop keeps rights and declaration non-authoritative', async ({ page }) => {
+  test('CREDO desktop keeps its fixed ivory-document identity and rights non-authoritative', async ({ page }) => {
     await seedSystem(page); await openApp(page, '/creator-rights', 'creator-rights-app', desktop)
     await page.getByTestId('creator-work-credo-work-neon-weather').click(); await expect(page.getByTestId('creator-rights-detail')).toContainText('不授予版权')
     await page.getByTestId('creator-rights-detail').getByRole('button', { name: '关闭' }).click(); await page.getByTestId('creator-rights-tab-me').click(); await expect(page.getByTestId('creator-rights-me')).toContainText('不提交、不签名、不生成认证')
-    await expectHealthy(page, 'creator-rights-app'); await page.screenshot({ path: join(evidenceDir, 'credo-desktop-day.png'), fullPage: true })
+    const paper = await page.getByTestId('creator-rights-app').evaluate((el) => getComputedStyle(el).backgroundColor)
+    expect(paper).toBe('rgb(245, 242, 233)')
+    await expectHealthy(page, 'creator-rights-app'); await page.screenshot({ path: join(evidenceDir, 'credo-desktop-zh.png'), fullPage: true })
   })
 
-  test('CREDO simulated Pixel 5 English night remains contained', async ({ page }) => {
+  test('CREDO simulated Pixel 5 English under system zen keeps the fixed ivory document', async ({ page }) => {
     await seedSystem(page, { language: 'en-US', theme: 'zen' }); await openApp(page, '/creator-rights', 'creator-rights-app', pixel5)
     await page.getByTestId('creator-rights-tab-statements').click(); await expect(page.getByTestId('creator-rights-statements')).toContainText('VISIBLE TOTAL'); expect(await page.getByTestId('creator-rights-app').innerText()).not.toMatch(/[\u4e00-\u9fff]/)
-    await expectHealthy(page, 'creator-rights-app'); await page.screenshot({ path: join(evidenceDir, 'credo-mobile-night-en.png'), fullPage: true })
+    await expect(page.getByTestId('creator-rights-app')).not.toHaveClass(/night/)
+    const paperZen = await page.getByTestId('creator-rights-app').evaluate((el) => getComputedStyle(el).backgroundColor)
+    expect(paperZen).toBe('rgb(245, 242, 233)')
+    await expectHealthy(page, 'creator-rights-app'); await page.screenshot({ path: join(evidenceDir, 'credo-mobile-zen-en.png'), fullPage: true })
   })
 
   test('POSTA desktop prepares only a local sending draft', async ({ page }) => {
