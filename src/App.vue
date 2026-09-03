@@ -74,6 +74,17 @@ const screenBackgroundImage = computed(() => {
 const appShellScopeAttrs = computed(() => resolveAppShellScopeAttrs(route))
 const showStatusBar = computed(() => settings.value.appearance.showStatusBar !== false)
 const isLockRoute = computed(() => route.path === '/lock')
+
+// Independent apps own a fixed face (brand-differentiation principle): the status
+// bar must follow the APP's surface, not the system theme, or light-identity apps
+// get light-on-light status text under zen.
+const FIXED_IDENTITY_STATUS_TONES = Object.freeze({
+  '/parcel': '#24313f',
+  '/creator-rights': '#24313f',
+  '/career': '#1a1f2c',
+  '/intercity': '#eef2f5',
+})
+const statusBarOverride = computed(() => FIXED_IDENTITY_STATUS_TONES[route.path] || '')
 const showHomeIndicator = computed(() => !isLockRoute.value && !systemStore.isLocked)
 const timeLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
 const dateLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
@@ -1073,6 +1084,7 @@ const lockPhone = () => {
       <div
         v-if="showStatusBar"
         class="absolute top-0 w-full h-8 px-6 flex justify-between items-center text-xs font-medium z-40 select-none status-fg"
+        :style="statusBarOverride ? { color: statusBarOverride } : undefined"
       >
         <span>{{ currentTime }}</span>
         <div class="flex gap-1.5">

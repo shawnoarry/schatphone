@@ -2,7 +2,7 @@
 
 Updated: 2026-09-03
 
-Status: `POSTA DONE 2026-09-03 / VIA DONE 2026-09-03 / CREDO DONE 2026-09-03 / NEXT NEXT`
+Status: `POSTA DONE 2026-09-03 / VIA DONE 2026-09-03 / CREDO DONE 2026-09-03 / NEXT DONE 2026-09-03 / GATE NEXT`
 
 本文件是跨 PC 接续文档：另一台机器接手时，读本文件 + `docs/design/PARCEL_POSTA_BRAND_DIRECTION.md` 即可继续，无需重读会话。
 
@@ -36,6 +36,21 @@ Status: `POSTA DONE 2026-09-03 / VIA DONE 2026-09-03 / CREDO DONE 2026-09-03 / N
 - 测试迁移：`remaining-shell-portfolio-view.test.js` 中 VIA 移出 night 耦合组，新增固定身份断言（系统 night 下无 night 类 + 英文无中文）。
 - 证据：`output/e2e/remaining-shell-portfolio/via-desktop-zh.png`、`via-mobile-zen-en.png`（旧名 `via-desktop-day.png` / `via-mobile-night-en.png` 已删除）。
 
+### 验收后视觉修正（2026-09-03，POSTA / VIA 同轮）
+
+复查验收证据后发现并修复的纯视觉/可访问性项，未触碰 fixture、state composable、localStorage key、路由、data-testid、fail-closed 语义与业务文案：
+
+1. POSTA 详情抽屉的航空信封条纹曾渲染在系统状态栏浮层（高 32px）之下；`aside::before` 下移 `calc(32px + env(safe-area-inset-top))`，关闭按钮随之下移，`data-statusbar='off'` 时回到原位。
+2. VIA 班次卡收藏按钮（34×34）曾覆盖价格文字尾部；改为 44×44 触控区并给价格行让位。
+3. VIA 底部导航计数徽标原为琥珀底，与激活态琥珀色块同色相融；改为深底 + 琥珀描边/数字。
+4. VIA 搜索结果行状态徽章补上缺失的 `tone-*` 色（此前与班次卡的信号灯语义不一致）。
+5. 两壳桌面端内容加入 max-width 居中（VIA 1080px / POSTA 880px，范式对齐 Aster 1080、ROAM/GATE 1120）。
+6. VIA mono 身份收尾：详情条日期、班次卡日期、行程卡日期进入等宽栈；两壳 8–9px 关键文字上探至 10px；POSTA 输入框 14px → 16px（避免 iOS 聚焦缩放）。
+7. 两壳装饰性 Font Awesome 图标补齐 `aria-hidden="true"`。
+8. 验证：lint 通过；全量 vitest 2764/2771（7 个失败均为 `world-semantic-access-map-store` 存量基线，5 个失败套件为本机 `.codex` 缓存噪音，无新增失败）；生产构建通过；`remaining-shell-portfolio` VIA/POSTA e2e 8/8（desktop + mobile-chrome，axe 零违规，固定底色断言保持）。证据截图同名重出。
+
+已识别但未做（超出"只改视觉"严格边界，留待用户确认）：VIA fixture 的 `platformZh/platformEn` 站台信息未渲染、POSTA 详情时间线可由现有字段升级为三节点、POSTA 头部置顶计数在 0 时仍显示、两壳详情抽屉可加 `role="dialog"` 与 Esc 关闭。
+
 ### CREDO 谱权（2026-09-03）
 
 - 固定亮底「象牙纸文书」身份：象牙纸 `#f5f2e9` + 藏青 `#25406b` + 金；衬线（Georgia / Noto Serif CJK）只留给文书标题与金额数字。
@@ -46,6 +61,14 @@ Status: `POSTA DONE 2026-09-03 / VIA DONE 2026-09-03 / CREDO DONE 2026-09-03 / N
 - 测试迁移：night 耦合组现只剩 NEXT；新增 CREDO 固定身份断言。
 - 证据：`output/e2e/remaining-shell-portfolio/credo-desktop-zh.png`、`credo-mobile-zen-en.png`（旧名已删除）。
 
+### NEXT 机会（2026-09-03）
+
+- 固定亮底「招聘平台」身份：亮白信息流 `#f4f6fa`/白卡 + 品牌蓝 `#1f53d6` + 珊瑚 `#f4553f`；Georgia 衬线全撤，换友好圆体感 sans；卡片区全面圆角化。
+- hero 从藏青斜切改亮蓝白渐变；草稿条 LOCAL 竖条、保存按钮、计数徽章走品牌蓝；收藏/删除走珊瑚。
+- 已解除系统主题耦合；zen 下保持亮白（e2e computed 背景断言 `rgb(244, 246, 250)` 锁定）。
+- axe 修过一轮：蓝压深到 `#1f53d6`（原 `#2f6bff` 对比 4.15/4.49 不达 4.5）。
+- **新系统级机制**：`src/App.vue` 增加 `FIXED_IDENTITY_STATUS_TONES` 路由映射——独立 App 解耦后，状态栏文字跟随 App 面貌而非系统主题（否则浅色身份壳在 zen 下状态栏浅对浅不可读）。当前覆盖 parcel/creator-rights/career（深字）与 intercity（浅字）；后续 GATE/ROAM 完成时补入。e2e 已对四壳加状态栏颜色断言。
+
 ## 4. Remaining / 待办矩阵
 
 执行顺序即优先级。每壳一个固定身份、一次到位：
@@ -54,8 +77,8 @@ Status: `POSTA DONE 2026-09-03 / VIA DONE 2026-09-03 / CREDO DONE 2026-09-03 / N
 | --- | --- | --- | --- | --- |
 | ~~1~~ ~~VIA~~ `DONE 2026-09-03` | VIA 联程（`/intercity` / `src/views/IntercityView.vue`） | **暗底交通枢纽信息牌**：近黑 + 琥珀/信号绿，等宽 mono 为主字体 | 时刻表行 + 时长条 + 站点代码大字 | 机场出发大屏 |
 | ~~2~~ ~~CREDO~~ `DONE 2026-09-03` | CREDO 谱权（`/creator-rights` / `src/views/CreatorRightsView.vue`） | **象牙纸文书**：纸白 + 藏青 + 金，衬线仅限文书标题 | 账簿表格 + 印章/编号美学 | 版税结算单、公证文书 |
-| 3（下一个） | NEXT 机会（`/career` / `src/views/CareerView.vue`） | **亮白招聘平台**：白 + 珊瑚/品牌蓝，友好圆体 sans | 信息流卡片墙 + 组织 logo 块 | Wanted、LinkedIn |
-| 4 | GATE 票务（`/tickets` / `src/views/TicketsView.vue`） | 暗底保留但转向**海报墙**，粗黑无衬线大字 | 海报优先网格 + 票根式卡片（打孔/锯齿边缘） | Interpark、票根 |
+| ~~3~~ ~~NEXT~~ `DONE 2026-09-03` | NEXT 机会（`/career` / `src/views/CareerView.vue`） | **亮白招聘平台**：白 + 珊瑚/品牌蓝，友好圆体 sans | 信息流卡片墙 + 组织 logo 块 | Wanted、LinkedIn |
+| 4（下一个） | GATE 票务（`/tickets` / `src/views/TicketsView.vue`） | 暗底保留但转向**海报墙**，粗黑无衬线大字 | 海报优先网格 + 票根式卡片（打孔/锯齿边缘） | Interpark、票根 |
 | 5 | ROAM 旅行（`/travel` / `src/views/TravelView.vue`） | **亮底目的地**：暖白 + 陶土，人文 sans | 目的地大图卡 + 地图锚点 | Airbnb、携程 |
 
 不动：Work Hub（暖纸）、Aster（海军蓝+青柠）已有独立身份；Shopping/FoodDelivery 各店铺已是正确范式。

@@ -44,6 +44,8 @@ test.describe('remaining S1 shell portfolio', () => {
     await expect(page.getByTestId('intercity-app')).not.toHaveClass(/night/)
     const boardColorZen = await page.evaluate(() => getComputedStyle(document.querySelector('[data-testid="intercity-app"]')).backgroundColor)
     expect(boardColorZen).toBe('rgb(13, 16, 19)')
+    const statusbarZen = await page.evaluate(() => getComputedStyle(document.querySelector('.status-fg')).color)
+    expect(statusbarZen).toBe('rgb(238, 242, 245)')
     await expectHealthy(page, 'intercity-app'); await page.screenshot({ path: join(evidenceDir, 'via-mobile-zen-en.png'), fullPage: true })
   })
 
@@ -62,6 +64,8 @@ test.describe('remaining S1 shell portfolio', () => {
     await expect(page.getByTestId('creator-rights-app')).not.toHaveClass(/night/)
     const paperZen = await page.getByTestId('creator-rights-app').evaluate((el) => getComputedStyle(el).backgroundColor)
     expect(paperZen).toBe('rgb(245, 242, 233)')
+    const statusbarZen = await page.evaluate(() => getComputedStyle(document.querySelector('.status-fg')).color)
+    expect(statusbarZen).toBe('rgb(36, 49, 63)')
     await expectHealthy(page, 'creator-rights-app'); await page.screenshot({ path: join(evidenceDir, 'credo-mobile-zen-en.png'), fullPage: true })
   })
 
@@ -75,20 +79,29 @@ test.describe('remaining S1 shell portfolio', () => {
     await seedSystem(page, { language: 'en-US', theme: 'zen' }); await openApp(page, '/parcel', 'parcel-app', pixel5)
     const appBackground = await page.getByTestId('parcel-app').evaluate((el) => getComputedStyle(el).backgroundColor)
     expect(appBackground).toBe('rgb(243, 238, 226)')
+    const statusbarZen = await page.evaluate(() => getComputedStyle(document.querySelector('.status-fg')).color)
+    expect(statusbarZen).toBe('rgb(36, 49, 63)')
     await page.getByTestId('parcel-shipment-posta-shipment-stale-0820').click(); await expect(page.getByTestId('parcel-detail')).toContainText('Authored tracking records are preview-only'); expect(await page.getByTestId('parcel-app').innerText()).not.toMatch(/[\u4e00-\u9fff]/)
     await expectHealthy(page, 'parcel-app'); await page.screenshot({ path: join(evidenceDir, 'posta-mobile-zen-en.png'), fullPage: true })
   })
 
-  test('NEXT desktop creates a local open-listing draft only', async ({ page }) => {
+  test('NEXT desktop keeps its fixed bright recruiting identity and creates a local open-listing draft only', async ({ page }) => {
     await seedSystem(page); await openApp(page, '/career', 'career-app', desktop)
     await page.getByTestId('career-listing-next-audition-vocal-0903').click(); await page.getByTestId('career-save-draft').click(); await page.getByTestId('career-tab-applications').click(); await expect(page.getByTestId('career-applications')).toContainText('还没有递交的材料')
     const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('schatphone:career-shell:preview-state') || '{}')); expect(stored.applicationDrafts).toHaveLength(1); expect(JSON.stringify(stored)).not.toMatch(/submittedAt|institutionReceipt|interview|offer|credential|calendar/i)
-    await expectHealthy(page, 'career-app'); await page.screenshot({ path: join(evidenceDir, 'next-desktop-day.png'), fullPage: true })
+    const feedBg = await page.getByTestId('career-app').evaluate((el) => getComputedStyle(el).backgroundColor)
+    expect(feedBg).toBe('rgb(244, 246, 250)')
+    await expectHealthy(page, 'career-app'); await page.screenshot({ path: join(evidenceDir, 'next-desktop-zh.png'), fullPage: true })
   })
 
-  test('NEXT simulated Pixel 5 English night keeps invite-only access closed', async ({ page }) => {
+  test('NEXT simulated Pixel 5 English under system zen keeps the fixed bright identity and invite-only access closed', async ({ page }) => {
     await seedSystem(page, { language: 'en-US', theme: 'zen' }); await openApp(page, '/career', 'career-app', pixel5)
-    await page.getByTestId('career-listing-next-invite-radio-0828').click(); await expect(page.getByTestId('career-closed')).toContainText('Without an institution invitation credential, access stays closed'); await expect(page.getByTestId('career-save-draft')).toHaveCount(0); expect(await page.getByTestId('career-app').innerText()).not.toMatch(/[\u4e00-\u9fff]/)
-    await expectHealthy(page, 'career-app'); await page.screenshot({ path: join(evidenceDir, 'next-mobile-night-en.png'), fullPage: true })
+    await page.getByTestId('career-listing-next-invite-radio-0828').click(); await expect(page.getByTestId('career-closed')).toContainText('Without an institution invitation credential, access stays closed'); await expect(page.getByTestId('career-save-draft')).toHaveCount(0); expect(await page.getByTestId('career-app').innerText()).not.toMatch(/[一-鿿]/)
+    await expect(page.getByTestId('career-app')).not.toHaveClass(/night/)
+    const feedBgZen = await page.getByTestId('career-app').evaluate((el) => getComputedStyle(el).backgroundColor)
+    expect(feedBgZen).toBe('rgb(244, 246, 250)')
+    const statusbarZen = await page.evaluate(() => getComputedStyle(document.querySelector('.status-fg')).color)
+    expect(statusbarZen).toBe('rgb(26, 31, 44)')
+    await expectHealthy(page, 'career-app'); await page.screenshot({ path: join(evidenceDir, 'next-mobile-zen-en.png'), fullPage: true })
   })
 })
