@@ -49,11 +49,11 @@ describe('ROAM Travel S1 shell', () => {
     wrapper.unmount()
   })
 
-  test('localizes English night mode without Chinese UI copy', async () => {
+  test('keeps its fixed warm-destination identity under system night mode', async () => {
     const { wrapper } = await mountTravel()
     const systemStore = useSystemStore(); systemStore.settings.system.language = 'en-US'; systemStore.settings.appearance.colorMode = 'night'
     await flushPromises()
-    expect(wrapper.get('[data-testid="travel-app"]').classes()).toContain('is-night')
+    expect(wrapper.get('[data-testid="travel-app"]').classes()).not.toContain('is-night')
     expect(wrapper.text()).toContain('For this pause')
     expect(wrapper.text()).not.toMatch(/[\u4e00-\u9fff]/)
     wrapper.unmount()

@@ -43,20 +43,22 @@ test.describe('ROAM Travel S1 shell', () => {
     expect(stored.bookingDrafts).toHaveLength(1)
     expect(JSON.stringify(stored)).not.toMatch(/reservationId|wallet|payment|calendar|route|agenda|eventInstance|notification/i)
     await expectNoHorizontalOverflow(page)
-    await page.screenshot({ path: join(evidenceDir, 'travel-desktop-day.png'), fullPage: true })
+    await page.screenshot({ path: join(evidenceDir, 'travel-desktop-zh.png'), fullPage: true })
   })
 
-  test('simulated Pixel 5 night mode is accessible and stale sources fail closed', async ({ page }) => {
+  test('simulated Pixel 5 under system zen keeps the fixed destination identity and stale sources fail closed', async ({ page }) => {
     await seedSystem(page, { theme: 'zen' })
     await openTravel(page, pixel5)
-    await expect(page.getByTestId('travel-app')).toHaveClass(/is-night/)
+    await expect(page.getByTestId('travel-app')).not.toHaveClass(/night/)
+    const roamBg = await page.evaluate(() => getComputedStyle(document.querySelector('[data-testid="travel-app"]')).backgroundColor)
+    expect(roamBg).toBe('rgb(250, 246, 239)')
     await page.getByTestId('travel-stay-roam-stay-sokcho-cloudline').click()
     await expect(page.getByTestId('travel-source-closed')).toContainText('不能用旧价格建立意向')
     await expect(page.getByTestId('travel-save-draft')).toHaveCount(0)
     const results = await new AxeBuilder({ page }).include('[data-testid="travel-app"]').withTags(['wcag2a', 'wcag2aa']).analyze()
     expect(results.violations).toEqual([])
     await expectNoHorizontalOverflow(page)
-    await page.screenshot({ path: join(evidenceDir, 'travel-mobile-night.png'), fullPage: true })
+    await page.screenshot({ path: join(evidenceDir, 'travel-mobile-zen.png'), fullPage: true })
   })
 
   test('simulated Pixel 5 English search remains localized and contained', async ({ page }) => {

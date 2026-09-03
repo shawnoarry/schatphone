@@ -2,7 +2,7 @@
 
 Updated: 2026-09-03
 
-Status: `POSTA DONE 2026-09-03 / VIA DONE 2026-09-03 / CREDO DONE 2026-09-03 / NEXT DONE 2026-09-03 / GATE DONE 2026-09-03 / ROAM NEXT`
+Status: `ALL SIX DONE 2026-09-03 (POSTA / VIA / CREDO / NEXT / GATE / ROAM)`
 
 本文件是跨 PC 接续文档：另一台机器接手时，读本文件 + `docs/design/PARCEL_POSTA_BRAND_DIRECTION.md` 即可继续，无需重读会话。
 
@@ -77,6 +77,13 @@ Status: `POSTA DONE 2026-09-03 / VIA DONE 2026-09-03 / CREDO DONE 2026-09-03 / N
 - 注意：`isNight`/`settings`/`storeToRefs` 已一并清理（lint）。
 - 证据：`output/e2e/tickets-app-shell/tickets-desktop-zh.png`、`tickets-mobile-zen.png`（旧名已删除）。
 
+### ROAM 旅行（2026-09-03）
+
+- 固定亮底「目的地手册」身份：暖白 `#faf6ef` + 陶土 `#b85c38` + 珊瑚 `#e07856`；Georgia 衬线全撤，人文 sans 统一。
+- 明信片 route-card、行程簿 DRAFT 印章竖条保留，换陶土色系；hero 改陶土渐变 + 沙点纹理。
+- 已解除系统主题耦合；zen 下保持暖白（e2e computed 背景断言 `rgb(250, 246, 239)` 锁定）。axe 修过一轮：辅助灰加深到 `#6b6157`。
+- 状态栏：沿用 ROAM 自带的 `:global` 覆盖（与 GATE 同机制）。**状态栏机制现状：App.vue 的 `FIXED_IDENTITY_STATUS_TONES` 覆盖 VIA/CREDO/NEXT/POSTA；GATE/ROAM 走各自的 `:global` 规则——两套并存都有 e2e/断言锁定，将来想收敛时以 App.vue 映射为准。**
+
 ## 4. Remaining / 待办矩阵
 
 执行顺序即优先级。每壳一个固定身份、一次到位：
@@ -87,7 +94,7 @@ Status: `POSTA DONE 2026-09-03 / VIA DONE 2026-09-03 / CREDO DONE 2026-09-03 / N
 | ~~2~~ ~~CREDO~~ `DONE 2026-09-03` | CREDO 谱权（`/creator-rights` / `src/views/CreatorRightsView.vue`） | **象牙纸文书**：纸白 + 藏青 + 金，衬线仅限文书标题 | 账簿表格 + 印章/编号美学 | 版税结算单、公证文书 |
 | ~~3~~ ~~NEXT~~ `DONE 2026-09-03` | NEXT 机会（`/career` / `src/views/CareerView.vue`） | **亮白招聘平台**：白 + 珊瑚/品牌蓝，友好圆体 sans | 信息流卡片墙 + 组织 logo 块 | Wanted、LinkedIn |
 | ~~4~~ ~~GATE~~ `DONE 2026-09-03` | GATE 票务（`/tickets` / `src/views/TicketsView.vue`） | 暗底保留但转向**海报墙**，粗黑无衬线大字 | 海报优先网格 + 票根式卡片（打孔/锯齿边缘） | Interpark、票根 |
-| 5（下一个） | ROAM 旅行（`/travel` / `src/views/TravelView.vue`） | **亮底目的地**：暖白 + 陶土，人文 sans | 目的地大图卡 + 地图锚点 | Airbnb、携程 |
+| ~~5~~ ~~ROAM~~ `DONE 2026-09-03` | ROAM 旅行（`/travel` / `src/views/TravelView.vue`） | **亮底目的地**：暖白 + 陶土，人文 sans | 目的地大图卡 + 地图锚点 | Airbnb、携程 |
 
 不动：Work Hub（暖纸）、Aster（海军蓝+青柠）已有独立身份；Shopping/FoodDelivery 各店铺已是正确范式。
 
