@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import fixture from './fixtures/world-semantic/conformance-v1.json'
 import {
@@ -232,8 +232,14 @@ const createHarness = async (worldFixture, {
 
 describe('Map production world-semantic restricted-place access', () => {
   beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(NOW + 1)
     localStorage.clear()
     setActivePinia(createPinia())
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   test.each(fixture.worlds)(

@@ -198,6 +198,7 @@ export default defineConfig(({ mode }) => ({
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
+      '**/.codex/**',
       '**/.{idea,git,cache,output,temp}/**',
       'e2e/**',
     ],
