@@ -95,6 +95,7 @@ Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 
 - 2026-08-28 人设唯一入口与本地文件导入优化：新增 9 项导入解析测试，覆盖 TXT、MD、Markdown、JSON、无效 JSON、空文件、超限、不支持格式和读取失败；Contacts 资料视图针对性测试共 33 项通过；
 - 2026-08-28 稳定 ID 与人物形象优化：Contacts 资料视图和 Chat 边界聚焦测试 2 文件 / 35 项通过；独立端口完成 desktop Chromium 与模拟 Pixel 5 的 Contacts 全流程 4/4，覆盖前置 ID、形象下钻、本地图片导入、Gallery 人物标签、主形象、相机/相册入口、WCAG A/AA 和零横向溢出；未声称真机证据；
+- 2026-09-30 空人物 authoring slice：`e2e/contacts-phone-ui.spec.js` 在 desktop Chromium 与模拟 Pixel 5 共 6/6 通过，新增流程覆盖新建空人物、稳定 `roleId`、导入人设/逐项填写两个入口、逐项填写保存与取消、TXT/Markdown/JSON/无效 JSON 输入保留、取消后正式资料与修订号恢复、reload 后仍保持，以及 WCAG A/AA、页面错误和零横向溢出；
 - 完整 `npm.cmd run test -- --dir tests --maxWorkers=2 --testTimeout=15000`：342 个文件 / 2609 项全部通过；
 - 独立 `5187` 端口完成 desktop Chromium 与模拟 Pixel 5 的 `e2e/contacts-phone-ui.spec.js`：4/4 通过；
 - 既有 WorldBook/Contacts Persona desktop Chromium 与模拟 Pixel 5 矩阵：8/8 通过，覆盖文件导入、双语/日夜、取消重开、AI 失败、WCAG A/AA 和零横向溢出；

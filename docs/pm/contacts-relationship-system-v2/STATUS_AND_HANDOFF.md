@@ -1,6 +1,6 @@
 # Contacts Relationship System V2 Status And Handoff
 
-Updated: 2026-08-28
+Updated: 2026-09-30
 
 Integrated baseline: `dc26226`
 
@@ -294,6 +294,7 @@ The older cross-device plans remain implementation history. They are not current
 - `CARD-6` validation on 2026-08-27: focused proposal, WorldBook, template, owner, storage, and Contacts coverage passes 10 files / 91 tests; the formal `tests/` run excluding the environment-bound image-publishing tooling test passes 331 files / 2489 tests; desktop Chromium and simulated Pixel 5 E2E pass 6 tests across the WorldBook -> Contacts value loop, manual template editing, and current-world suggestion cancel/save behavior. ESLint, production build, governance, and final diff checks are recorded in `CONTACTS_V3_2A_EXECUTION_PLAN.md`.
 - `CONTACTS-V3-4A` validation on 2026-08-28: the final archived-target/Chat-social/Store focus run passes 5 files / 31 tests; the complete project suite excluding the environment-owned `.codex/**` tree passes 338 files / 2551 tests; the existing Chat Directory Chromium E2E passes 1/1. ESLint, production build, governance (2 files / 19 tests), and `git diff --check` pass. The implementation adds no user-facing archive route or permanent-delete rewrite.
 - `CONTACTS-V3-4B / V3-4C` validation on 2026-08-28: the formal `tests/` suite passes 339 files / 2568 tests; the Contacts lifecycle E2E passes on desktop Chromium and mobile Chrome, covering archive, reload/direct return to archived management, search, restore, WCAG A/AA, mobile landscape, and horizontal overflow. ESLint, production build, governance (2 files / 19 tests), and `git diff --check` pass. A root-level Vitest invocation can also discover environment-owned untracked `.codex/**` tooling tests, so the authoritative project command is `npm.cmd run test -- --dir tests`.
+- `CONTACTS-V3-2C` empty-person authoring evidence on 2026-09-30: `e2e/contacts-phone-ui.spec.js` passes 6/6 across desktop Chromium and simulated Pixel 5, covering the empty-person overview, stable `roleId`, import-persona and fill-item-by-item entry points, save/cancel isolation, TXT/Markdown/JSON/invalid-JSON source retention, revision-safe reload, WCAG A/AA, page-error, and horizontal-overflow checks. The full `npm.cmd run test -- --dir tests --maxWorkers=2 --testTimeout=15000` passes 361 files / 2771 tests; `npm.cmd run lint`, `npm.cmd run build`, `npm.cmd run governance:check`, and `git diff --check` pass. The build retains only the existing large-chunk advisory.
 
 ## 5. Must Sync When Working Here
 

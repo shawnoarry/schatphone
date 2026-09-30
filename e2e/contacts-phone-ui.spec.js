@@ -170,6 +170,12 @@ const expectNoHorizontalOverflow = async (page) => {
   expect(hasOverflow).toBe(false)
 }
 
+const readPersistedProfile = (page, roleId) =>
+  page.evaluate((targetRoleId) => {
+    const snapshot = JSON.parse(window.localStorage.getItem('schatphone:store:chat') || '{}')
+    return snapshot.data?.roleProfiles?.find((profile) => profile.roleId === targetRoleId) || null
+  }, roleId)
+
 test.beforeEach(async ({ page, isMobile }) => {
   await page.setViewportSize(isMobile ? { width: 390, height: 844 } : { width: 1280, height: 800 })
   await seedContactsSnapshot(page)
@@ -295,6 +301,144 @@ test('Contacts opens as a phone contact list on mobile', async ({ page }) => {
   await expect(page.getByTestId('contacts-row-3')).toContainText('World NPC')
 
   await expectNoHorizontalOverflow(page)
+})
+
+test('Contacts empty-person authoring restores stable details after cancellation', async ({
+  page,
+}, testInfo) => {
+  const pageErrors = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+  const roleId = '9904'
+  const name = 'New empty person'
+  const savedIdentity = 'Independent stage designer'
+  const unsavedIdentity = 'Discarded identity draft'
+
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/contacts')
+  await page.getByTestId('contacts-add-profile').click()
+  await page.getByTestId('contacts-profile-role-id').fill(roleId)
+  await page.getByTestId('contacts-profile-name').fill(name)
+  await page.getByTestId('contacts-profile-submit').click()
+  await expect(page.getByTestId('contacts-profile-modal')).toHaveCount(0)
+  await expect(page.getByTestId('contacts-persona-empty-state')).toContainText(name)
+  await expect(page.getByTestId('contacts-role-id')).toHaveText(`ID ${roleId}`)
+  await expect(page.getByTestId('contacts-open-persona-classification')).toHaveCount(1)
+  await expect(page.getByTestId('contacts-persona-fill-from-overview')).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+  await testInfo.attach('empty-person-overview', {
+    body: await page.screenshot(),
+    contentType: 'image/png',
+  })
+  await expect.poll(() => readPersistedProfile(page, roleId)).not.toBeNull()
+  const emptyProfile = await readPersistedProfile(page, roleId)
+  expect(emptyProfile.profileValues).toEqual([])
+
+  // A person without a profile style enters the existing editor before persona review.
+  await page.getByTestId('contacts-open-persona-classification').click()
+  await expect(page.getByTestId('contacts-world-profile-fields-editor')).toBeVisible()
+  await expect(page.getByTestId('contacts-persona-classification-panel')).toHaveCount(0)
+  await page.getByTestId('contacts-cancel-world-profile-fields').click()
+  await page.getByTestId('contacts-detail-sheet-back').click()
+  await expect(page.getByTestId('contacts-persona-empty-state')).toBeVisible()
+  expect(await readPersistedProfile(page, roleId)).toEqual(emptyProfile)
+
+  await page.getByTestId('contacts-persona-fill-from-overview').click()
+  await page.getByTestId('contacts-profile-template-select').selectOption('preset_basic_modern')
+  await page.getByTestId('contacts-profile-template-value-identity').fill(unsavedIdentity)
+  await expectNoHorizontalOverflow(page)
+  await page.getByTestId('contacts-cancel-world-profile-fields').click()
+  await expect(page.getByTestId('contacts-world-profile-fields-editor')).toHaveCount(0)
+  expect(await readPersistedProfile(page, roleId)).toEqual(emptyProfile)
+  await page.getByTestId('contacts-detail-sheet-back').click()
+
+  await page.getByTestId('contacts-persona-fill-from-overview').click()
+  await page.getByTestId('contacts-profile-template-select').selectOption('preset_basic_modern')
+  await expect(page.getByTestId('contacts-profile-template-value-identity')).toHaveValue('')
+  await page.getByTestId('contacts-profile-template-value-identity').fill(savedIdentity)
+  await page.getByTestId('contacts-profile-template-value-life_habit').fill('Tea, Evening walks')
+  await page.getByTestId('contacts-save-world-profile-fields').click()
+  await expect(page.getByTestId('contacts-world-field-identity')).toContainText(savedIdentity)
+  await page.getByTestId('contacts-detail-sheet-back').click()
+  await expect(page.getByTestId('contacts-persona-empty-state')).toHaveCount(0)
+  const readableGroups = page.getByTestId('contacts-persona-readable-groups')
+  await expect(readableGroups).toContainText(savedIdentity)
+  await expect(readableGroups).toContainText('Evening walks')
+  await expect.poll(async () => (await readPersistedProfile(page, roleId))?.revision)
+    .toBe(emptyProfile.revision + 1)
+  const savedProfile = await readPersistedProfile(page, roleId)
+
+  await page.getByTestId('contacts-persona-fill-from-overview').click()
+  await expect(page.getByTestId('contacts-profile-template-value-identity')).toHaveValue(savedIdentity)
+  await page.getByTestId('contacts-profile-template-value-identity').fill(unsavedIdentity)
+  await page.getByTestId('contacts-cancel-world-profile-fields').click()
+  await expect(page.getByTestId('contacts-world-field-identity')).toContainText(savedIdentity)
+  await expect(page.getByTestId('contacts-world-profile-fields-section')).not.toContainText(unsavedIdentity)
+  await page.getByTestId('contacts-detail-sheet-back').click()
+  expect(await readPersistedProfile(page, roleId)).toEqual(savedProfile)
+
+  await page.getByTestId('contacts-open-persona-classification').click()
+  const source = page.getByTestId('contacts-persona-source')
+  await source.fill('Pasted persona that will not be saved.')
+  await expect(page.getByTestId('contacts-world-profile-category-list')).toHaveCount(0)
+  await page.getByTestId('contacts-persona-source-file').setInputFiles({
+    name: 'persona.md',
+    mimeType: 'text/markdown',
+    buffer: Buffer.from('# Draft persona\nLikes quiet rehearsals.'),
+  })
+  await expect(source).toHaveValue('# Draft persona\nLikes quiet rehearsals.')
+  await page.getByTestId('contacts-persona-source-file').setInputFiles({
+    name: 'persona.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from('{"identity":"Unsaved imported identity","habits":["Reading"]}'),
+  })
+  const importedText = JSON.stringify({
+    identity: 'Unsaved imported identity',
+    habits: ['Reading'],
+  }, null, 2)
+  await expect(source).toHaveValue(importedText)
+  await page.getByTestId('contacts-persona-source-file').setInputFiles({
+    name: 'invalid.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from('{invalid'),
+  })
+  await expect(page.getByTestId('contacts-persona-classification-error')).toContainText(
+    'current input was kept',
+  )
+  await expect(source).toHaveValue(importedText)
+  const accessibility = await new AxeBuilder({ page })
+    .include('[data-testid="contacts-persona-classification-panel"]')
+    .withTags(['wcag2a', 'wcag2aa'])
+    .analyze()
+  expect(accessibility.violations).toEqual([])
+  await expectNoHorizontalOverflow(page)
+  expect(await readPersistedProfile(page, roleId)).toEqual(savedProfile)
+
+  await page.getByTestId('contacts-close-persona-classification').click()
+  await expect(page.getByTestId('contacts-world-profile-category-list')).toBeVisible()
+  await expect(page.getByTestId('contacts-world-field-identity')).toContainText(savedIdentity)
+  await page.getByTestId('contacts-detail-sheet-back').click()
+  await expect(readableGroups).toContainText(savedIdentity)
+  await expect(readableGroups).not.toContainText('Unsaved imported identity')
+  await expect(page.getByTestId('contacts-role-id')).toHaveText(`ID ${roleId}`)
+  await testInfo.attach('restored-person-overview', {
+    body: await page.screenshot(),
+    contentType: 'image/png',
+  })
+
+  await page.getByTestId('contacts-open-persona-classification').click()
+  await expect(source).toHaveValue('')
+  await expect(page.getByTestId('contacts-persona-imported-file')).toHaveCount(0)
+  await expect(page.getByTestId('contacts-persona-classification-error')).toHaveCount(0)
+  await page.getByTestId('contacts-close-persona-classification').click()
+  await page.getByTestId('contacts-detail-sheet-back').click()
+  await page.reload()
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, `/contacts?profileId=${savedProfile.id}`)
+  await expect(readableGroups).toContainText(savedIdentity)
+  await expect(readableGroups).not.toContainText(unsavedIdentity)
+  expect(await readPersistedProfile(page, roleId)).toEqual(savedProfile)
+  await expectNoHorizontalOverflow(page)
+  expect(pageErrors).toEqual([])
 })
 
 test('Contacts archives, reloads, searches, and restores one person', async ({ page, isMobile }) => {
