@@ -16,6 +16,12 @@ const seedSystem = async (page, { language = 'zh-CN', theme = 'default' } = {}) 
 }
 const openApp = async (page, route, testId, viewport) => { await page.setViewportSize(viewport); await unlockToHome(page); await navigateInsideUnlockedApp(page, `${route}?from=home&homePage=3`); await expect(page.getByTestId(testId)).toBeVisible() }
 const expectHealthy = async (page, testId) => {
+  // Measure settled colors, not an intermediate navigation/detail transition.
+  await expect.poll(() => page.getByTestId(testId).evaluate((element) =>
+    element.getAnimations({ subtree: true }).filter((animation) =>
+      animation.playState === 'running' && Number.isFinite(animation.effect?.getComputedTiming().endTime),
+    ).length,
+  )).toBe(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1)
   const results = await new AxeBuilder({ page }).include(`[data-testid="${testId}"]`).withTags(['wcag2a', 'wcag2aa']).analyze()
   expect(results.violations).toEqual([])
