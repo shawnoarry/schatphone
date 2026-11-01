@@ -16,7 +16,8 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Keep the release environment compatible with locked Playwright 1.60.
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - name: Require main for manual deploy
@@ -67,7 +68,7 @@ jobs:
 
   e2e:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -120,7 +121,7 @@ jobs:
 
   deploy:
     needs: [build, e2e]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

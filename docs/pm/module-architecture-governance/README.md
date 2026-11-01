@@ -6,6 +6,7 @@ Use this package for state ownership, persistence, security/toolchain maintenanc
 
 Current state:
 
+- the 2026-11-01 release-only compatibility repair pins CI, Pages and Hosted Product Proof to `ubuntu-24.04`: the moving `ubuntu-latest` image selected Ubuntu 26.04, which locked Playwright 1.60 cannot use. Full release gates remain unchanged; the package handoff records the failure and exact-commit acceptance;
 - the local 2026-11-01 dependency maintenance and technical-stack review is recorded in [the validation report](../../qa/DEPENDENCY_MAINTENANCE_2026-11-01.md); the package handoff and roadmap 4.5 own its completion status. Preserve Vue/Pinia/Vite and keep optional major migrations separate from this security slice;
 - the subsequently authorized local Node 24 security update is complete at Node 24.22.2 / npm 11.19.1, with the existing install/global paths preserved; [the runtime update report](../../qa/NODE24_SECURITY_UPDATE_2026-11-01.md) records rollback materials, clean installation, full unit/build checks and 22 core browser-flow checks under the new runtime;
 - domain ownership and shared `lib` contracts are strong enough to preserve;
