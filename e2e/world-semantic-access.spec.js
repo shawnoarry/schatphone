@@ -5,6 +5,7 @@ import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js
 const OPENFREEMAP_HOST = 'tiles.openfreemap.org'
 const MAP_PACK_ID = 'semantic-access-e2e-v1'
 const PLACE_ID = 'silver-ward-archive'
+const SCENARIO_NOW = new Date('2026-08-31T13:00:00.000Z').getTime()
 
 const deterministicStyle = {
   version: 8,
@@ -34,7 +35,7 @@ const readPersistedData = async (page, key) =>
     return envelope?.data || null
   }, key)
 
-const seedSemanticAccessWorld = async (page) => page.evaluate(async ({ mapPackId, placeId }) => {
+const seedSemanticAccessWorld = async (page) => page.evaluate(async ({ mapPackId, placeId, now }) => {
   const [
     { useMapStore },
     { useSystemStore },
@@ -62,7 +63,6 @@ const seedSemanticAccessWorld = async (page) => page.evaluate(async ({ mapPackId
     import('/schatphone/src/lib/map-world-suite-inspection.js'),
     import('/schatphone/src/lib/persistence.js'),
   ])
-  const now = new Date('2026-08-31T13:00:00.000Z').getTime()
   const systemStore = useSystemStore()
   const workHubStore = useWorkHubStore()
   const mapStore = useMapStore()
@@ -334,7 +334,7 @@ const seedSemanticAccessWorld = async (page) => page.evaluate(async ({ mapPackId
   workHubStore.saveNow()
   mapStore.saveNow()
   await waitForPendingPersistedStateWrites()
-}, { mapPackId: MAP_PACK_ID, placeId: PLACE_ID })
+}, { mapPackId: MAP_PACK_ID, placeId: PLACE_ID, now: SCENARIO_NOW })
 
 const expectNoHorizontalOverflow = async (page) => {
   const overflow = await page.evaluate(() => {
@@ -352,6 +352,7 @@ const expectNoHorizontalOverflow = async (page) => {
 
 test.describe('WORLD-SEMANTIC-4 restricted-place access', () => {
   test('enters through verified identity and replays the same settlement after reload', async ({ page }) => {
+    await page.clock.setFixedTime(SCENARIO_NOW)
     const pageErrors = []
     page.on('pageerror', (error) => pageErrors.push(error.message))
     await page.emulateMedia({ reducedMotion: 'reduce' })

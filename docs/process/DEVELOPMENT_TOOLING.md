@@ -1,6 +1,6 @@
 # SchatPhone Development Tooling
 
-Updated: 2026-08-28
+Updated: 2026-11-01
 
 Purpose: record shared development-tool assumptions, local skill inventory, and cross-PC setup rules for SchatPhone.
 
@@ -50,9 +50,11 @@ Do not assume another PC has the same visual reference asset library path. If th
 Project runtime on the current machine:
 
 ```text
-Node.js: v24.13.0
-npm: 11.6.2
+Node.js: v24.22.2
+npm: 11.19.1
 ```
+
+The user-authorized 2026-11-01 security update uses the official signed Windows installer and preserves `H:\Nodejs` and the existing npm global prefix. Installation, rollback and project validation evidence are recorded in `docs/qa/NODE24_SECURITY_UPDATE_2026-11-01.md`. This is the current machine's runtime; do not rewrite another workstation's paths from it.
 
 Recommended checks:
 

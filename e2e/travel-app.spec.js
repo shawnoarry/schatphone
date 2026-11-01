@@ -55,6 +55,7 @@ test.describe('ROAM Travel S1 shell', () => {
     await page.getByTestId('travel-stay-roam-stay-sokcho-cloudline').click()
     await expect(page.getByTestId('travel-source-closed')).toContainText('不能用旧价格建立意向')
     await expect(page.getByTestId('travel-save-draft')).toHaveCount(0)
+    await expect(page.getByTestId('travel-stay-detail')).toHaveCSS('opacity', '1')
     const results = await new AxeBuilder({ page }).include('[data-testid="travel-app"]').withTags(['wcag2a', 'wcag2aa']).analyze()
     expect(results.violations).toEqual([])
     await expectNoHorizontalOverflow(page)

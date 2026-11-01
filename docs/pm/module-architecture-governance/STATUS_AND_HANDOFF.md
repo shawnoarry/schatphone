@@ -1,6 +1,6 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-08-31
+Updated: 2026-11-01
 
 Integrated alignment baseline: `38dc329`.
 
@@ -11,6 +11,10 @@ This is the current handoff for architecture cleanup, state ownership, persisten
 Status: `CMG_SEQUENCE_DONE / WORLD_SETTING_W2_DONE / HOSTED_PRODUCT_PROOF_AUTOMATION_IMPLEMENTED 2026-08-31`
 
 Roadmap owner: 4.5 Architecture, Security, And Documentation Maintenance.
+
+2026-11-01 maintenance slice: `LOCAL_DONE / NOT_DEPLOYED`, based on integrated `6a7ded4`. The user-authorized vulnerability remediation and technical-stack assessment are complete locally: production/full official-registry audits are 0/0, two clean installs pass, lint retains the 1,005-file scope, 361 files / 2,771 unit tests and the production build pass, and the final desktop/simulated-Pixel-5 browser run passes 424 cases with 4 existing skips, 0 failures and 0 flaky cases at zero retries. Four E2E files now wait for image/animation completion and use the authored scenario clock; application source and persistence contracts are unchanged. [The maintenance report](../../qa/DEPENDENCY_MAINTENANCE_2026-11-01.md) records exact dependency versions, bounded overrides, first-run findings, evidence and the recommended later Node 24 security patch. This is the pre-publication validation snapshot; the subsequent user-authorized project checkpoint is described in `docs/qa/CHAT_MEMORY_CONTINUITY_ACCEPTANCE_2026-11-01.md`. Deployment success is not inferred from local validation or Git publication.
+
+2026-11-01 subsequent runtime slice: `LOCAL_DONE / NOT_DEPLOYED`. The user explicitly authorized the previously recommended Node 24 update. Official signed Windows MSI upgraded `H:\Nodejs` from 24.13.0 to 24.22.2, with npm/npx 11.19.1, unchanged global prefix and unchanged six global package versions. Verified rollback copies remain on I:. Under the new runtime, clean install preserves the project lockfile, lint and 361 files / 2,771 unit tests pass, production and Worker dry-run builds pass, both audits remain 0, and 22 desktop/simulated-mobile core E2E cases pass with zero failures/skips/flaky cases/retries. [The runtime report](../../qa/NODE24_SECURITY_UPDATE_2026-11-01.md) owns this evidence; the prior 424-case full run remains the earlier dependency-maintenance proof. No project dependency, application source, storage or deployment configuration changes are added by this runtime slice.
 
 SchatPhone's domain architecture is sound enough to preserve. The current problem is concentration and hardening, not missing architecture or a need for framework replacement.
 
@@ -279,6 +283,8 @@ Implemented 2026-07-22:
 - confirmed metadata-only and whole-asset-package exports retain the v2 shape and configured API key unchanged.
 
 ### Dependency Audit
+
+The current local 2026-11-01 versions, audits and validation evidence are recorded in [Dependency Maintenance And Stack Review](../../qa/DEPENDENCY_MAINTENANCE_2026-11-01.md). The dated entries below preserve earlier maintenance history rather than the currently installed versions.
 
 2026-07-22 dependency-maintenance results:
 

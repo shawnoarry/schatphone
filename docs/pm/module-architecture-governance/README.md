@@ -1,11 +1,13 @@
 # Module Architecture Governance Package
 
-Updated: 2026-08-28
+Updated: 2026-11-01
 
 Use this package for state ownership, persistence, security/toolchain maintenance, CI/release confidence, refactor planning, module maturity, and architecture debt.
 
 Current state:
 
+- the local 2026-11-01 dependency maintenance and technical-stack review is recorded in [the validation report](../../qa/DEPENDENCY_MAINTENANCE_2026-11-01.md); the package handoff and roadmap 4.5 own its completion status. Preserve Vue/Pinia/Vite and keep optional major migrations separate from this security slice;
+- the subsequently authorized local Node 24 security update is complete at Node 24.22.2 / npm 11.19.1, with the existing install/global paths preserved; [the runtime update report](../../qa/NODE24_SECURITY_UPDATE_2026-11-01.md) records rollback materials, clean installation, full unit/build checks and 22 core browser-flow checks under the new runtime;
 - domain ownership and shared `lib` contracts are strong enough to preserve;
 - browsers and installable PWAs are confirmed as complete first-class clients, with one isolated storage container owning one current save;
 - authoritative histories and relationship evidence require explicit user deletion; automatic capacity management is limited to reversible archival/compaction or rebuildable data. A complete Mini Scene is optional presentation history and may be explicitly removed without removing its event result or memory projections;
@@ -44,7 +46,7 @@ Current state:
 - Mini Scene was not added to persistence Batch 2B and is not a Repository migration. Calendar authoring/entry was rejected and removed. A production event-trigger Adapter, profile-binding UI, safe Book transform execution, interactive HTML, and source-owner integrations remain unimplemented;
 - Settings has 3 workflow composables, Chat 15 focused composables, Contacts 10, and WorldBook 3;
 - the remaining structural hotspots are the large route views, especially the five-facade `FoodDeliveryView.vue`, `systemStore`, and direct cross-store coordination;
-- the isolated Vitest migration is complete at 4.1.10: it reuses root Vite 7.3.6 and removes the nested Vite 5/esbuild advisory chain and the prior critical finding;
+- the isolated Vitest 4 migration removed the nested Vite 5/esbuild advisory chain in July; the local November maintenance now uses Vitest 4.1.12 with root Vite 7.3.7, with validation recorded in the report linked above;
 - every complete local JSON export now presents one fixed danger warning before payload construction, keeps configured credentials and private local data intact, and exits without export/report side effects when cancelled;
 - normal npm resolution refreshed only compatible transitive advisory nodes, kept `package.json` and all direct versions unchanged, used no override/resolution or major migration, and reported production/full audits at 0/0 in the 2026-07-22 baseline with 185 files / 1170 tests and 56 pass / 4 existing Playwright skips;
 - the 2026-08-07 audit repair refreshed only the lockfile's transitive `js-yaml` node from 4.3.0 to 4.3.1 after the remote Pages gate exposed its high advisory; `package.json`, direct versions, and override/resolution policy remain unchanged, with production/full audits back at 0/0;

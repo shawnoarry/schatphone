@@ -216,11 +216,11 @@ test('Peach Cloud keeps its own visual identity through browse, cart, checkout, 
     'data-required-asset',
     'peach-cloud/cover/peach-cloud-hero-01.png',
   )
-  expect(
-    await homeHeroImage.evaluate(
+  await expect
+    .poll(() => homeHeroImage.evaluate(
       (image) => image.complete && image.naturalWidth === 1536 && image.naturalHeight === 1024,
-    ),
-  ).toBe(true)
+    ))
+    .toBe(true)
   await expect(page.getByTestId('food-delivery-peach-cloud-featured')).toHaveCount(0)
   await expect(page.locator('[data-testid^="food-delivery-menu-"][data-menu-section]')).toHaveCount(
     0,

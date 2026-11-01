@@ -55,6 +55,7 @@ test.describe('GATE Tickets S1 shell', () => {
     expect(posterBg).toBe('rgb(15, 15, 16)')
     await page.getByTestId('tickets-event-gate-event-iseo-listening-20260920').click()
     await expect(page.getByTestId('tickets-save-draft')).toBeDisabled()
+    await expect(page.getByTestId('tickets-event-detail')).toHaveCSS('opacity', '1')
     const results = await new AxeBuilder({ page }).include('[data-testid="tickets-app"]').withTags(['wcag2a', 'wcag2aa']).analyze()
     expect(results.violations).toEqual([])
     await expectNoHorizontalOverflow(page)
