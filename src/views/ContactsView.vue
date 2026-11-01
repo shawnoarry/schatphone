@@ -76,6 +76,7 @@ import {
   restoreRoleProfileWithWallet,
 } from '../lib/contacts-profile-lifecycle-coordinator'
 import { isContactsProfileArchived } from '../lib/contacts-profile-owner'
+import { buildGeneralProfileChatProjection } from '../lib/contacts-profile-projection'
 import { useDialog } from '../composables/useDialog'
 import { useContactsHomeListModel } from '../composables/useContactsHomeListModel'
 import { useContactsDangerZoneModel } from '../composables/useContactsDangerZoneModel'
@@ -94,6 +95,7 @@ import { useI18n } from '../composables/useI18n'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import AssetThumbnailOption from '../components/assets/AssetThumbnailOption.vue'
 import {
+  buildReturnSourceQuery,
   normalizeContactsProfileIdQuery,
   pushReturnTarget,
 } from '../lib/navigation-return'
@@ -126,6 +128,7 @@ const isWorldBookProfileTemplateHandoff = computed(() => {
 })
 
 const showProfileModal = ref(false)
+const profileFormError = ref('')
 const profileModalMode = ref('create')
 const editingProfileId = ref(0)
 const selectedProfileId = ref(0)
@@ -311,6 +314,7 @@ const setUiNotice = (type, message, durationMs = 2200) => {
   if (!text) return
   showUiNoticeType.value = type
   showUiNoticeMessage.value = text
+  if (type === 'error' && showProfileModal.value) profileFormError.value = text
   if (uiNoticeTimerId) clearTimeout(uiNoticeTimerId)
   uiNoticeTimerId = setTimeout(() => {
     showUiNoticeType.value = ''
@@ -754,7 +758,46 @@ const selectedRoleChatContact = computed(() => {
   if (!profileId) return null
   return chatStore.contacts.find((contact) => contact.kind === 'role' && Number(contact.profileId) === Number(profileId)) || null
 })
+const canVisitSelectedProfileInChat = computed(() => {
+  const profile = selectedProfile.value
+  return profile && !isContactsProfileArchived(profile) &&
+    profile.entityType !== CONTACTS_ENTITY_TYPES.SELF_PROFILE &&
+    profile.capabilities?.canAppearInChatDirectory !== false
+})
+const visitSelectedProfileInChat = () => {
+  if (!canVisitSelectedProfileInChat.value) return
+  router.push({
+    path: '/chat-contacts',
+    query: buildReturnSourceQuery('home', route, {
+      section: 'roles',
+      source: 'contacts',
+      profileId: String(selectedProfile.value.id),
+    }),
+  })
+}
 const universalProfileTemplates = computed(() => systemStore.listProfileTemplatePresets())
+const selectedGeneralProfileChatStatus = computed(() => {
+  const profile = selectedProfile.value
+  if (!profile || profile.templateLink?.primaryWorldId || !canVisitSelectedProfileInChat.value) return ''
+  const result = buildGeneralProfileChatProjection({
+    profile,
+    template: universalProfileTemplates.value.find((item) => item.id === profile.templateLink?.profileTemplateId),
+    expectedProfileRevision: profile.revision,
+  })
+  if (!result.ok) return t(
+    '这份资料暂未用于 AI 回复。请在“逐项填写”中确认资料卡样式并保存。',
+    'This card is not ready for AI replies. Choose its profile style and save in “Fill item by item”.',
+  )
+  return result.projection.fields.length > 0
+    ? t(
+        '已保存的公开资料和“熟悉后知道”资料会用于这个人物的 AI 回复。隐藏、亲密和世界专属资料不会自动带入。',
+        'Saved public and familiar details are used in this person’s AI replies. Hidden, intimate, and world-specific details are excluded.',
+      )
+    : t(
+        '目前没有可用于 AI 回复的资料。保存公开资料或“熟悉后知道”的内容后，会在下一次回复中生效。',
+        'No details are available for AI replies yet. Save public or familiar details to use them in the next reply.',
+      )
+})
 const currentWorldProfileTemplates = computed(() =>
   Array.isArray(currentContactsWorldContext.value.profiles?.enabledTemplates)
     ? currentContactsWorldContext.value.profiles.enabledTemplates
@@ -2291,6 +2334,7 @@ const resetProfileDraft = () => {
 }
 
 const openCreateProfile = () => {
+  profileFormError.value = ''
   profileModalMode.value = 'create'
   editingProfileId.value = 0
   resetProfileDraft()
@@ -2299,6 +2343,7 @@ const openCreateProfile = () => {
 }
 
 const openEditProfile = (profile) => {
+  profileFormError.value = ''
   if (!profile) return
   profileModalMode.value = 'edit'
   editingProfileId.value = Number(profile.id) || 0
@@ -2380,6 +2425,7 @@ const clearDraftKnowledgePoints = () => {
 }
 
 const saveProfile = () => {
+  profileFormError.value = ''
   const name = profileDraft.name.trim()
   if (!name) {
     setUiNotice('error', t('请填写角色名称。', 'Please enter a profile name.'))
@@ -3054,7 +3100,12 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="contacts-modal-scroll space-y-3 overflow-y-auto pb-6 no-scrollbar">
+        <p v-if="profileFormError" role="alert" class="text-sm text-red-700" data-testid="contacts-profile-error">
+          {{ profileFormError }}
+        </p>
+        <label for="contacts-basic-role-id" class="block text-sm font-semibold">{{ t('人物 ID', 'Person ID') }}</label>
         <input
+          id="contacts-basic-role-id"
           data-testid="contacts-profile-role-id"
           v-model="profileDraft.roleId"
           :readonly="profileModalMode === 'edit'"
@@ -3073,7 +3124,9 @@ onBeforeUnmount(() => {
           {{ t('ID 创建后保持不变，用于 Chat、Wallet、World Hub、事件审计和后续跨模块引用。', 'The ID stays fixed after creation for Chat, Wallet, World Hub, event audit, and future cross-module references.') }}
         </p>
 
+        <label for="contacts-basic-name" class="block text-sm font-semibold">{{ t('名字 / 昵称', 'Name / Display Name') }}</label>
         <input
+          id="contacts-basic-name"
           data-testid="contacts-profile-name"
           v-model="profileDraft.name"
           :placeholder="t('名字 / 昵称', 'Name / Display Name')"
@@ -3899,7 +3952,18 @@ onBeforeUnmount(() => {
             </span>
           </button>
 
-          <div v-if="isSelectedProfileArchived" class="contacts-profile-actions contacts-hero-actions">
+          <div v-if="canVisitSelectedProfileInChat" class="contacts-profile-actions contacts-hero-actions">
+            <button
+              type="button"
+              class="contacts-primary-action"
+              data-testid="contacts-go-to-chat"
+              @click="visitSelectedProfileInChat"
+            >
+              <i class="far fa-comment" aria-hidden="true"></i>
+              {{ selectedProfileChatBound ? t('继续聊天', 'Continue chatting') : t('前往 Chat 添加', 'Add in Chat') }}
+            </button>
+          </div>
+          <div v-else-if="isSelectedProfileArchived" class="contacts-profile-actions contacts-hero-actions">
             <button
               type="button"
               class="contacts-primary-action"
@@ -3964,6 +4028,13 @@ onBeforeUnmount(() => {
                 </div>
               </div>
 
+              <p
+                v-if="selectedProfileHasReadableDetails && selectedGeneralProfileChatStatus"
+                class="text-sm leading-relaxed text-gray-600"
+                data-testid="contacts-persona-chat-scope"
+              >
+                {{ selectedGeneralProfileChatStatus }}
+              </p>
               <div v-if="!isSelectedProfileArchived" class="contacts-persona-actions">
                 <button
                   type="button"
@@ -4062,7 +4133,7 @@ onBeforeUnmount(() => {
                   <span class="contacts-person-link__icon"><i class="far fa-id-card" aria-hidden="true"></i></span>
                   <span>
                     <strong>{{ t('身份与绑定', 'Identity and bindings') }}</strong>
-                    <small>{{ t('修改姓名、稳定 ID、一句话身份、人物类型和高级绑定', 'Change name, stable ID, identity label, person type, and advanced bindings') }}</small>
+                    <small>{{ t('修改姓名、一句话身份、人物类型和高级绑定；人物 ID 保持不变', 'Change name, identity label, person type, and advanced bindings; the person ID stays fixed') }}</small>
                   </span>
                   <i class="fas fa-chevron-right" aria-hidden="true"></i>
                 </button>
@@ -5313,6 +5384,14 @@ onBeforeUnmount(() => {
                   </span>
                 </div>
               </details>
+
+              <p
+                v-if="profileTemplateDraftTemplate?.scope === PROFILE_TEMPLATE_SCOPES.GLOBAL_PRESET && selectedProfileEntityType !== CONTACTS_ENTITY_TYPES.SELF_PROFILE"
+                class="text-sm leading-relaxed text-gray-600"
+                data-testid="contacts-general-chat-save-hint"
+              >
+                {{ t('保存后，公开资料和“熟悉后知道”的内容可用于这个人物的 AI 回复。未保存的修改不会生效；不希望带入聊天的内容请设为隐藏。', 'After saving, public and familiar details can be used in this person’s AI replies. Unsaved edits have no effect; mark details as hidden to keep them out of Chat.') }}
+              </p>
 
               <div v-if="contactsProfileTemplateOptions.length === 0" class="contacts-empty-detail">
                 <p>

@@ -9,6 +9,7 @@ import {
   useChatAiPromptContextModel,
 } from '../src/composables/useChatAiPromptContextModel'
 import { DEFAULT_CHAT_THREAD_AI_PREFS } from '../src/composables/useChatActiveThreadModel'
+import { createDefaultProfileTemplatePresets } from '../src/lib/profile-template-schema'
 import {
   WEATHER_DISPLAY_MODE_CUSTOM,
   normalizeWeatherSettings,
@@ -85,6 +86,32 @@ const createSystemStore = () => ({
   getUserAiContextSummary: ({ displayName }) => ({
     promptText: `User profile: ${displayName}`,
   }),
+})
+
+test('formal Chat reads saved general persona per person and immediately reflects edits and privacy changes', () => {
+  const presets = createDefaultProfileTemplatePresets()
+  const systemStore = { ...createSystemStore(), listProfileTemplatePresets: () => presets }
+  const profiles = [10, 20].map((id) => ({
+    id, revision: 1, entityType: 'main_role', name: `Person ${id}`, role: 'Neighbor',
+    templateLink: { primaryWorldId: '', profileTemplateId: 'preset_basic_modern', profileTemplateVersion: 1 },
+    profileValues: [{ fieldId: 'identity', value: `persona-marker-${id}`, sourceKind: 'manual', visibilityLevel: 'familiar' }],
+  }))
+  const model = createModel({ systemStore, roleProfiles: profiles })
+  const contact = { id: 1, kind: 'role', profileId: 10, name: 'Person 10' }
+  const prompt = () => model.buildSystemPrompt(contact, DEFAULT_CHAT_THREAD_AI_PREFS)
+  expect(prompt()).toContain('persona-marker-10')
+  expect(prompt()).not.toContain('persona-marker-20')
+  profiles[0].profileValues[0].value = 'updated-persona-marker'
+  profiles[0].revision += 1
+  expect(prompt()).toContain('updated-persona-marker')
+  expect(prompt()).not.toContain('persona-marker-10')
+  profiles[0].profileValues[0].visibilityLevel = 'hidden'
+  profiles[0].revision += 1
+  expect(prompt()).not.toContain('updated-persona-marker')
+  expect(model.buildSystemPrompt({ ...contact, kind: 'service' }, DEFAULT_CHAT_THREAD_AI_PREFS)).not.toContain('persona-marker-20')
+  expect(model.buildSystemPrompt({ ...contact, profileId: 20 }, DEFAULT_CHAT_THREAD_AI_PREFS)).toContain('persona-marker-20')
+  presets[0].version += 1
+  expect(model.buildSystemPrompt({ ...contact, profileId: 20 }, DEFAULT_CHAT_THREAD_AI_PREFS)).not.toContain('persona-marker-20')
 })
 
 const createModel = ({

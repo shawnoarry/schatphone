@@ -231,7 +231,8 @@ const updateNumberSetting = (key, value) => {
           <button
             type="button"
             class="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl bg-gray-100 text-gray-700"
-            @click="$emit('open-chat-directory')"
+            data-testid="thread-open-contact-info"
+            @click="$emit(activeChat?.kind === 'role' && worldKernelState.profileId ? 'open-contacts-profile' : 'open-chat-directory')"
           >
             <i :class="isActiveServiceChat ? 'fas fa-bullhorn' : 'fas fa-user'"></i>
             <span class="text-[11px]">{{ isActiveServiceChat ? t('服务号资料', 'Service info') : t('联系人资料', 'Contact info') }}</span>

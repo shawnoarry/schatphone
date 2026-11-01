@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { buildRoleIdentityProjection } from '../src/lib/role-identity-projection'
+import { createDefaultProfileTemplatePresets } from '../src/lib/profile-template-schema'
 
 const createProfile = (overrides = {}) => ({
   id: 10,
@@ -19,6 +20,23 @@ const createProfile = (overrides = {}) => ({
 })
 
 describe('role identity projection Module', () => {
+  test('reads the matching general card with existing prompt budgets and never falls back from an invalid world link', () => {
+    const profile = createProfile({
+      templateLink: { primaryWorldId: '', profileTemplateId: 'preset_basic_modern', profileTemplateVersion: 1 },
+      profileValues: [
+        { fieldId: 'identity', value: 'Neighbor', visibilityLevel: 'public', sourceKind: 'manual' },
+        { fieldId: 'relationship_setting', value: 'Study partner', visibilityLevel: 'familiar', sourceKind: 'manual' },
+      ],
+    })
+    const input = { profile, contact: { kind: 'role', profileId: 10 }, generalProfileTemplates: createDefaultProfileTemplatePresets(), profileValueLimit: 1 }
+    const result = buildRoleIdentityProjection(input)
+    expect(result.stableText).toContain('Identity: Neighbor')
+    expect(result.stableText).not.toContain('Study partner')
+    expect(result.omittedCounts.profileValues).toBe(1)
+    expect(buildRoleIdentityProjection({ ...input, profileCharacterBudget: 4 }).stableText).not.toContain('Neighbor')
+    expect(buildRoleIdentityProjection({ ...input, contact: { kind: 'role', profileId: 999 } }).roleBound).toBe(false)
+    expect(buildRoleIdentityProjection({ ...input, profile: { ...profile, templateLink: { ...profile.templateLink, primaryWorldId: 'some-world' } } }).stableText).not.toContain('Identity: Neighbor')
+  })
   test('does not expose archived role identity or continuity to formal Chat', () => {
     const projection = buildRoleIdentityProjection({
       contact: { id: 1, kind: 'role', profileId: 10 },

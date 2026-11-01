@@ -77,7 +77,7 @@ describe('Contacts and Chat Directory boundary copy', () => {
     wrapper.unmount()
   })
 
-  test('keeps Chat actions off the selected Contacts profile', async () => {
+  test('offers navigation to Chat without binding from the selected Contacts profile', async () => {
     const chatStore = useChatStore()
     const profile = chatStore.addRoleProfile({
       roleId: '7101',
@@ -104,6 +104,12 @@ describe('Contacts and Chat Directory boundary copy', () => {
     expect(wrapper.get('[data-testid="contacts-manage-identity-bindings"]').text()).toContain(
       'Identity and bindings',
     )
+    expect(chatStore.isRoleProfileBound(profile.id)).toBe(false)
+
+    await wrapper.get('[data-testid="contacts-go-to-chat"]').trigger('click')
+    await flushUi()
+    expect(router.currentRoute.value.path).toBe('/chat-contacts')
+    expect(router.currentRoute.value.query).toMatchObject({ source: 'contacts', profileId: String(profile.id) })
     expect(chatStore.isRoleProfileBound(profile.id)).toBe(false)
 
     wrapper.unmount()
@@ -133,14 +139,75 @@ describe('Contacts and Chat Directory boundary copy', () => {
     })
     await flushUi()
     expect(wrapper.find('[data-testid="contacts-start-chat"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="contacts-go-to-chat"]').exists()).toBe(false)
 
     await router.push(`/contacts?profileId=${disabledProfile.id}`)
     await flushUi()
     expect(wrapper.get('[data-testid="contacts-role-detail"]').text()).toContain('Disabled Role')
     expect(wrapper.find('[data-testid="contacts-start-chat"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="contacts-go-to-chat"]').exists()).toBe(false)
     expect(chatStore.isRoleProfileBound(selfProfile.id)).toBe(false)
     expect(chatStore.isRoleProfileBound(disabledProfile.id)).toBe(false)
 
+    wrapper.unmount()
+  })
+
+  test('handoff preselects the exact person, cancels without binding, and reuses the confirmed conversation', async () => {
+    const chatStore = useChatStore()
+    const profile = chatStore.addRoleProfile({ roleId: '7180', name: 'Requested person' })
+    const router = createTestRouter()
+    const profilePath = `/contacts?profileId=${profile.id}&from=home&homePage=2`
+    await router.push(profilePath)
+    await router.isReady()
+    const wrapper = mount({ template: '<router-view />' }, { global: { plugins: [router] } })
+    await flushUi()
+    await wrapper.get('[data-testid="contacts-go-to-chat"]').trigger('click')
+    await flushUi()
+    expect(wrapper.get('[data-testid="chat-directory-bind-profile"]').element.value).toBe(String(profile.id))
+    expect(chatStore.isRoleProfileBound(profile.id)).toBe(false)
+    await wrapper.get('[aria-label="Close"]').trigger('click')
+    await flushUi()
+    expect(router.currentRoute.value.path).toBe('/contacts')
+    expect(router.currentRoute.value.query).toMatchObject({ profileId: String(profile.id), homePage: '2' })
+    expect(chatStore.isRoleProfileBound(profile.id)).toBe(false)
+
+    await wrapper.get('[data-testid="contacts-go-to-chat"]').trigger('click')
+    await flushUi()
+    await wrapper.get('[data-testid="chat-directory-confirm-bind"]').trigger('click')
+    await flushUi()
+    const contact = chatStore.contacts.find((item) => item.profileId === profile.id)
+    expect(router.currentRoute.value.path).toBe(`/chat/${contact.id}`)
+    expect(router.currentRoute.value.query.homePage).toBe('2')
+
+    await router.push(profilePath)
+    await flushUi()
+    expect(wrapper.get('[data-testid="contacts-go-to-chat"]').text()).toBe('Continue chatting')
+    await wrapper.get('[data-testid="contacts-go-to-chat"]').trigger('click')
+    await flushUi()
+    expect(router.currentRoute.value.path).toBe(`/chat/${contact.id}`)
+    expect(chatStore.contacts.filter((item) => item.profileId === profile.id)).toHaveLength(1)
+    wrapper.unmount()
+  })
+
+  test.each(['self_profile', 'disabled', 'archived', 'missing'])('rejects a %s person handoff and excludes invalid add candidates', async (kind) => {
+    const chatStore = useChatStore()
+    const profile = kind === 'missing' ? { id: 99999 } : chatStore.addRoleProfile({
+      name: 'Unavailable person',
+      ...(kind === 'self_profile' ? { entityType: kind } : {}),
+      ...(kind === 'disabled' ? { capabilities: { canAppearInChatDirectory: false } } : {}),
+    })
+    if (kind === 'archived') chatStore.archiveRoleProfile(profile.id)
+    const router = createTestRouter()
+    await router.push(`/chat-contacts?source=contacts&profileId=${profile.id}`)
+    await router.isReady()
+    const wrapper = mount(ChatDirectoryView, { global: { plugins: [router] } })
+    await flushUi()
+    expect(wrapper.find('[data-testid="chat-directory-bind-modal"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('This person is unavailable for Chat.')
+    expect(chatStore.isRoleProfileBound(profile.id)).toBe(false)
+    await wrapper.get('button[aria-label="Add contact"]').trigger('click')
+    await flushUi()
+    expect(wrapper.findAll('select option').some((option) => option.element.value === String(profile.id))).toBe(false)
     wrapper.unmount()
   })
 

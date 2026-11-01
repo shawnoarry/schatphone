@@ -1,4 +1,7 @@
 import {
+  CONTACTS_ENTITY_TYPES,
+  PROFILE_TEMPLATE_FIELD_PURPOSES,
+  PROFILE_TEMPLATE_SCOPES,
   PROFILE_VALUE_SOURCE_KINDS,
   PROFILE_VISIBILITY_LEVELS,
   normalizeProfileExtensions,
@@ -31,7 +34,7 @@ const worldsMatch = (left, right) => {
 
 const fail = (reason) => immutable({ ok: false, reason, projection: null })
 
-export const buildContactsProfileProjection = ({
+const projectProfile = ({
   purpose = '',
   profile,
   template,
@@ -40,7 +43,7 @@ export const buildContactsProfileProjection = ({
   allowedEntityTypes = [],
   allowedVisibilityLevels = DEFAULT_VISIBILITY,
   allowedFieldIds,
-} = {}) => {
+} = {}, { generalChat = false } = {}) => {
   const normalizedPurpose = normalizeText(purpose, 80)
   if (!normalizedPurpose) return fail('purpose_missing')
   if (!profile || typeof profile !== 'object') return fail('profile_missing')
@@ -54,13 +57,21 @@ export const buildContactsProfileProjection = ({
   if (Number(profile.revision) !== Number(expectedProfileRevision)) return fail('stale_profile_revision')
 
   const link = profile.templateLink || {}
-  if (!expectedWorldId || !link.primaryWorldId) return fail('world_missing')
-  if (!worldsMatch(link.primaryWorldId, expectedWorldId)) return fail('world_mismatch')
+  if (generalChat) {
+    if (link.primaryWorldId) return fail('general_profile_required')
+  } else {
+    if (!expectedWorldId || !link.primaryWorldId) return fail('world_missing')
+    if (!worldsMatch(link.primaryWorldId, expectedWorldId)) return fail('world_mismatch')
+  }
   if (!template || typeof template !== 'object' || template.enabled === false) return fail('template_missing')
+  if (generalChat && (template.scope !== PROFILE_TEMPLATE_SCOPES.GLOBAL_PRESET || template.worldId)) {
+    return fail('general_template_required')
+  }
   if (normalizeText(template.id, 80) !== normalizeText(link.profileTemplateId, 80)) {
     return fail('template_mismatch')
   }
-  if (Number(template.version) !== Number(link.profileTemplateVersion)) return fail('stale_template_version')
+  if (!Number.isSafeInteger(Number(template.version)) || Number(template.version) <= 0 ||
+    Number(template.version) !== Number(link.profileTemplateVersion)) return fail('stale_template_version')
 
   const extensionFields = normalizeProfileExtensions(profile.profileExtensions).fields
   const fields = [
@@ -71,7 +82,7 @@ export const buildContactsProfileProjection = ({
   const fieldMap = new Map(
     fields
       .filter((field) => field.entityTypes.includes(profile.entityType))
-      .filter((field) => field.purposes.includes(normalizedPurpose))
+      .filter((field) => field.purposes.includes(normalizedPurpose) || (generalChat && field.purposes.length === 0))
       .filter((field) => !allowlist || allowlist.has(field.id))
       .map((field) => [field.id, field]),
   )
@@ -85,7 +96,7 @@ export const buildContactsProfileProjection = ({
     if (!field) continue
     if (value?.sourceKind !== PROFILE_VALUE_SOURCE_KINDS.MANUAL) continue
     if (!visibility.has(value?.visibilityLevel)) continue
-    const rendered = Array.isArray(value.value)
+    const rendered = typeof value.value === 'boolean' ? String(value.value) : Array.isArray(value.value)
       ? value.value.map((item) => normalizeText(item, 120)).filter(Boolean)
       : normalizeText(value.value)
     if (Array.isArray(rendered) ? rendered.length === 0 : !rendered) continue
@@ -109,3 +120,22 @@ export const buildContactsProfileProjection = ({
     },
   })
 }
+
+// World-bound consumers keep their existing purpose and world checks.
+export const buildContactsProfileProjection = (input = {}) => projectProfile(input)
+
+// Ordinary, world-independent role cards are a Chat-only identity source. This
+// reads confirmed values without granting or persisting purposes on old fields.
+export const buildGeneralProfileChatProjection = ({ profile, template, expectedProfileRevision } = {}) =>
+  projectProfile({
+    purpose: PROFILE_TEMPLATE_FIELD_PURPOSES.CHAT_CONTEXT,
+    profile,
+    template,
+    expectedProfileRevision,
+    allowedEntityTypes: [
+      CONTACTS_ENTITY_TYPES.MAIN_ROLE,
+      CONTACTS_ENTITY_TYPES.SUPPORTING_ROLE,
+      CONTACTS_ENTITY_TYPES.NPC,
+    ],
+    allowedVisibilityLevels: DEFAULT_VISIBILITY,
+  }, { generalChat: true })

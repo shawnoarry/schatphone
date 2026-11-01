@@ -4,6 +4,7 @@ import {
   buildPersonaProfileConfirmation,
 } from '../src/lib/persona-profile-confirmation'
 import { createPersonaReviewRows } from '../src/lib/persona-profile-classifier'
+import { buildGeneralProfileChatProjection } from '../src/lib/contacts-profile-projection'
 import {
   PROFILE_TEMPLATE_SCOPES,
   PROFILE_TEMPLATE_FIELD_TYPES,
@@ -160,6 +161,42 @@ describe('persona profile confirmation', () => {
       expect.objectContaining({ fieldId: 'occupation', value: 'Creative producer' }),
     ])
     expect(result.updates.profileExtensions.fields).toEqual([])
+  })
+
+  test('confirmed general-role imports reach Chat with person extensions and retain visibility controls', () => {
+    const roleTemplate = {
+      ...template,
+      scope: PROFILE_TEMPLATE_SCOPES.GLOBAL_PRESET,
+      fields: template.fields.map((field) => ({ ...field, entityTypes: ['main_role'] })),
+    }
+    const roleProfile = {
+      ...profile,
+      entityType: 'main_role',
+      templateLink: { ...profile.templateLink, primaryWorldId: '' },
+    }
+    const roleDraft = { ...draft, profileRef: { ...draft.profileRef, entityType: 'main_role' } }
+    const rows = acceptedRows().map((row) => ({ ...row, visibilityLevel: 'familiar' }))
+    const confirmation = buildPersonaProfileConfirmation({
+      draft: roleDraft, reviewRows: rows, profile: roleProfile, template: roleTemplate,
+      worldId: 'world_a', now: 1000, random: 0.25,
+    })
+    expect(confirmation.ok).toBe(true)
+    const savedProfile = { ...roleProfile, ...confirmation.updates, revision: 4 }
+    const project = (currentProfile) => buildGeneralProfileChatProjection({
+      profile: currentProfile, template: roleTemplate, expectedProfileRevision: currentProfile.revision,
+    })
+    expect(project(roleProfile).projection.fields.map((field) => field.value)).toEqual(['Manager'])
+    expect(project(savedProfile).projection.fields.map((field) => field.value)).toEqual(['Producer', 'Stay curious'])
+    expect(savedProfile.profileExtensions.fields[0].purposes).toEqual([])
+
+    rows[1].visibilityLevel = 'hidden'
+    const privateConfirmation = buildPersonaProfileConfirmation({
+      draft: roleDraft, reviewRows: rows, profile: roleProfile, template: roleTemplate,
+      worldId: 'world_a', now: 1000, random: 0.25,
+    })
+    expect(privateConfirmation.ok).toBe(true)
+    expect(project({ ...roleProfile, ...privateConfirmation.updates, revision: 4 })
+      .projection.fields.map((field) => field.value)).toEqual(['Producer'])
   })
 
   test.each([

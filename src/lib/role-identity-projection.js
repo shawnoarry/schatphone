@@ -2,7 +2,7 @@ import {
   CONTACTS_ENTITY_TYPES,
   PROFILE_TEMPLATE_FIELD_PURPOSES,
 } from './profile-template-schema'
-import { buildContactsProfileProjection } from './contacts-profile-projection'
+import { buildContactsProfileProjection, buildGeneralProfileChatProjection } from './contacts-profile-projection'
 import { isContactsProfileActive } from './contacts-profile-owner'
 import { buildRoleContinuityProjection } from './role-continuity-projection'
 
@@ -59,6 +59,7 @@ const isEligibleRoleProfile = (contact, profile) =>
   (contact?.kind || 'role') === 'role' &&
   profile &&
   typeof profile === 'object' &&
+  (!contact?.profileId || Number(contact.profileId) === Number(profile.id)) &&
   isContactsProfileActive(profile) &&
   profile.entityType !== CONTACTS_ENTITY_TYPES.SELF_PROFILE
 
@@ -83,14 +84,20 @@ export const buildRoleIdentityProjection = (input = {}) => {
   const bio = normalizeText(profile.bio || contact.bio, 1200) || 'none'
   const relationshipLabel = normalizeText(profile.relationshipLabelText, 160)
   const relationshipNote = normalizeText(profile.relationshipLabelNote, 600)
-  const linkedTemplate = (Array.isArray(source.profileTemplates) ? source.profileTemplates : [])
+  const isGeneralProfile = !profile.templateLink?.primaryWorldId
+  const templates = isGeneralProfile ? source.generalProfileTemplates : source.profileTemplates
+  const linkedTemplate = (Array.isArray(templates) ? templates : [])
     .find((template) => template?.id === profile.templateLink?.profileTemplateId)
-  const profileProjection = buildContactsProfileProjection({
+  const profileProjection = isGeneralProfile ? buildGeneralProfileChatProjection({
+    profile,
+    template: linkedTemplate,
+    expectedProfileRevision: source.expectedProfileRevision ?? profile.revision,
+  }) : buildContactsProfileProjection({
     purpose: PROFILE_TEMPLATE_FIELD_PURPOSES.CHAT_CONTEXT,
     profile,
     template: linkedTemplate,
     expectedWorldId: source.expectedWorldId || profile.templateLink?.primaryWorldId,
-    expectedProfileRevision: source.expectedProfileRevision || profile.revision,
+    expectedProfileRevision: source.expectedProfileRevision ?? profile.revision,
     allowedEntityTypes: [
       CONTACTS_ENTITY_TYPES.MAIN_ROLE,
       CONTACTS_ENTITY_TYPES.SUPPORTING_ROLE,

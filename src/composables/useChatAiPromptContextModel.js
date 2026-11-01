@@ -361,6 +361,7 @@ export const useChatAiPromptContextModel = ({
       contact,
       profile,
       profileTemplates: options.profileTemplates,
+      generalProfileTemplates: systemStore?.listProfileTemplatePresets?.() || [],
       expectedWorldId: options.expectedWorldId,
       recalledMemories: options.recalledMemories,
     })

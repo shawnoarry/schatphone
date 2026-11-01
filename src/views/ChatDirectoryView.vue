@@ -28,6 +28,7 @@ import { extractWorldServiceTemplateProposals } from '../lib/world-service-templ
 import { formatApiErrorForUi } from '../lib/ai'
 import { CONTACTS_ENTITY_TYPES } from '../lib/role-profile-schema'
 import { isContactsProfileActive } from '../lib/contacts-profile-owner'
+import { buildReturnSourceQuery, normalizeContactsProfileIdQuery, normalizeHomePageQuery } from '../lib/navigation-return'
 import { resolveWorldviewText } from '../lib/world-interface'
 import { getChatAppearanceClasses } from '../lib/chat-appearance'
 import { useDialog } from '../composables/useDialog'
@@ -65,6 +66,11 @@ const roleActionMenuContactId = ref(0)
 const showServiceManagement = ref(false)
 const showBindModal = ref(false)
 const bindProfileId = ref(0)
+const bindFromProfile = ref(false)
+const bindProfileSelect = ref(null)
+const requestedProfileId = computed(() => route.query.source === 'contacts'
+  ? normalizeContactsProfileIdQuery(route.query.profileId)
+  : '')
 const directoryScrollAreaRef = ref(null)
 
 const showRoleMetaModal = ref(false)
@@ -224,7 +230,10 @@ const boundProfileIds = computed(() =>
 const unboundRoleProfilesRaw = computed(() =>
   roleProfiles.value.filter(
     (profile) =>
-      isContactsProfileActive(profile) && !boundProfileIds.value.has(Number(profile.id)),
+      isContactsProfileActive(profile) &&
+      profile.entityType !== CONTACTS_ENTITY_TYPES.SELF_PROFILE &&
+      profile.capabilities?.canAppearInChatDirectory !== false &&
+      !boundProfileIds.value.has(Number(profile.id)),
   ),
 )
 
@@ -982,6 +991,13 @@ const selectedCountCurrentSection = computed(() =>
 )
 
 const goBack = () => {
+  if (requestedProfileId.value) {
+    router.replace({
+      path: '/contacts',
+      query: buildReturnSourceQuery('home', route, { profileId: requestedProfileId.value }),
+    })
+    return
+  }
   router.push('/chat')
 }
 
@@ -1148,7 +1164,11 @@ const openChat = (contact) => {
     })
     return
   }
-  router.push(`/chat/${contact.id}`)
+  const homePage = normalizeHomePageQuery(route.query.homePage)
+  router[requestedProfileId.value ? 'replace' : 'push']({
+    path: `/chat/${contact.id}`,
+    ...(homePage ? { query: buildReturnSourceQuery('home', route) } : {}),
+  })
 }
 
 const chatSocialStateLabel = (contact) => {
@@ -1215,6 +1235,7 @@ const unblockRoleContact = (contact) => {
 }
 
 const openBindModal = () => {
+  bindFromProfile.value = false
   if (unboundRoleProfilesRaw.value.length === 0) {
     showUiNotice(
       'warning',
@@ -1231,6 +1252,9 @@ const openBindModal = () => {
 
 const closeBindModal = () => {
   showBindModal.value = false
+  const shouldReturn = bindFromProfile.value
+  bindFromProfile.value = false
+  if (shouldReturn) goBack()
 }
 
 const bindSelectedProfile = () => {
@@ -1244,8 +1268,51 @@ const bindSelectedProfile = () => {
     return
   }
   showUiNotice('success', t('绑定成功。', 'Bind succeeded.'))
+  const shouldOpen = bindFromProfile.value
+  bindFromProfile.value = false
   closeBindModal()
+  if (shouldOpen) openChat(created)
 }
+
+const visitRequestedProfile = () => {
+  if (route.path !== '/chat-contacts' || !requestedProfileId.value) return
+  const profile = chatStore.getRoleProfileById(Number(requestedProfileId.value))
+  if (!profile || !isContactsProfileActive(profile) ||
+    profile.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE ||
+    profile.capabilities?.canAppearInChatDirectory === false) {
+    showUiNotice('warning', t('这个人物暂时不能加入聊天。', 'This person is unavailable for Chat.'))
+    return
+  }
+  const existing = contacts.value.find((contact) => contact.kind === 'role' && Number(contact.profileId) === profile.id)
+  if (existing) {
+    openChat(existing)
+    return
+  }
+  activeSection.value = 'roles'
+  bindProfileId.value = profile.id
+  bindFromProfile.value = true
+  showBindModal.value = true
+}
+
+const keepBindDialogFocus = (event) => {
+  if (event.key !== 'Tab') return
+  const controls = [...event.currentTarget.querySelectorAll('button, select')]
+  const first = controls[0]
+  const last = controls.at(-1)
+  if (event.shiftKey && event.target === first) {
+    event.preventDefault()
+    last?.focus()
+  } else if (!event.shiftKey && event.target === last) {
+    event.preventDefault()
+    first?.focus()
+  }
+}
+watch(showBindModal, async (shown) => {
+  if (shown) {
+    await nextTick()
+    bindProfileSelect.value?.focus()
+  }
+})
 
 const openRoleMetaModal = (contact) => {
   editingRoleContactId.value = contact.id
@@ -2358,6 +2425,8 @@ onMounted(() => {
   scrollSelectedServiceIntoView()
 })
 
+watch(() => [route.path, requestedProfileId.value], visitRequestedProfile, { immediate: true })
+
 onBeforeUnmount(() => {
   if (uiNoticeTimerId) clearTimeout(uiNoticeTimerId)
   Object.keys(rolePreviewMap).forEach((assetId) => {
@@ -2379,7 +2448,7 @@ onBeforeUnmount(() => {
         <button
           @click="goBack"
           class="chat-home-icon-button chat-ink"
-          :aria-label="t('返回消息', 'Back to Messages')"
+          :aria-label="requestedProfileId ? t('返回人物资料', 'Back to profile') : t('返回消息', 'Back to Messages')"
         >
           <i class="fas fa-chevron-left"></i>
         </button>
@@ -3569,15 +3638,18 @@ onBeforeUnmount(() => {
       class="fixed inset-0 z-40 bg-black/35 px-4 flex items-end justify-center pb-6"
       data-testid="chat-directory-bind-modal"
       @click.self="closeBindModal"
+      @keydown.esc.stop.prevent="closeBindModal"
+      @keydown="keepBindDialogFocus"
     >
-      <div class="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl">
+      <div role="dialog" aria-modal="true" aria-labelledby="chat-bind-title" class="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl">
         <div class="flex items-start justify-between gap-3">
-          <p class="text-lg font-extrabold text-gray-950">{{ t('绑定角色到会话', 'Bind Profile to Chat') }}</p>
-          <button type="button" class="chat-home-icon-button -mr-1 -mt-1 text-gray-400" @click="closeBindModal">
-            <i class="fas fa-times"></i>
+          <p id="chat-bind-title" class="text-lg font-extrabold text-gray-950">{{ t('添加聊天联系人', 'Add a Chat contact') }}</p>
+          <button type="button" :aria-label="t('关闭', 'Close')" class="chat-home-icon-button -mr-1 -mt-1 text-gray-400" @click="closeBindModal">
+            <i class="fas fa-times" aria-hidden="true"></i>
           </button>
         </div>
-        <select v-model.number="bindProfileId" data-testid="chat-directory-bind-profile" class="mt-4 w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-yellow-300 focus:bg-white">
+        <label for="chat-bind-profile" class="mt-4 block text-sm font-semibold text-gray-700">{{ t('选择人物', 'Choose a person') }}</label>
+        <select id="chat-bind-profile" ref="bindProfileSelect" v-model.number="bindProfileId" data-testid="chat-directory-bind-profile" class="mt-2 w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-yellow-300 focus:bg-white">
           <option v-for="profile in unboundRoleProfilesRaw" :key="profile.id" :value="profile.id">
             {{ profile.name }} · {{ profile.role || t('未设置角色', 'Role not set') }}
           </option>
@@ -3589,7 +3661,7 @@ onBeforeUnmount(() => {
             data-testid="chat-directory-confirm-bind"
             class="rounded-full bg-yellow-300 px-4 py-2 text-sm font-extrabold text-gray-950 shadow-sm"
           >
-            {{ t('确认绑定', 'Confirm Bind') }}
+            {{ bindFromProfile ? t('添加并聊天', 'Add and chat') : t('确认添加', 'Add contact') }}
           </button>
         </div>
       </div>
