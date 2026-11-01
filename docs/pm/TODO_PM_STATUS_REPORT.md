@@ -1,12 +1,14 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-08-31
+Updated: 2026-11-01
 
 Integrated baseline: `38dc329`
 
 Working tree: excluded local tool caches and QA/visual artifacts remain outside integrated capability claims.
 
 Execution authority: `docs/roadmap/TODO_ROADMAP.md`
+
+Local follow-up (2026-11-01, not a new integrated release): the user promoted Contacts-to-Chat core-flow completion and general-card persona consumption, and delegated acceptance. Both scoped slices are locally complete; a confirmed world-independent role card can now shape that role's next AI reply without WorldBook setup. Desktop/mobile mock-provider evidence, privacy exclusions, and save/reload continuity are recorded in `docs/qa/GENERAL_PROFILE_CHAT_ACCEPTANCE_2026-11-01.md`. The integrated baseline and broader release/true-device/consumer-adoption gates below are unchanged.
 
 ## 1. Current Product Stage
 
@@ -15,6 +17,8 @@ SchatPhone is an integrated local-first virtual phone and AI life-simulation pro
 The project is not yet a production-hardened final release. Named physical-device evidence, installed-PWA/relaunch proof, external repository/environment protections, several provider-specific smokes, and selected secondary product loops remain open.
 
 ## 2. Current Execution Order
+
+2026-11-01 user override for this checkpoint: complete delegated Chat memory/role-continuity acceptance, record the next proposed optimization order in roadmap 6.1, push the reviewed project, then stop implementation. The proposed next slices are real-model continuity and memory-review clarity, one companion outing with later recall, recovery/mobile proof for that loop, and an optional memory-scene visual prototype. They are planning only. The release gates below remain open and are not claimed complete by the local checks.
 
 1. Confirm the new exact-commit hosted-browser automation remotely, then complete OS-installed PWA/relaunch, external protections, and named true-device evidence.
 2. Preserve the completed `CMG-00` through `CMG-10` continuity contracts while fixing only failures found by product-preview proof.

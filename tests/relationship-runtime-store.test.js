@@ -705,6 +705,35 @@ describe('relationship runtime store', () => {
     expect(promptWithArchived).toContain('Archived memory should stay out of default prompt recall.')
   })
 
+  test('disclosure detail recall stays role-scoped, archived-aware and backup-compatible', () => {
+    const store = useRelationshipRuntimeStore()
+    store.resetForTesting()
+    const target = { profileId: 59, name: 'Continuity' }
+    const add = (summary, createdAt, overrides = {}) => store.recordRelationshipFact({
+      target, sourceModule: 'relationship_chat_user_disclosure', sourceId: `detail_${createdAt}`,
+      memoryKey: 'chat_disclosure__hospital', factType: 'user_disclosure', summary,
+      forceSupportingMemory: true, metricDeltas: {}, createdAt, ...overrides,
+    })
+    add('The disinfectant smell makes me nervous.', 100)
+    add('Please come with me to the clinic.', 200)
+    add('OTHER_ROLE_PRIVATE_DETAIL', 300, { target: { profileId: 60 } })
+    const before = store.createBackupSnapshot()
+    const recall = () => store.buildPromptProjectionForTarget(target, {
+      includeNeutral: true, recallQuery: 'disinfectant smell',
+    })
+    expect(recall().text).toContain('The disinfectant smell makes me nervous.')
+    expect(recall().text).toContain('Please come with me to the clinic.')
+    expect(recall().text).not.toContain('OTHER_ROLE_PRIVATE_DETAIL')
+    expect(recall().memoryRecall.characterCount).toBeLessThanOrEqual(720)
+    expect(store.createBackupSnapshot()).toEqual(before)
+    store.restoreFromBackup(before)
+    expect(recall().text).toContain('The disinfectant smell makes me nervous.')
+    store.updateMemoryReviewForTarget(target, 'chat_disclosure__hospital', { status: 'archived' })
+    expect(recall().text).not.toContain('disinfectant')
+    expect(recall().text).not.toContain('clinic')
+    expect(store.createBackupSnapshot().events).toHaveLength(3)
+  })
+
   test('recalls a relevant older memory without changing stored memory order', () => {
     const store = useRelationshipRuntimeStore()
     store.resetForTesting()

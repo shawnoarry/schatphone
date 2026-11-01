@@ -283,3 +283,26 @@ export const selectMemoryRecall = (input = {}) => {
     ),
   }
 }
+
+// One subject may contain several explicitly remembered disclosures. Keep its
+// latest statement and at most one relevant earlier detail; never merge them
+// into a new asserted fact or expose the underlying source records to Chat.
+export const buildChatDisclosureRecallSummary = ({ summary = '', details = [], queryText = '' } = {}) => {
+  const latest = normalizeDisplayText(summary).slice(0, 280)
+  if (!latest) return ''
+  const earlier = selectMemoryRecall({
+    memories: details
+      .filter((detail) => normalizeDisplayText(detail.summary) !== latest)
+      .map((detail) => ({
+        memoryKey: detail.id,
+        recallSummary: normalizeDisplayText(detail.summary).slice(0, 240),
+        latestCreatedAt: detail.createdAt,
+      })),
+    queryText,
+    limit: 1,
+    characterBudget: 240,
+  }).text
+  return earlier
+    ? `Latest remembered detail: ${latest} Earlier remembered detail (later corrections take precedence): ${earlier}`
+    : latest
+}

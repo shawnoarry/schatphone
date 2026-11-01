@@ -1,7 +1,8 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
-import { selectMemoryRecall } from '../lib/memory-recall'
+import { buildChatDisclosureRecallSummary, selectMemoryRecall } from '../lib/memory-recall'
+import { CHAT_DISCLOSURE_SOURCE_MODULE } from '../lib/chat-disclosure-proposals'
 import { projectMemoryConsolidationPressure } from '../lib/memory-consolidation-pressure'
 import { normalizeSharedExperienceId } from '../lib/shared-experience-contract'
 
@@ -1456,19 +1457,32 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
         characterCount: 0,
       }
     }
+    const ownerKey = buildRelationshipEntityKey(target)
+    const disclosuresByMemory = new Map()
+    events.value.forEach((event) => {
+      if (event.entityKey !== ownerKey || event.status !== RELATIONSHIP_EVENT_STATUS.APPLIED ||
+        event.sourceModule !== CHAT_DISCLOSURE_SOURCE_MODULE || event.factType !== 'user_disclosure') return
+      const details = disclosuresByMemory.get(event.memoryKey) || []
+      details.push({ id: event.id, summary: event.summary, createdAt: event.createdAt })
+      disclosuresByMemory.set(event.memoryKey, details)
+    })
     const memories = listMemoryAggregatesForTarget(
       target,
       Number.MAX_SAFE_INTEGER,
       { sortMode: 'recent' },
-    ).map((memory) => ({
-      ...memory,
-      // Prompt recall uses the owner summary only. Source counts/modules remain review metadata.
-      recallSummary:
-        memory.displaySummary ||
-        memory.primarySummary ||
-        memory.latestSummary ||
-        memory.memoryKey,
-    }))
+    ).map((memory) => {
+      const summary = memory.displaySummary || memory.primarySummary || memory.latestSummary || memory.memoryKey
+      const isDisclosureGroup = memory.sourceModules.length === 1 &&
+        memory.sourceModules[0] === CHAT_DISCLOSURE_SOURCE_MODULE && !memory.latestMemorySummary
+      return {
+        ...memory,
+        // Only the owner composes this bounded reading projection. Stored group
+        // summaries and source history stay intact; authored summaries win.
+        recallSummary: isDisclosureGroup ? buildChatDisclosureRecallSummary({
+          summary, details: disclosuresByMemory.get(memory.memoryKey) || [], queryText: options.queryText,
+        }) : summary,
+      }
+    })
     return selectMemoryRecall({
       memories,
       queryText: options.queryText,

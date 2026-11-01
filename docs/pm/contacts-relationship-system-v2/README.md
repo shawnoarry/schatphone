@@ -1,6 +1,6 @@
 # Contacts Relationship System V2 Package
 
-Updated: 2026-08-28
+Updated: 2026-11-01
 
 Use this package for work touching Contacts, Chat Directory boundary, role identity, relationship reset/delete, one-memory delete, role detail IA, or World Hub cleanup semantics tied to one role.
 
@@ -42,6 +42,10 @@ Current cross-device handoff and execution record:
 
 ## Fast Product Meaning
 
+- The 2026-11-01 Chat memory follow-up repairs omission of earlier explicitly remembered same-topic details without rewriting stored groups or metrics. Relationship Runtime supplies one bounded latest/earlier reading projection and keeps archive and role isolation intact. See `docs/qa/CHAT_MEMORY_CONTINUITY_ACCEPTANCE_2026-11-01.md`.
+
+- The 2026-11-01 Contacts-to-Chat core flow has passed delegated acceptance; see `docs/qa/CONTACTS_CHAT_ACCEPTANCE_2026-11-01.md`. The current person-page action navigates to Chat Directory for explicit confirmation or existing-thread reuse. The user subsequently promoted general-card persona consumption for Chat: confirmed public/familiar values now feed the bound role's next reply through a bounded Contacts-owned projection. Manual entry and confirmed imports share this path; hidden/intimate/world-specific values and unsaved drafts remain excluded. Follow-up evidence: `docs/qa/GENERAL_PROFILE_CHAT_ACCEPTANCE_2026-11-01.md`.
+
 - `CONTACTS-V3-2C PERSON_PROFILE_UX` is locally acceptance-ready and still user-review pending. The person-first overview, direct paste/manual entry, user-language second-level editor and review, category choice for proposed fields, and representative untouched Eva/Jackie fixtures are implemented. Read `CONTACTS_V3_2C_PERSON_PROFILE_UX_ACCEPTANCE_AND_HANDOFF.md` before continuing instead of rebuilding the profile-card foundation.
 - Contacts V2 remains complete at its accepted role, relationship, memory, WorldBook-field, cleanup, and Role Hub baseline. Contacts V3 is complete through profile-card construction, Persona Confirmation, approved purpose-specific projections, and V3-4A/V3-4B/V3-4C role lifecycle. Contacts now exposes one counted/searchable archived-people manager, read-only archived details, rollback-safe archive/restore with the same Wallet payee identity, and archive-only permanent deletion through grouped impact plus typed role-ID confirmation. The legacy active-person direct-delete entry is removed; V3-5 consumer adoption remains gated.
 - Person archive is reversible and preserves the complete person, Chat history, relationship, memories, source lineage, and receiving-account identity while suspending new interaction/projections. Permanent deletion is archive-first, creates a minimal tombstone, reserves both profile and role IDs, revokes new payee use, and preserves immutable owner history without rebinding it to another person.
@@ -57,7 +61,7 @@ Current cross-device handoff and execution record:
 - Contacts detail is now the role control page for this classification slice: it shows the read-only current relationship runtime snapshot first, then lets the user edit profile-side relationship premise, seed values, category, modifiers, and classification audit below it.
 - Relationship-label AI classification goes through `src/lib/ai.js` and shared JSON parsing; high confidence is saved as `ai_auto`, medium/low confidence requires confirmation before `ai_confirmed`, and `user_edited` classifications are protected from silent AI or world-template overwrite.
 - Event/runtime consumes saved category/modifier classification fields for gate decisions and audit metadata. It must not read `relationshipLabelText` or `relationshipLabelNote` as event conditions.
-- `Chat` owns the idempotent role-binding seam. Contacts may invoke it from an explicit eligible-role `Start Chat` action; `Chat Directory` owns bound-target review, unbind, Chat-local metadata, and service-account entry management.
+- `Chat` owns the idempotent role-binding seam. The current Contacts action navigates to Chat Directory for exact-person confirmation or existing-thread reuse; `Chat Directory` owns bound-target review, unbind, Chat-local metadata, and service-account entry management.
 - Chat Directory may preserve legacy `relationshipLevel` / `relationshipNote` as Chat-local tuning/note compatibility fields, but must not label them as current affinity or relationship progress.
 - `Chat` owns conversations, messages, and manual chat-message deletion.
 - `Relationship Runtime` owns relationship progress and memory groups.

@@ -1,10 +1,12 @@
 # Contacts V3-2C Person Profile UX Acceptance And Handoff
 
-Updated: 2026-08-28
+Updated: 2026-11-01
 
-Status: `LOCAL_ACCEPTANCE_READY / USER_REVIEW_PENDING / CONTACTS-V3-2C_IN_PROGRESS`
+Status: `CORE_FLOW_DELEGATED_ACCEPTANCE_DONE / GENERAL_PROFILE_CHAT_DONE / CONTACTS-V3-2C_IN_PROGRESS`
 
 Execution authority: `docs/roadmap/TODO_ROADMAP.md`
+
+2026-11-01：用户明确委托 Codex 代为完成联系人到聊天体验验收，核心操作结果保留在 `docs/qa/CONTACTS_CHAT_ACCEPTANCE_2026-11-01.md`。随后用户明确要求接入通用资料卡人设并继续代验收，该缺口现已闭合：已保存的公开/熟悉资料（含确认导入的人物专属字段）用于该人物的下一次回复；取消的草稿及隐藏/亲密/世界专属值不进入本次新增读取路径。修改、重开、角色隔离和正式生成请求已通过检查。新证据与验收范围见 `docs/qa/GENERAL_PROFILE_CHAT_ACCEPTANCE_2026-11-01.md`。无需用户重复本轮验收；完整生活模拟、真实模型扮演质量及更广泛视觉完成仍不作完成声明。下文 2026-08/09 的证据保留为历史记录。
 
 ## 1. 这轮解决了什么
 
@@ -72,11 +74,13 @@ Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 - 已确认形象可作为未来创作流程的候选引用，但当前页面不会自动发起图片生成；
 - “身份与绑定”下沉到档案管理，只负责姓名、只读稳定 ID、一句话身份、人物类型和高级绑定，不再包含头像或整段人设。未来如确需纠错，只能设计单独的跨 owner 迁移流程，不能恢复普通随意改号。
 
-## 3. 用户回家后的验收路径
+## 3. 可随时体验的路径
 
 打开：
 
-`http://127.0.0.1:5174/schatphone/#/contacts?homePage=0&from=home&profileId=1`
+`http://127.0.0.1:5198/schatphone/#/contacts`
+
+这是 2026-11-01 为本轮启动并验证的本机服务；首次打开如遇锁屏，解锁后进入底部“联系人”。本轮检查已由 Codex 代劳，下面的清单供以后自主体验，不是等待用户完成的阻塞项。
 
 按下面顺序检查：
 
@@ -103,7 +107,7 @@ Execution authority: `docs/roadmap/TODO_ROADMAP.md`
 
 ## 5. 当前仍未完成
 
-- 用户尚未共同验收，因此 `CONTACTS-V3-2C` 继续保持 `IN_PROGRESS`；
+- 核心流程已于 2026-11-01 经用户委托代验收通过；通用资料卡参与 AI 聊天的连续性缺口及更广泛体验尚未完成，`CONTACTS-V3-2C` 保持 `IN_PROGRESS`；
 - 当前不是 Contacts 全应用视觉重做完成声明；
 - 类目命名、输入控件节奏和人物专属新增区仍可以根据实际观感继续调整；本轮已收紧二级阅读页空类目密度、Persona 整理态焦点和唯一导入入口；
 - Gallery 人物标签目前由用户明确导入或手动标记，不包含自动面容识别；Camera 目前只提供入口，不声称拍摄结果已经自动回填指定人物；

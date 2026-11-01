@@ -1,14 +1,16 @@
 # Chat And Chat Directory Package
 
-Updated: 2026-08-28
+Updated: 2026-11-01
 
 Use this package for Chat thread behavior, Chat Directory, service accounts, role binding into Chat, and message-surface work.
+
+2026-11-01 continuity follow-up: recent Chat history survives reopening and enters the bounded next-request window. Explicitly remembered same-topic disclosures now retain the latest statement plus at most one relevant earlier detail in the Relationship Runtime projection, with correction precedence and unchanged budgets. Role isolation, duplicate Remember actions, history eviction, and reopen are covered by `docs/qa/CHAT_MEMORY_CONTINUITY_ACCEPTANCE_2026-11-01.md`. The next optimization plan is recorded in roadmap section 6.1; the user requested this round stop after publication.
 
 Confirmed persistence boundary: user-visible Chat history and saved messages require explicit user deletion. Older records may be paged or moved into reversible cold archives, but capacity management must preserve review/restore behavior and cannot redefine Contacts lifecycle or Relationship Runtime truth ownership.
 
 Confirmed AI-artifact boundary: Chat persists messages and rich content formally committed to Chat plus the minimum provenance needed for the thread. It does not persist complete assembled prompts, raw provider responses, uncommitted candidates, or transport payloads by default; full capture belongs only to explicit temporary diagnostics. Future social, forum, offline, narrative, performance, or character-state modules persist their own committed canonical content rather than routing it through Chat.
 
-Current role-activation boundary: Contacts may expose an explicit `Start Chat` action for an eligible Main Role or NPC, but it calls the existing Chat-owned idempotent binding seam and routes only from the returned contact. Chat Directory remains the management surface for bound targets, unbind, and Chat-local metadata. Self Profile is never a Chat target, and Book text, encyclopedia selection, and extra World Packs remain optional.
+Current role-activation boundary: Contacts offers navigation to Chat for an eligible non-Self person. Chat Directory preselects the exact person, confirms through the existing Chat-owned idempotent binding seam, and opens the returned contact; an existing binding goes to the same conversation. Directory remains the management surface for bound targets, unbind, and Chat-local metadata. Self, archived, and capability-disabled profiles cannot become new targets. Book text, encyclopedia selection, and extra World Packs remain optional. The 2026-11-01 core-flow evidence is retained in `docs/qa/CONTACTS_CHAT_ACCEPTANCE_2026-11-01.md`; the later user-approved general-card persona path is complete under delegated acceptance in `docs/qa/GENERAL_PROFILE_CHAT_ACCEPTANCE_2026-11-01.md`. Formal AI requests now read the bound role's current confirmed public/familiar general-card values through the Contacts projection, without requiring a world-bound template.
 
 Current role-payee boundary: role profiles own stable fictional receiving-account definitions. Chat may request and render one only as a system-generated `payee_account` share card built from the persisted profile; the AI must not invent or output bank credentials. The request and account card do not move money. Wallet owns the disclosed reference, confirmation, same-currency validation, ledger mutation, receipt, and resulting relationship fact.
 

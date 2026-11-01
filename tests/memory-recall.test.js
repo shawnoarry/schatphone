@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { buildMemoryRecallQuery, selectMemoryRecall } from '../src/lib/memory-recall'
+import { buildChatDisclosureRecallSummary, buildMemoryRecallQuery, selectMemoryRecall } from '../src/lib/memory-recall'
 
 const memory = (overrides = {}) => ({
   memoryKey: 'memory',
@@ -10,6 +10,33 @@ const memory = (overrides = {}) => ({
 })
 
 describe('memory recall Module', () => {
+  test('retains the latest disclosure plus one relevant earlier detail, with correction precedence', () => {
+    const details = [
+      { id: 'first', summary: '医院的消毒水味让我难受。', createdAt: 1 },
+      { id: 'middle', summary: '诊所门口有一棵银杏树。', createdAt: 2 },
+      { id: 'latest', summary: '现在去诊所希望有人陪伴。', createdAt: 3 },
+    ]
+    const snapshot = structuredClone(details)
+    const text = buildChatDisclosureRecallSummary({
+      summary: details[2].summary, details, queryText: '消毒水味',
+    })
+    expect(text).toContain(details[0].summary)
+    expect(text).toContain(details[2].summary)
+    expect(text).not.toContain(details[1].summary)
+    expect(text).toContain('later corrections take precedence')
+    expect(details).toEqual(snapshot)
+  })
+
+  test('deduplicates repeated statements and bounds long disclosure recall', () => {
+    expect(buildChatDisclosureRecallSummary({ summary: 'Same.', details: [{ summary: 'Same.' }] })).toBe('Same.')
+    const summary = buildChatDisclosureRecallSummary({
+      summary: 'N'.repeat(280), details: [{ id: 'old', summary: 'O'.repeat(240), createdAt: 1 }],
+    })
+    expect(summary.length).toBeLessThanOrEqual(620)
+    expect(selectMemoryRecall({ memories: [{ recallSummary: summary }], characterBudget: 200 }).text.length)
+      .toBeLessThanOrEqual(200)
+  })
+
   test('selects an older relevant memory before a newer unrelated memory', () => {
     const result = selectMemoryRecall({
       memories: [

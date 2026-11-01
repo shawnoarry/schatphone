@@ -1,6 +1,6 @@
 # Contacts Relationship System V2 Status And Handoff
 
-Updated: 2026-09-30
+Updated: 2026-11-01
 
 Integrated baseline: `dc26226`
 
@@ -8,7 +8,13 @@ This file is the handoff page for anyone continuing Contacts, role, relationship
 
 ## 1. Current Status
 
+2026-11-01 `CHAT_MEMORY_CONTINUITY_DONE`: Relationship Runtime's Chat-disclosure recall now preserves the latest statement plus one relevant earlier explicitly remembered detail. Only applied facts from the exact role and pure disclosure group participate; archived groups remain excluded and authored memory summaries retain priority. The prompt labels earlier/later order and correction precedence, with unchanged memory budget, source records, display summary, metrics and backup schema. Scoped delegated acceptance: `docs/qa/CHAT_MEMORY_CONTINUITY_ACCEPTANCE_2026-11-01.md`. This does not enable automatic message extraction or general memory consolidation.
+
 Status: `CONTACTS_V2_DONE / CONTACTS-V3-0_DONE 2026-08-27 / CONTACTS-V3-1_DONE 2026-08-27 / CONTACTS-V3-2A_STRUCTURE_DONE 2026-08-27 / CARD-1_DONE / ROLE-0_DECISION_DONE / ROLE-1_DONE / CARD-2_DONE / CARD-3_DONE / CARD-4_DONE / CARD-5_DONE / CARD-6_DONE / PERSONA-1_DONE / PERSONA-2_DONE 2026-08-27 / CONTACTS-V3-2C_PERSON_PROFILE_UX_IN_PROGRESS / CONTACTS-V3-3_DONE 2026-08-27 / CONTACTS-V3-4_DECISION_FREEZE_COMPLETE / V3-4A_DONE 2026-08-28 / V3-4B_DONE 2026-08-28 / V3-4C_DONE 2026-08-28 / V3-5_GATED`
+
+2026-11-01 scoped checkpoint: the user delegated Contacts-to-Chat experience acceptance to Codex. Create/edit/save/cancel, exact-person Chat confirmation, repeat entry, thread-to-profile return, history navigation, and reload continuity pass. Contacts only navigates; Chat retains binding ownership. The initial evidence is retained in `docs/qa/CONTACTS_CHAT_ACCEPTANCE_2026-11-01.md`.
+
+2026-11-01 follow-up `GENERAL_PROFILE_CHAT_DONE / DELEGATED_ACCEPTANCE_DONE`: the user explicitly requested the previously identified general-card persona gap be closed. A separate Contacts-owned Chat-only projection reads the current confirmed public/familiar values of an active Main Role, Supporting Role, or NPC using an exact enabled global preset and profile/template revision. Default unmarked general-card fields and person extensions are eligible; explicitly other-purpose fields are not. No stored purpose markers are added. Formal prompt assembly resolves this on every request; cancel, save, refresh, import confirmation, private-value exclusion, and role isolation pass. World-bound Chat, Event, Work Hub, Self Profile, and public projections retain their existing checks. Evidence: `docs/qa/GENERAL_PROFILE_CHAT_ACCEPTANCE_2026-11-01.md`. No repeat manual acceptance is required for either completed scoped check; broader V3-2C visual completion and V3-5 adoption remain separate.
 
 Accepted next-lane direction:
 

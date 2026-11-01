@@ -1,6 +1,6 @@
 # Chat And Chat Directory Product Boundary
 
-Updated: 2026-08-28
+Updated: 2026-11-01
 
 This file defines the ownership boundary between Chat, Chat Directory, and Contacts.
 
@@ -29,8 +29,10 @@ Chat owns:
 - legacy product-card compatibility display while the active Shopping send path migrates to `share_card`
 - Chat-local saved-message flags for ordinary role/group threads
 - AI reply trigger and prompt assembly
+- bounded consumption of confirmed general-card persona through the Contacts-owned Chat-only projection: current bound non-Self role, exact global preset/version and profile revision, public/familiar manual-compatible values, and the existing field/character budget; no raw import source or unsaved drafts, no private/world-specific values, and no fallback from an invalid world-bound profile
 - approximate, non-persisted next-request text-token visibility derived from the same prompt/context projection, without owning provider billing or introducing content limits
 - bounded consumption of Relationship Runtime's owner projection: one current relationship, relevant role-memory summaries, and active shared-experience summaries only; Chat does not receive raw supporting rows or source-audit metadata in its prompt
+- a pure Chat-disclosure memory group may supply its latest statement and one relevant earlier explicitly remembered detail; Relationship Runtime labels their order and later-correction precedence, preserves authored summaries, and applies the same bounded recall budget. This does not turn ordinary history into durable memory or create an AI-merged fact.
 - the user-facing Chat App shell for message entry and thread-level controls
 - Chat Settings as the Chat-local behavior, appearance-entry, and diagnostics surface
 - Chat Settings as the entry surface for shared TTS provider configuration and temporary preview, without taking ownership of TTS transport, credentials, or audio truth

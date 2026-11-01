@@ -1,10 +1,12 @@
 # Chat And Chat Directory Implementation Workstreams / 聊天与会话通讯录实施工作流
 
-Updated: 2026-08-18
+Updated: 2026-11-01
 
 ## 1. Workstream A: Chat Thread Behavior
 
 - reply trigger and manual AI invocation
+- `CHAT_MEMORY_CONTINUITY_DONE 2026-11-01`: recent conversation/reopen and explicit-memory recall are accepted locally; fix same-topic earlier-detail omission in the owner projection. Optimization candidates are planned only in roadmap 6.1; stop after the requested push.
+- `GENERAL_PROFILE_CHAT_DONE 2026-11-01`: formal reply requests consume current confirmed public/familiar general-card persona through Contacts; save/cancel/reload and role isolation are covered by delegated desktop/mobile acceptance in `docs/qa/GENERAL_PROFILE_CHAT_ACCEPTANCE_2026-11-01.md`. World-bound and other-consumer rules remain separate.
 - provider-neutral transient AI message-window budgeting shared by normal reply and regeneration, without mutating Chat history or adding a persisted setting
 - approximate next-request text-token visibility derived from that transient projection, with readable world/supporting/recent-conversation parts, explicit model variance and image exclusion, and no content limit or prompt persistence
 - message actions

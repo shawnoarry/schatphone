@@ -533,6 +533,12 @@ describe('relationship fact adapters', () => {
         'conv_9:profile_9:message_msg_hospital_2',
       ]),
     )
+    const prompt = relationshipRuntimeStore.buildPromptContextForTarget(contact, {
+      recallQuery: '还记得我为什么不喜欢医院的消毒水味吗？',
+      includeNeutral: true,
+    })
+    expect(prompt).toContain(hospitalFirst.content)
+    expect(prompt).toContain(hospitalUpdate.content.normalize('NFKC'))
   })
 
   test('keeps unknown subjects separate and leaves the legacy generic group readable', () => {

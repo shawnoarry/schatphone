@@ -1,12 +1,18 @@
 # Chat And Chat Directory Status And Handoff
 
-Updated: 2026-08-28
+Updated: 2026-11-01
 
 This file is the handoff page for Chat, Chat Directory, service accounts, and Chat-side role binding work.
 
 ## 1. Current Status
 
 Status: `PARTIAL_DONE`
+
+2026-11-01 `CHAT_MEMORY_CONTINUITY_DONE / DELEGATED_ACCEPTANCE_DONE`: recent messages and prior replies remain available after reopening within the existing request window. A reproduced same-topic disclosure bug omitted earlier saved detail from recall even though source history survived. Relationship Runtime now supplies the latest statement plus at most one relevant earlier remembered detail, explicitly labelled with later-correction precedence, inside the existing 3-memory / 720-character budget. Canonical group summaries, original facts, metrics, persistence shape, and explicit-Remember policy are unchanged. Desktop/mobile provider-request checks cover window eviction, duplicate Remember, role isolation and reload; archived exclusion and backup round trip are also tested. Evidence: `docs/qa/CHAT_MEMORY_CONTINUITY_ACCEPTANCE_2026-11-01.md`. Next work is planned only in roadmap section 6.1; publish the reviewed project checkpoint and stop per the user's instruction.
+
+2026-11-01 Contacts-to-Chat core-flow acceptance is locally complete under user delegation. Contacts navigates to Chat Directory with an exact profile; Directory confirms a new binding or reuses the existing conversation, excludes Self/archived/capability-disabled candidates, preserves Home context, and replaces the intermediate route. The thread's Contact info action returns to that bound person's profile. Initial evidence: `docs/qa/CONTACTS_CHAT_ACCEPTANCE_2026-11-01.md`.
+
+2026-11-01 `GENERAL_PROFILE_CHAT_DONE / DELEGATED_ACCEPTANCE_DONE`: under the user's subsequent explicit request, formal prompt assembly now resolves global profile presets from System and consumes the current bound person's confirmed public/familiar card values through the Contacts-owned general-card projection. Saved manual input and confirmed imports share one canonical source; cancelled drafts, hidden/intimate/world-specific values, unrelated roles, Self, and service targets do not enter this path. Invalid world/template/revision references fail closed, with no general-card fallback for world-bound profiles. Desktop and simulated Pixel 5 prove first reply, cancel, save, refresh, private-value exclusion, and role isolation with intercepted provider requests. Evidence and actual validation limits: `docs/qa/GENERAL_PROFILE_CHAT_ACCEPTANCE_2026-11-01.md`.
 
 Confirmed persistence dependency for future work:
 

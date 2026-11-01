@@ -1,6 +1,6 @@
 # Contacts V3 Identity And Role Core Plan / 联系人 V3 身份与角色核心规划
 
-Updated: 2026-08-28
+Updated: 2026-11-01
 
 Status: `PLANNING_ACCEPTED / CONTACTS-V3-0_DONE 2026-08-27 / CONTACTS-V3-1_DONE 2026-08-27 / CONTACTS-V3-2A_DONE 2026-08-27 / CONTACTS-V3-2B_PERSONA-2_DONE 2026-08-27 / CONTACTS-V3-3_DONE 2026-08-27 / CONTACTS-V3-4_DECISION_FREEZE_COMPLETE / V3-4A_DONE 2026-08-28 / V3-4B_DONE 2026-08-28 / V3-4C_DONE 2026-08-28 / V3-5_GATED`
 
@@ -122,6 +122,8 @@ The Module must preserve source and review state at least conceptually:
 Only confirmed or directly saved structured values become canonical profile values. AI output alone remains transient.
 
 ### 4.3 Role Context Projection Module
+
+2026-11-01 accepted Chat-only extension: ordinary world-independent role cards now have a separate bounded projection for confirmed public/familiar values, including applicable unmarked general-preset fields and person-only extensions. Exact global preset/version, active non-Self identity, profile revision, and value source remain required. This does not mark old fields or relax world-bound Chat, Event, Work Hub, or public projections. See `PRODUCT_BOUNDARY.md` and `docs/qa/GENERAL_PROFILE_CHAT_ACCEPTANCE_2026-11-01.md` for the implemented contract and delegated acceptance.
 
 Purpose:
 
